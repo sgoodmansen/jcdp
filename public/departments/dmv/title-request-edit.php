@@ -15,7 +15,14 @@ if (!$request) {
     exit;
 }
 
-$lienholders = db()->query('SELECT id, company_name FROM dmv_lienholders ORDER BY company_name')->fetchAll();
+$lienholdersStatement = db()->prepare(
+    'SELECT id, company_name, is_active
+     FROM dmv_lienholders
+     WHERE is_active = 1 OR id = :current_lienholder_id
+     ORDER BY company_name'
+);
+$lienholdersStatement->execute(['current_lienholder_id' => $request['lienholder_id']]);
+$lienholders = $lienholdersStatement->fetchAll();
 $vehicleMakes = db()->query(
     'SELECT id, name FROM dmv_vehicle_makes WHERE is_active = 1 ORDER BY name'
 )->fetchAll();
@@ -127,7 +134,7 @@ page_header('Edit Title Request');
                     <option value="">Select lienholder</option>
                     <?php foreach ($lienholders as $lienholder): ?>
                         <option value="<?= e((string) $lienholder['id']) ?>" <?= (int) $request['lienholder_id'] === (int) $lienholder['id'] ? 'selected' : '' ?>>
-                            <?= e($lienholder['company_name']) ?>
+                            <?= e($lienholder['company_name']) ?><?= (int) $lienholder['is_active'] === 0 ? ' (Inactive)' : '' ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

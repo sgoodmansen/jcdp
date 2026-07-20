@@ -115,6 +115,7 @@ $statement = db()->prepare(
         dmv_lienholders.state AS lienholder_state,
         dmv_lienholders.zip_code AS lienholder_zip_code,
         dmv_lienholders.phone AS lienholder_phone,
+        dmv_lienholders.phone_extension AS lienholder_phone_extension,
         dmv_lienholders.fax AS lienholder_fax,
         users.first_name AS clerk_first_name,
         users.last_name AS clerk_last_name,
@@ -167,7 +168,11 @@ if (!empty($request['lienholder_fax'])) {
     $pdf->line('Fax ' . $request['lienholder_fax']);
 }
 if (!empty($request['lienholder_phone'])) {
-    $pdf->line('Phone ' . $request['lienholder_phone']);
+    $phoneLine = 'Phone ' . $request['lienholder_phone'];
+    if (!empty($request['lienholder_phone_extension'])) {
+        $phoneLine .= ' ext. ' . $request['lienholder_phone_extension'];
+    }
+    $pdf->line($phoneLine);
 }
 
 $pdf->blank(16);

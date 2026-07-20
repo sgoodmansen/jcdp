@@ -234,6 +234,20 @@ textarea {
     margin: 0;
 }
 
+.form .checkbox-row {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+}
+
+.form .checkbox-row input[type="checkbox"] {
+    flex: 0 0 auto;
+    height: 16px;
+    padding: 0;
+    width: 16px;
+}
+
 .table-actions {
     align-items: center;
     display: flex;
@@ -400,6 +414,16 @@ textarea {
     font-size: 13px;
     font-weight: 700;
     padding: 4px 10px;
+}
+
+.badge-success {
+    background: #e6f3ec;
+    color: var(--success);
+}
+
+.badge-muted {
+    background: #edf0f2;
+    color: var(--muted);
 }
 
 .footer {

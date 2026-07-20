@@ -45,6 +45,7 @@ CREATE TABLE audit_log (
 
 CREATE TABLE dmv_lienholders (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    access_lienholder_id INT UNSIGNED NULL UNIQUE,
     created_by INT UNSIGNED NULL,
     company_name VARCHAR(180) NOT NULL,
     contact_name VARCHAR(160) NULL,
@@ -53,9 +54,11 @@ CREATE TABLE dmv_lienholders (
     state VARCHAR(40) NOT NULL,
     zip_code VARCHAR(20) NOT NULL,
     phone VARCHAR(40) NULL,
+    phone_extension VARCHAR(20) NULL,
     fax VARCHAR(40) NULL,
     email VARCHAR(190) NULL,
     notes TEXT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_dmv_lienholder_company (company_name),

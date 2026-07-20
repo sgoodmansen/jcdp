@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+if (PHP_SAPI === 'cli') {
+    session_save_path(sys_get_temp_dir());
+}
+
 session_start();
 
 $configPath = __DIR__ . '/../config/config.php';

@@ -29,6 +29,7 @@ $statement = db()->prepare(
         dmv_lienholders.state AS lienholder_state,
         dmv_lienholders.zip_code AS lienholder_zip_code,
         dmv_lienholders.phone AS lienholder_phone,
+        dmv_lienholders.phone_extension AS lienholder_phone_extension,
         dmv_lienholders.fax AS lienholder_fax,
         dmv_lienholders.email AS lienholder_email,
         users.first_name AS clerk_first_name,
@@ -137,7 +138,10 @@ page_header('Title Request Detail');
                 <dt>Email</dt>
                 <dd><?= e($request['lienholder_email'] ?: 'Not provided') ?></dd>
                 <dt>Phone / Fax</dt>
-                <dd><?= e($request['lienholder_phone'] ?: 'No phone') ?> / <?= e($request['lienholder_fax'] ?: 'No fax') ?></dd>
+                <dd>
+                    <?= e($request['lienholder_phone'] ?: 'No phone') ?><?= $request['lienholder_phone_extension'] ? ' ext. ' . e($request['lienholder_phone_extension']) : '' ?>
+                    / <?= e($request['lienholder_fax'] ?: 'No fax') ?>
+                </dd>
             </dl>
         </article>
 

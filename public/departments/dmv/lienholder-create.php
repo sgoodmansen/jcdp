@@ -7,9 +7,9 @@ $user = current_user();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $statement = db()->prepare(
         'INSERT INTO dmv_lienholders
-            (created_by, company_name, contact_name, mailing_address, city, state, zip_code, phone, fax, email, notes)
+            (created_by, company_name, contact_name, mailing_address, city, state, zip_code, phone, phone_extension, fax, email, notes)
          VALUES
-            (:created_by, :company_name, :contact_name, :mailing_address, :city, :state, :zip_code, :phone, :fax, :email, :notes)'
+            (:created_by, :company_name, :contact_name, :mailing_address, :city, :state, :zip_code, :phone, :phone_extension, :fax, :email, :notes)'
     );
 
     $statement->execute([
@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'state' => trim($_POST['state'] ?? ''),
         'zip_code' => trim($_POST['zip_code'] ?? ''),
         'phone' => trim($_POST['phone'] ?? ''),
+        'phone_extension' => trim($_POST['phone_extension'] ?? ''),
         'fax' => trim($_POST['fax'] ?? ''),
         'email' => trim($_POST['email'] ?? ''),
         'notes' => trim($_POST['notes'] ?? ''),
@@ -83,6 +84,10 @@ page_header('New Lienholder');
             <label>
                 Phone
                 <input name="phone" class="phone-input" inputmode="tel" placeholder="(208) 555-1234">
+            </label>
+            <label>
+                Phone extension
+                <input name="phone_extension">
             </label>
             <label>
                 Fax

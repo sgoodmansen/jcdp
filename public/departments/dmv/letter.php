@@ -26,6 +26,7 @@ $statement = db()->prepare(
         dmv_lienholders.state AS lienholder_state,
         dmv_lienholders.zip_code AS lienholder_zip_code,
         dmv_lienholders.phone AS lienholder_phone,
+        dmv_lienholders.phone_extension AS lienholder_phone_extension,
         dmv_lienholders.fax AS lienholder_fax,
         users.first_name AS clerk_first_name,
         users.last_name AS clerk_last_name,
@@ -115,7 +116,7 @@ page_header('Title Request Letter');
                     Fax <?= e($request['lienholder_fax']) ?><br>
                 <?php endif; ?>
                 <?php if ($request['lienholder_phone']): ?>
-                    Phone <?= e($request['lienholder_phone']) ?>
+                    Phone <?= e($request['lienholder_phone']) ?><?= $request['lienholder_phone_extension'] ? ' ext. ' . e($request['lienholder_phone_extension']) : '' ?>
                 <?php endif; ?>
             </p>
             <p>Date <?= e(date('n/j/Y', strtotime($request['request_date']))) ?></p>

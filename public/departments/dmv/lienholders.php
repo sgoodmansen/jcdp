@@ -3,13 +3,23 @@ require_once __DIR__ . '/../../../app/bootstrap.php';
 require_department_access('dmv');
 
 $search = trim($_GET['search'] ?? '');
+$status = $_GET['status'] ?? 'active';
 $params = [];
-$where = '';
+$whereParts = [];
 
 if ($search !== '') {
-    $where = 'WHERE company_name LIKE :search OR contact_name LIKE :search OR email LIKE :search OR city LIKE :search';
+    $whereParts[] = '(company_name LIKE :search OR contact_name LIKE :search OR email LIKE :search OR city LIKE :search)';
     $params['search'] = '%' . $search . '%';
 }
+
+if ($status === 'inactive') {
+    $whereParts[] = 'is_active = 0';
+} elseif ($status !== 'all') {
+    $status = 'active';
+    $whereParts[] = 'is_active = 1';
+}
+
+$where = $whereParts ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
 $statement = db()->prepare(
     "SELECT *
@@ -43,6 +53,14 @@ page_header('Lienholders');
                 Search lienholders
                 <input name="search" value="<?= e($search) ?>">
             </label>
+            <label>
+                Status
+                <select name="status">
+                    <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active</option>
+                    <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>Inactive</option>
+                    <option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All</option>
+                </select>
+            </label>
             <div class="actions">
                 <button type="submit">Search</button>
                 <a class="button" href="<?= e(url('departments/dmv/lienholder-create.php')) ?>">New lienholder</a>
@@ -56,6 +74,7 @@ page_header('Lienholders');
                 <tr>
                     <th>Lienholder</th>
                     <th>Address</th>
+                    <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -65,6 +84,11 @@ page_header('Lienholders');
                         <td><?= e($lienholder['company_name']) ?></td>
                         <td><?= e($lienholder['mailing_address'] . ', ' . $lienholder['city'] . ', ' . $lienholder['state'] . ' ' . $lienholder['zip_code']) ?></td>
                         <td>
+                            <span class="badge <?= (int) $lienholder['is_active'] === 1 ? 'badge-success' : 'badge-muted' ?>">
+                                <?= (int) $lienholder['is_active'] === 1 ? 'Active' : 'Inactive' ?>
+                            </span>
+                        </td>
+                        <td>
                             <div class="table-actions">
                                 <a class="icon-link" href="<?= e(url('departments/dmv/lienholder-edit.php?id=' . $lienholder['id'])) ?>" title="Edit lienholder" aria-label="Edit lienholder">✎</a>
                             </div>
@@ -73,7 +97,7 @@ page_header('Lienholders');
                 <?php endforeach; ?>
                 <?php if (!$lienholders): ?>
                     <tr>
-                        <td colspan="3">No lienholders found.</td>
+                        <td colspan="4">No lienholders found.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

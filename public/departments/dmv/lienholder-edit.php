@@ -25,9 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              state = :state,
              zip_code = :zip_code,
              phone = :phone,
+             phone_extension = :phone_extension,
              fax = :fax,
              email = :email,
-             notes = :notes
+             notes = :notes,
+             is_active = :is_active
          WHERE id = :id'
     );
 
@@ -40,14 +42,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'state' => trim($_POST['state'] ?? ''),
         'zip_code' => trim($_POST['zip_code'] ?? ''),
         'phone' => trim($_POST['phone'] ?? ''),
+        'phone_extension' => trim($_POST['phone_extension'] ?? ''),
         'fax' => trim($_POST['fax'] ?? ''),
         'email' => trim($_POST['email'] ?? ''),
         'notes' => trim($_POST['notes'] ?? ''),
+        'is_active' => isset($_POST['is_active']) ? 1 : 0,
     ]);
 
     audit_event('updated', 'dmv_lienholder', (string) $id, [
         'company_name' => trim($_POST['company_name'] ?? ''),
         'previous_company_name' => $lienholder['company_name'],
+        'is_active' => isset($_POST['is_active']) ? 1 : 0,
+        'previous_is_active' => (int) ($lienholder['is_active'] ?? 1),
     ]);
 
     flash('success', 'Lienholder updated.');
@@ -103,12 +109,20 @@ page_header('Edit Lienholder');
                 <input name="phone" class="phone-input" inputmode="tel" placeholder="(208) 555-1234" value="<?= e($lienholder['phone']) ?>">
             </label>
             <label>
+                Phone extension
+                <input name="phone_extension" value="<?= e($lienholder['phone_extension']) ?>">
+            </label>
+            <label>
                 Fax
                 <input name="fax" class="phone-input" inputmode="tel" placeholder="(208) 555-1234" value="<?= e($lienholder['fax']) ?>">
             </label>
             <label class="span-2">
                 Notes
                 <textarea name="notes"><?= e($lienholder['notes']) ?></textarea>
+            </label>
+            <label class="check-label checkbox-row span-2">
+                <input type="checkbox" name="is_active" value="1" <?= (int) ($lienholder['is_active'] ?? 1) === 1 ? 'checked' : '' ?>>
+                Active lienholder
             </label>
             <div class="actions span-2">
                 <button type="submit">Save changes</button>

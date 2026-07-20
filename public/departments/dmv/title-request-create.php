@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../app/bootstrap.php';
 require_department_access('dmv');
 
 $user = current_user();
-$lienholders = db()->query('SELECT id, company_name FROM dmv_lienholders ORDER BY company_name')->fetchAll();
+$lienholders = db()->query('SELECT id, company_name FROM dmv_lienholders WHERE is_active = 1 ORDER BY company_name')->fetchAll();
 $vehicleMakes = db()->query(
     'SELECT id, name FROM dmv_vehicle_makes WHERE is_active = 1 ORDER BY name'
 )->fetchAll();
