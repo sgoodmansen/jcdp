@@ -89,6 +89,34 @@ function require_department_access(string $slug): void
     }
 }
 
+function can_manage_department(string $slug): bool
+{
+    $user = current_user();
+
+    if ($user === null) {
+        return false;
+    }
+
+    if ($user['role'] === 'system_admin') {
+        return true;
+    }
+
+    return $user['role'] === 'department_admin' && can_access_department($slug);
+}
+
+function require_department_manager(string $slug): void
+{
+    require_login();
+
+    if (!can_manage_department($slug)) {
+        http_response_code(403);
+        page_header('Access denied');
+        echo '<main class="shell"><section class="panel"><h1>Access denied</h1><p>You do not have permission to manage this department module.</p></section></main>';
+        page_footer();
+        exit;
+    }
+}
+
 function attempt_login(string $email, string $password): bool
 {
     $statement = db()->prepare('SELECT * FROM users WHERE email = :email AND is_active = 1');

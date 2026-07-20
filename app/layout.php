@@ -12,7 +12,7 @@ function page_header(string $title): void
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title><?= e($title) ?> | <?= e(app_name()) ?></title>
-        <link rel="stylesheet" href="<?= e(url('assets/styles.css')) ?>">
+        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260720b')) ?>">
     </head>
     <body>
         <header class="topbar">
@@ -26,6 +26,7 @@ function page_header(string $title): void
                     <a href="<?= e(url('departments/index.php')) ?>">Departments</a>
                     <?php if ($user['role'] === 'system_admin'): ?>
                         <a href="<?= e(url('admin/users.php')) ?>">Admin</a>
+                        <a href="<?= e(url('admin/audit-log.php')) ?>">Audit log</a>
                     <?php endif; ?>
                     <a href="<?= e(url('logout.php')) ?>">Sign out</a>
                 </nav>

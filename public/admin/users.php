@@ -18,6 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'role' => $_POST['role'] ?? 'standard_user',
     ]);
 
+    $userId = (int) db()->lastInsertId();
+    audit_event('created', 'user', (string) $userId, [
+        'email' => trim($_POST['email'] ?? ''),
+        'role' => $_POST['role'] ?? 'standard_user',
+        'department_id' => $departmentId,
+    ]);
+
     flash('success', 'User account created.');
     redirect_to('admin/users.php');
 }
@@ -89,6 +96,8 @@ page_header('Manage Users');
                     <th>Email</th>
                     <th>Role</th>
                     <th>Department</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -98,6 +107,12 @@ page_header('Manage Users');
                         <td><?= e($portalUser['email']) ?></td>
                         <td><?= e(status_badge($portalUser['role'])) ?></td>
                         <td><?= e($portalUser['department_name'] ?? 'None') ?></td>
+                        <td><?= $portalUser['is_active'] ? 'Active' : 'Inactive' ?></td>
+                        <td>
+                            <div class="table-actions">
+                                <a class="icon-link" href="<?= e(url('admin/user-edit.php?id=' . $portalUser['id'])) ?>" title="Edit user" aria-label="Edit user">✎</a>
+                            </div>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

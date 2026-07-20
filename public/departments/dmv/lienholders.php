@@ -7,7 +7,7 @@ $params = [];
 $where = '';
 
 if ($search !== '') {
-    $where = 'WHERE company_name LIKE :search OR contact_name LIKE :search OR city LIKE :search';
+    $where = 'WHERE company_name LIKE :search OR contact_name LIKE :search OR email LIKE :search OR city LIKE :search';
     $params['search'] = '%' . $search . '%';
 }
 
@@ -32,6 +32,12 @@ page_header('Lienholders');
             <div class="notice success"><?= e($message) ?></div>
         <?php endif; ?>
 
+        <div class="actions" style="margin-bottom: 18px;">
+            <a class="button secondary" href="<?= e(url('departments/dmv/index.php')) ?>">DMV home</a>
+            <a class="button secondary" href="<?= e(url('departments/dmv/title-request-create.php')) ?>">New title request</a>
+            <a class="button secondary" href="<?= e(url('departments/dmv/title-requests.php')) ?>">Title requests</a>
+        </div>
+
         <form class="form" method="get">
             <label>
                 Search lienholders
@@ -39,7 +45,7 @@ page_header('Lienholders');
             </label>
             <div class="actions">
                 <button type="submit">Search</button>
-                <a class="button secondary" href="<?= e(url('departments/dmv/lienholder-create.php')) ?>">New lienholder</a>
+                <a class="button" href="<?= e(url('departments/dmv/lienholder-create.php')) ?>">New lienholder</a>
             </div>
         </form>
     </section>
@@ -49,23 +55,25 @@ page_header('Lienholders');
             <thead>
                 <tr>
                     <th>Lienholder</th>
-                    <th>Contact</th>
                     <th>Address</th>
-                    <th>Phone</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($lienholders as $lienholder): ?>
                     <tr>
                         <td><?= e($lienholder['company_name']) ?></td>
-                        <td><?= e($lienholder['contact_name']) ?></td>
                         <td><?= e($lienholder['mailing_address'] . ', ' . $lienholder['city'] . ', ' . $lienholder['state'] . ' ' . $lienholder['zip_code']) ?></td>
-                        <td><?= e($lienholder['phone']) ?></td>
+                        <td>
+                            <div class="table-actions">
+                                <a class="icon-link" href="<?= e(url('departments/dmv/lienholder-edit.php?id=' . $lienholder['id'])) ?>" title="Edit lienholder" aria-label="Edit lienholder">✎</a>
+                            </div>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$lienholders): ?>
                     <tr>
-                        <td colspan="4">No lienholders found.</td>
+                        <td colspan="3">No lienholders found.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

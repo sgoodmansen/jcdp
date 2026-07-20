@@ -53,6 +53,7 @@ CREATE TABLE dmv_lienholders (
     state VARCHAR(40) NOT NULL,
     zip_code VARCHAR(20) NOT NULL,
     phone VARCHAR(40) NULL,
+    fax VARCHAR(40) NULL,
     email VARCHAR(190) NULL,
     notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -69,11 +70,15 @@ CREATE TABLE dmv_title_requests (
     created_by INT UNSIGNED NULL,
     request_date DATE NOT NULL,
     registrant_name VARCHAR(160) NOT NULL,
+    registrant_name_2 VARCHAR(160) NULL,
     registrant_address VARCHAR(190) NOT NULL,
     registrant_city VARCHAR(100) NOT NULL,
     registrant_state VARCHAR(40) NOT NULL,
     registrant_zip_code VARCHAR(20) NOT NULL,
+    registrant_phone VARCHAR(40) NULL,
     vehicle_year VARCHAR(10) NULL,
+    vehicle_make_id INT UNSIGNED NULL,
+    vehicle_model_id INT UNSIGNED NULL,
     vehicle_make VARCHAR(80) NULL,
     vehicle_model VARCHAR(80) NULL,
     vin VARCHAR(80) NULL,
@@ -90,6 +95,35 @@ CREATE TABLE dmv_title_requests (
     CONSTRAINT fk_dmv_title_requests_created_by
         FOREIGN KEY (created_by) REFERENCES users(id)
         ON DELETE SET NULL
+);
+
+CREATE TABLE dmv_vehicle_makes (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE dmv_vehicle_models (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    make_id INT UNSIGNED NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_dmv_model_make_name (make_id, name),
+    CONSTRAINT fk_dmv_vehicle_models_make
+        FOREIGN KEY (make_id) REFERENCES dmv_vehicle_makes(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE dmv_vehicle_make_aliases (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    make_id INT UNSIGNED NOT NULL,
+    alias VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_dmv_vehicle_make_aliases_make
+        FOREIGN KEY (make_id) REFERENCES dmv_vehicle_makes(id)
+        ON DELETE CASCADE
 );
 
 INSERT INTO departments (name, slug, description) VALUES
