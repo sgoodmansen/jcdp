@@ -35,6 +35,12 @@ $statement = db()->prepare(
 );
 $statement->execute($params);
 $requests = $statement->fetchAll();
+$actions = [
+    ['label' => 'New title request', 'href' => url('departments/dmv/title-request-create.php'), 'primary' => true],
+    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
+    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php')],
+    ['label' => 'New lienholder', 'href' => url('departments/dmv/lienholder-create.php')],
+];
 
 page_header('Title Requests');
 ?>
@@ -47,11 +53,7 @@ page_header('Title Requests');
             <div class="notice success"><?= e($message) ?></div>
         <?php endif; ?>
 
-        <div class="actions" style="margin-bottom: 18px;">
-            <a class="button secondary" href="<?= e(url('departments/dmv/index.php')) ?>">DMV home</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/lienholders.php')) ?>">Lienholders</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/lienholder-create.php')) ?>">New lienholder</a>
-        </div>
+        <?php page_actions($actions); ?>
 
         <form class="form" method="get">
             <?php if ($status !== ''): ?>
@@ -64,7 +66,6 @@ page_header('Title Requests');
             </label>
             <div class="actions">
                 <button type="submit">Search</button>
-                <a class="button secondary" href="<?= e(url('departments/dmv/title-request-create.php')) ?>">New title request</a>
                 <?php if ($status !== ''): ?>
                     <a class="button secondary" href="<?= e(url('departments/dmv/title-requests.php')) ?>">Clear status filter</a>
                 <?php endif; ?>
@@ -73,7 +74,7 @@ page_header('Title Requests');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
-        <table class="table">
+        <table class="table mobile-card-table">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -87,17 +88,17 @@ page_header('Title Requests');
             <tbody>
                 <?php foreach ($requests as $request): ?>
                     <tr>
-                        <td><?= e($request['request_date']) ?></td>
-                        <td>
+                        <td data-label="Date"><?= e($request['request_date']) ?></td>
+                        <td data-label="Registrant">
                             <?= e($request['registrant_name']) ?>
                             <?php if (!empty($request['registrant_name_2'])): ?>
                                 <br><span class="meta"><?= e($request['registrant_name_2']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td><?= e($request['company_name']) ?></td>
-                        <td><?= e(trim($request['vehicle_year'] . ' ' . $request['display_vehicle_make'] . ' ' . $request['display_vehicle_model'])) ?></td>
-                        <td><?= e(ucfirst($request['status'])) ?></td>
-                        <td>
+                        <td data-label="Lienholder"><?= e($request['company_name']) ?></td>
+                        <td data-label="Vehicle"><?= e(trim($request['vehicle_year'] . ' ' . $request['display_vehicle_make'] . ' ' . $request['display_vehicle_model'])) ?></td>
+                        <td data-label="Status"><?= e(ucfirst($request['status'])) ?></td>
+                        <td data-label="Actions">
                             <div class="table-actions">
                                 <a class="icon-link" href="<?= e(url('departments/dmv/title-request-detail.php?id=' . $request['id'])) ?>" title="View details" aria-label="View title request details">▤</a>
                                 <a class="icon-link" href="<?= e(url('departments/dmv/title-request-edit.php?id=' . $request['id'])) ?>" title="Edit title request" aria-label="Edit title request">✎</a>

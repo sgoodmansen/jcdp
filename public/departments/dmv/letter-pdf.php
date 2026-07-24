@@ -23,6 +23,12 @@ class SimplePdf
         $this->content[] = "BT /{$font} {$size} Tf {$x} {$y} Td ({$escaped}) Tj ET";
     }
 
+    public function textRight(string $text, float $rightX, float $y, int $size = 11, bool $bold = false): void
+    {
+        $width = strlen($text) * $size * 0.5;
+        $this->text($text, $rightX - $width, $y, $size, $bold);
+    }
+
     public function line(string $text = '', int $size = 11, bool $bold = false): void
     {
         if ($text !== '') {
@@ -155,7 +161,7 @@ $pdf->text('Phone: (208) 745-9228', 54, 710);
 $pdf->text('Fax: (208) 745-5240', 54, 696);
 $pdf->text('Assessor: Jessica Roach', 54, 682);
 
-$pdf->text('Date ' . date('n/j/Y', strtotime($request['request_date'])), 420, 682);
+$pdf->text(date('n/j/Y', strtotime($request['request_date'])), 420, 682);
 
 $pdf->setCursor(54, 642);
 $pdf->line($request['company_name'], 11, true);
@@ -184,27 +190,31 @@ $pdf->wrapped('The Idaho title showing your lien will be forwarded to you immedi
 
 $pdf->blank(18);
 $detailsY = 400;
-$pdf->text('Owner', 54, $detailsY, 11, true);
-$pdf->text($registrantNames, 120, $detailsY);
-$pdf->text('Year', 360, $detailsY, 11, true);
-$pdf->text((string) $request['vehicle_year'], 420, $detailsY);
+$leftLabelX = 108;
+$leftValueX = 120;
+$rightLabelX = 378;
+$rightValueX = 390;
 
-$pdf->text('Address', 54, $detailsY - 18, 11, true);
-$pdf->text($request['registrant_address'], 120, $detailsY - 18);
-$pdf->text('Make', 360, $detailsY - 18, 11, true);
-$pdf->text((string) $request['vehicle_make'], 420, $detailsY - 18);
+$pdf->textRight('Owner', $leftLabelX, $detailsY, 11, true);
+$pdf->text($registrantNames, $leftValueX, $detailsY);
+$pdf->textRight('Year', $rightLabelX, $detailsY, 11, true);
+$pdf->text((string) $request['vehicle_year'], $rightValueX, $detailsY);
 
-$pdf->text('City, State Zip', 54, $detailsY - 36, 11, true);
-$pdf->text($request['registrant_city'] . ' ' . $request['registrant_state'] . ' ' . $request['registrant_zip_code'], 145, $detailsY - 36);
-$pdf->text('Type', 360, $detailsY - 36, 11, true);
-$pdf->text((string) $request['vehicle_model'], 420, $detailsY - 36);
+$pdf->textRight('Address', $leftLabelX, $detailsY - 18, 11, true);
+$pdf->text($request['registrant_address'], $leftValueX, $detailsY - 18);
+$pdf->textRight('Make', $rightLabelX, $detailsY - 18, 11, true);
+$pdf->text((string) $request['vehicle_make'], $rightValueX, $detailsY - 18);
+
+$pdf->text($request['registrant_city'] . ' ' . $request['registrant_state'] . ' ' . $request['registrant_zip_code'], $leftValueX, $detailsY - 36);
+$pdf->textRight('Model', $rightLabelX, $detailsY - 36, 11, true);
+$pdf->text((string) $request['vehicle_model'], $rightValueX, $detailsY - 36);
 
 if (!empty($request['registrant_phone'])) {
-    $pdf->text('Phone', 54, $detailsY - 54, 11, true);
-    $pdf->text($request['registrant_phone'], 120, $detailsY - 54);
+    $pdf->textRight('Phone', $leftLabelX, $detailsY - 54, 11, true);
+    $pdf->text($request['registrant_phone'], $leftValueX, $detailsY - 54);
 }
-$pdf->text('VIN', 360, $detailsY - 54, 11, true);
-$pdf->text((string) $request['vin'], 420, $detailsY - 54);
+$pdf->textRight('VIN', $rightLabelX, $detailsY - 54, 11, true);
+$pdf->text(normalize_vin($request['vin']), $rightValueX, $detailsY - 54);
 
 $pdf->setCursor(54, 280);
 $pdf->line('Sincerely,');

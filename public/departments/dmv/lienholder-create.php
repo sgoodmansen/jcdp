@@ -14,10 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $statement->execute([
         'created_by' => $user['id'],
-        'company_name' => trim($_POST['company_name'] ?? ''),
+        'company_name' => title_case_company($_POST['company_name'] ?? ''),
         'contact_name' => trim($_POST['contact_name'] ?? ''),
-        'mailing_address' => trim($_POST['mailing_address'] ?? ''),
-        'city' => trim($_POST['city'] ?? ''),
+        'mailing_address' => title_case_address($_POST['mailing_address'] ?? ''),
+        'city' => title_case_name($_POST['city'] ?? ''),
         'state' => trim($_POST['state'] ?? ''),
         'zip_code' => trim($_POST['zip_code'] ?? ''),
         'phone' => trim($_POST['phone'] ?? ''),
@@ -29,14 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $lienholderId = (int) db()->lastInsertId();
     audit_event('created', 'dmv_lienholder', (string) $lienholderId, [
-        'company_name' => trim($_POST['company_name'] ?? ''),
-        'city' => trim($_POST['city'] ?? ''),
+        'company_name' => title_case_company($_POST['company_name'] ?? ''),
+        'city' => title_case_name($_POST['city'] ?? ''),
         'state' => trim($_POST['state'] ?? ''),
     ]);
 
     flash('success', 'Lienholder created.');
     redirect_to('departments/dmv/lienholders.php');
 }
+
+$actions = [
+    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php'), 'primary' => true],
+    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
+];
 
 page_header('New Lienholder');
 ?>
@@ -45,10 +50,7 @@ page_header('New Lienholder');
         <h1>New Lienholder</h1>
         <p>Add a lienholder contact that can be reused for title request letters.</p>
 
-        <div class="actions" style="margin-bottom: 18px;">
-            <a class="button secondary" href="<?= e(url('departments/dmv/lienholders.php')) ?>">Lienholders</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/index.php')) ?>">DMV home</a>
-        </div>
+        <?php page_actions($actions); ?>
 
         <form class="form compact-form" method="post">
             <label class="span-2">

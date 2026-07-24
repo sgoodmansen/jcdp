@@ -2,6 +2,51 @@
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_department_access('dmv');
 
+function title_request_history_action(string $action): string
+{
+    return match ($action) {
+        'created' => 'Created',
+        'updated' => 'Edited',
+        'status_changed' => 'Status changed',
+        default => ucwords(str_replace('_', ' ', $action)),
+    };
+}
+
+function title_request_history_details(?string $json): string
+{
+    $details = json_decode($json ?? '', true);
+
+    if (!is_array($details)) {
+        return '';
+    }
+
+    if (isset($details['previous_status'], $details['new_status'])) {
+        return ucfirst((string) $details['previous_status']) . ' to ' . ucfirst((string) $details['new_status']);
+    }
+
+    $parts = [];
+
+    if (isset($details['registrant_name'], $details['previous_registrant_name'])
+        && $details['registrant_name'] !== $details['previous_registrant_name']) {
+        $parts[] = 'Registrant changed from ' . $details['previous_registrant_name'] . ' to ' . $details['registrant_name'];
+    }
+
+    if (isset($details['previous_status'], $details['status'])
+        && $details['status'] !== $details['previous_status']) {
+        $parts[] = 'Status changed from ' . ucfirst((string) $details['previous_status']) . ' to ' . ucfirst((string) $details['status']);
+    }
+
+    if (isset($details['registrant_name']) && !$parts) {
+        $parts[] = 'Registrant: ' . $details['registrant_name'];
+    }
+
+    if (isset($details['status']) && !$parts) {
+        $parts[] = 'Status: ' . ucfirst((string) $details['status']);
+    }
+
+    return implode('; ', $parts);
+}
+
 $id = (int) ($_GET['id'] ?? 0);
 $statement = db()->prepare(
     'SELECT
@@ -63,6 +108,27 @@ if (!empty($request['registrant_name_2'])) {
     $registrantNames .= ' and ' . $request['registrant_name_2'];
 }
 
+$historyStatement = db()->prepare(
+    'SELECT
+        audit_log.*,
+        users.first_name,
+        users.last_name,
+        users.email
+     FROM audit_log
+     LEFT JOIN users ON users.id = audit_log.user_id
+     WHERE audit_log.entity_type = "dmv_title_request"
+       AND audit_log.entity_id = :entity_id
+     ORDER BY audit_log.created_at DESC, audit_log.id DESC'
+);
+$historyStatement->execute(['entity_id' => (string) $request['id']]);
+$historyEvents = $historyStatement->fetchAll();
+$actions = [
+    ['label' => 'View letter', 'href' => url('departments/dmv/letter.php?id=' . $request['id']), 'primary' => true],
+    ['label' => 'Edit request', 'href' => url('departments/dmv/title-request-edit.php?id=' . $request['id'])],
+    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
+    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
+];
+
 page_header('Title Request Detail');
 ?>
 <main class="shell">
@@ -77,25 +143,26 @@ page_header('Title Request Detail');
         <h1>Title Request Detail</h1>
         <p><?= e($registrantNames) ?> - <?= e(ucfirst($request['status'])) ?></p>
 
-        <div class="actions">
-            <a class="button" href="<?= e(url('departments/dmv/letter.php?id=' . $request['id'])) ?>">View letter</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-request-edit.php?id=' . $request['id'])) ?>">Edit request</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-requests.php')) ?>">Title requests</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/index.php')) ?>">DMV home</a>
-        </div>
-
-        <p class="meta" style="margin-top: 12px;">Current status: <?= e(ucfirst($request['status'])) ?></p>
-        <div class="actions" style="margin-top: 12px;">
-            <?php foreach (['sent' => 'Mark as Sent', 'received' => 'Mark as Received', 'closed' => 'Close Request'] as $newStatus => $label): ?>
-                <?php if ($request['status'] !== $newStatus): ?>
-                    <form method="post" action="<?= e(url('departments/dmv/status-update.php')) ?>">
-                        <input type="hidden" name="id" value="<?= e((string) $request['id']) ?>">
-                        <input type="hidden" name="status" value="<?= e($newStatus) ?>">
-                        <input type="hidden" name="return_to" value="detail">
-                        <button type="submit" class="secondary"><?= e($label) ?></button>
-                    </form>
-                <?php endif; ?>
-            <?php endforeach; ?>
+        <div class="page-toolbar">
+            <?php page_actions($actions); ?>
+            <aside class="status-panel" aria-label="Request status">
+                <div class="status-panel-header">
+                    <strong>Request Status</strong>
+                    <span class="badge"><?= e(ucfirst($request['status'])) ?></span>
+                </div>
+                <div class="actions status-actions">
+                    <?php foreach (['sent' => 'Mark as Sent', 'received' => 'Mark as Received', 'closed' => 'Close Request'] as $newStatus => $label): ?>
+                        <?php if ($request['status'] !== $newStatus): ?>
+                            <form method="post" action="<?= e(url('departments/dmv/status-update.php')) ?>">
+                                <input type="hidden" name="id" value="<?= e((string) $request['id']) ?>">
+                                <input type="hidden" name="status" value="<?= e($newStatus) ?>">
+                                <input type="hidden" name="return_to" value="detail">
+                                <button type="submit" class="secondary"><?= e($label) ?></button>
+                            </form>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </aside>
         </div>
     </section>
 
@@ -119,10 +186,10 @@ page_header('Title Request Detail');
                 <dd><?= e($request['vehicle_year'] ?: 'Not provided') ?></dd>
                 <dt>Make</dt>
                 <dd><?= e($request['vehicle_make'] ?: 'Not provided') ?></dd>
-                <dt>Type</dt>
+                <dt>Model</dt>
                 <dd><?= e($request['vehicle_model'] ?: 'Not provided') ?></dd>
                 <dt>VIN</dt>
-                <dd><?= e($request['vin'] ?: 'Not provided') ?></dd>
+                <dd><?= e($request['vin'] ? normalize_vin($request['vin']) : 'Not provided') ?></dd>
             </dl>
         </article>
 
@@ -166,5 +233,54 @@ page_header('Title Request Detail');
         <h1>Notes</h1>
         <p><?= e($request['notes'] ?: 'No notes entered.') ?></p>
     </section>
+
+    <section class="panel" style="margin-top: 18px;">
+        <div class="section-heading-row">
+            <h1>History</h1>
+            <button type="button" class="secondary compact-button" id="history-toggle" aria-expanded="false" aria-controls="history-content">Show History</button>
+        </div>
+        <div id="history-content" hidden>
+            <?php if (!$historyEvents): ?>
+                <p>No history has been recorded for this title request.</p>
+            <?php else: ?>
+                <table class="table mobile-card-table">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($historyEvents as $event): ?>
+                            <tr>
+                                <td data-label="Date/Time"><?= e($event['created_at']) ?></td>
+                                <td data-label="User">
+                                    <?= e(trim(($event['first_name'] ?? '') . ' ' . ($event['last_name'] ?? '')) ?: 'System') ?>
+                                    <?php if (!empty($event['email'])): ?>
+                                        <br><span class="meta"><?= e($event['email']) ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td data-label="Action"><?= e(title_request_history_action($event['action'])) ?></td>
+                                <td data-label="Details"><?= e(title_request_history_details($event['details'])) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+    </section>
 </main>
+<script>
+    const historyToggle = document.getElementById('history-toggle');
+    const historyContent = document.getElementById('history-content');
+
+    historyToggle?.addEventListener('click', () => {
+        const willExpand = historyContent.hidden;
+        historyContent.hidden = !willExpand;
+        historyToggle.setAttribute('aria-expanded', willExpand ? 'true' : 'false');
+        historyToggle.textContent = willExpand ? 'Hide History' : 'Show History';
+    });
+</script>
 <?php page_footer(); ?>

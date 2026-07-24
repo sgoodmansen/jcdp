@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $vehicleModelId = (int) ($_POST['vehicle_model_id'] ?? 0);
     $vehicleMake = '';
     $vehicleModel = '';
+    $vin = normalize_vin($_POST['vin'] ?? '');
 
     if ($vehicleMakeId > 0) {
         $makeStatement = db()->prepare('SELECT name FROM dmv_vehicle_makes WHERE id = :id AND is_active = 1');
@@ -85,10 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'id' => $id,
         'lienholder_id' => (int) ($_POST['lienholder_id'] ?? 0),
         'request_date' => $_POST['request_date'] ?? date('Y-m-d'),
-        'registrant_name' => trim($_POST['registrant_name'] ?? ''),
-        'registrant_name_2' => trim($_POST['registrant_name_2'] ?? ''),
-        'registrant_address' => trim($_POST['registrant_address'] ?? ''),
-        'registrant_city' => trim($_POST['registrant_city'] ?? ''),
+        'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
+        'registrant_name_2' => title_case_name($_POST['registrant_name_2'] ?? ''),
+        'registrant_address' => title_case_address($_POST['registrant_address'] ?? ''),
+        'registrant_city' => title_case_name($_POST['registrant_city'] ?? ''),
         'registrant_state' => trim($_POST['registrant_state'] ?? ''),
         'registrant_zip_code' => trim($_POST['registrant_zip_code'] ?? ''),
         'registrant_phone' => trim($_POST['registrant_phone'] ?? ''),
@@ -97,13 +98,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'vehicle_model_id' => $vehicleModelId > 0 ? $vehicleModelId : null,
         'vehicle_make' => $vehicleMake,
         'vehicle_model' => $vehicleModel,
-        'vin' => trim($_POST['vin'] ?? ''),
+        'vin' => $vin,
         'status' => $_POST['status'] ?? 'draft',
         'notes' => trim($_POST['notes'] ?? ''),
     ]);
 
     audit_event('updated', 'dmv_title_request', (string) $id, [
-        'registrant_name' => trim($_POST['registrant_name'] ?? ''),
+        'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
         'previous_registrant_name' => $request['registrant_name'],
         'status' => $_POST['status'] ?? 'draft',
         'previous_status' => $request['status'],
@@ -113,6 +114,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('departments/dmv/letter.php?id=' . $id);
 }
 
+$actions = [
+    ['label' => 'View letter', 'href' => url('departments/dmv/letter.php?id=' . $request['id']), 'primary' => true],
+    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
+    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
+];
+
 page_header('Edit Title Request');
 ?>
 <main class="shell">
@@ -120,11 +127,11 @@ page_header('Edit Title Request');
         <h1>Edit Title Request</h1>
         <p>Update the registrant, lienholder, vehicle, or status information for this request.</p>
 
-        <div class="actions" style="margin-bottom: 18px;">
-            <a class="button secondary" href="<?= e(url('departments/dmv/letter.php?id=' . $request['id'])) ?>">View letter</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-requests.php')) ?>">Title requests</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/index.php')) ?>">DMV home</a>
-        </div>
+        <?php page_actions($actions); ?>
+
+        <?php if ($message = flash('error')): ?>
+            <div class="notice error"><?= e($message) ?></div>
+        <?php endif; ?>
 
         <form class="form compact-form" method="post">
             <input type="hidden" name="id" value="<?= e((string) $request['id']) ?>">
@@ -142,14 +149,6 @@ page_header('Edit Title Request');
             <label>
                 Request date
                 <input type="date" name="request_date" value="<?= e($request['request_date']) ?>" required>
-            </label>
-            <label>
-                Status
-                <select name="status">
-                    <?php foreach (['draft' => 'Draft', 'sent' => 'Sent', 'received' => 'Received', 'closed' => 'Closed'] as $value => $label): ?>
-                        <option value="<?= e($value) ?>" <?= $request['status'] === $value ? 'selected' : '' ?>><?= e($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
             </label>
             <label>
                 Registrant name
@@ -183,7 +182,8 @@ page_header('Edit Title Request');
             </label>
             <label>
                 VIN
-                <input name="vin" value="<?= e($request['vin']) ?>">
+                <input name="vin" class="vin-input" title="Standard VINs are 17 letters or numbers and do not include I, O, or Q." value="<?= e(normalize_vin($request['vin'])) ?>" data-vin-check-url="<?= e(url('departments/dmv/vin-check.php')) ?>" data-current-request-id="<?= e((string) $request['id']) ?>">
+                <span class="field-warning vin-warning" aria-live="polite"></span>
             </label>
             <label>
                 Vehicle year
@@ -208,6 +208,14 @@ page_header('Edit Title Request');
                         <option value="<?= e((string) $model['id']) ?>" <?= (int) $request['vehicle_model_id'] === (int) $model['id'] ? 'selected' : '' ?>>
                             <?= e($model['name']) ?>
                         </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                Status
+                <select name="status">
+                    <?php foreach (['draft' => 'Draft', 'sent' => 'Sent', 'received' => 'Received', 'closed' => 'Closed'] as $value => $label): ?>
+                        <option value="<?= e($value) ?>" <?= $request['status'] === $value ? 'selected' : '' ?>><?= e($label) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -248,5 +256,5 @@ page_header('Edit Title Request');
         vehicleModel.disabled = false;
     });
 </script>
-<script src="<?= e(url('assets/forms.js?v=20260720')) ?>"></script>
+<script src="<?= e(url('assets/forms.js?v=20260722c')) ?>"></script>
 <?php page_footer(); ?>

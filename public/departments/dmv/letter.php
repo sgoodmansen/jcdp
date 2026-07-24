@@ -60,6 +60,12 @@ $registrantNames = $request['registrant_name'];
 if (!empty($request['registrant_name_2'])) {
     $registrantNames .= ' and ' . $request['registrant_name_2'];
 }
+$actions = [
+    ['label' => 'Download PDF', 'href' => url('departments/dmv/letter-pdf.php?id=' . $request['id']), 'primary' => true],
+    ['label' => 'Edit request', 'href' => url('departments/dmv/title-request-edit.php?id=' . $request['id'])],
+    ['label' => 'Request details', 'href' => url('departments/dmv/title-request-detail.php?id=' . $request['id'])],
+    ['label' => 'Back to requests', 'href' => url('departments/dmv/title-requests.php')],
+];
 
 page_header('Title Request Letter');
 ?>
@@ -71,24 +77,28 @@ page_header('Title Request Letter');
         <?php if ($message = flash('error')): ?>
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
-        <div class="actions">
-            <button onclick="window.print()">Print letter</button>
-            <a class="button" href="<?= e(url('departments/dmv/letter-pdf.php?id=' . $request['id'])) ?>">Download PDF</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-request-edit.php?id=' . $request['id'])) ?>">Edit request</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-request-detail.php?id=' . $request['id'])) ?>">Request details</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-requests.php')) ?>">Back to requests</a>
-        </div>
-        <p class="meta" style="margin-top: 12px;">Current status: <?= e(ucfirst($request['status'])) ?></p>
-        <div class="actions" style="margin-top: 12px;">
-            <?php foreach (['sent' => 'Mark as Sent', 'received' => 'Mark as Received', 'closed' => 'Close Request'] as $newStatus => $label): ?>
-                <?php if ($request['status'] !== $newStatus): ?>
-                    <form method="post" action="<?= e(url('departments/dmv/status-update.php')) ?>">
-                        <input type="hidden" name="id" value="<?= e((string) $request['id']) ?>">
-                        <input type="hidden" name="status" value="<?= e($newStatus) ?>">
-                        <button type="submit" class="secondary"><?= e($label) ?></button>
-                    </form>
-                <?php endif; ?>
-            <?php endforeach; ?>
+        <div class="page-toolbar">
+            <div class="letter-action-row">
+                <button type="button" class="button desktop-print-button" onclick="window.print()">Print letter</button>
+                <?php page_actions($actions); ?>
+            </div>
+            <aside class="status-panel" aria-label="Request status">
+                <div class="status-panel-header">
+                    <strong>Request Status</strong>
+                    <span class="badge"><?= e(ucfirst($request['status'])) ?></span>
+                </div>
+                <div class="actions status-actions">
+                    <?php foreach (['sent' => 'Mark as Sent', 'received' => 'Mark as Received', 'closed' => 'Close Request'] as $newStatus => $label): ?>
+                        <?php if ($request['status'] !== $newStatus): ?>
+                            <form method="post" action="<?= e(url('departments/dmv/status-update.php')) ?>">
+                                <input type="hidden" name="id" value="<?= e((string) $request['id']) ?>">
+                                <input type="hidden" name="status" value="<?= e($newStatus) ?>">
+                                <button type="submit" class="secondary"><?= e($label) ?></button>
+                            </form>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </aside>
         </div>
     </section>
 
@@ -119,7 +129,7 @@ page_header('Title Request Letter');
                     Phone <?= e($request['lienholder_phone']) ?><?= $request['lienholder_phone_extension'] ? ' ext. ' . e($request['lienholder_phone_extension']) : '' ?>
                 <?php endif; ?>
             </p>
-            <p>Date <?= e(date('n/j/Y', strtotime($request['request_date']))) ?></p>
+            <p><?= e(date('n/j/Y', strtotime($request['request_date']))) ?></p>
         </div>
 
         <p>
@@ -138,20 +148,28 @@ page_header('Title Request Letter');
         </p>
 
         <div class="letter-details">
-            <div>
-                <strong>Owner</strong> <?= e($registrantNames) ?><br>
-                <strong>Address</strong> <?= e($request['registrant_address']) ?><br>
-                <strong>City, State Zip</strong> <?= e($request['registrant_city']) ?> <?= e($request['registrant_state']) ?> <?= e($request['registrant_zip_code']) ?><br>
+            <dl class="letter-detail-list">
+                <dt>Owner</dt>
+                <dd><?= e($registrantNames) ?></dd>
+                <dt>Address</dt>
+                <dd><?= e($request['registrant_address']) ?></dd>
+                <dt aria-hidden="true"></dt>
+                <dd><?= e($request['registrant_city']) ?> <?= e($request['registrant_state']) ?> <?= e($request['registrant_zip_code']) ?></dd>
                 <?php if ($request['registrant_phone']): ?>
-                    <strong>Phone</strong> <?= e($request['registrant_phone']) ?>
+                    <dt>Phone</dt>
+                    <dd><?= e($request['registrant_phone']) ?></dd>
                 <?php endif; ?>
-            </div>
-            <div>
-                <strong>Year</strong> <?= e($request['vehicle_year']) ?><br>
-                <strong>Make</strong> <?= e($request['vehicle_make']) ?><br>
-                <strong>Type</strong> <?= e($request['vehicle_model']) ?><br>
-                <strong>VIN</strong> <?= e($request['vin']) ?>
-            </div>
+            </dl>
+            <dl class="letter-detail-list vehicle-detail-list">
+                <dt>Year</dt>
+                <dd><?= e($request['vehicle_year']) ?></dd>
+                <dt>Make</dt>
+                <dd><?= e($request['vehicle_make']) ?></dd>
+                <dt>Model</dt>
+                <dd><?= e($request['vehicle_model']) ?></dd>
+                <dt>VIN</dt>
+                <dd><?= e(normalize_vin($request['vin'])) ?></dd>
+            </dl>
         </div>
 
         <p>

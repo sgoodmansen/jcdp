@@ -8,16 +8,22 @@ function current_user(): ?array
         return null;
     }
 
-    $statement = db()->prepare(
-        'SELECT users.*, departments.name AS department_name
-         FROM users
-         LEFT JOIN departments ON departments.id = users.department_id
-         WHERE users.id = :id AND users.is_active = 1'
-    );
+    $statement = db()->prepare('SELECT * FROM users WHERE id = :id AND is_active = 1');
     $statement->execute(['id' => $_SESSION['user_id']]);
     $user = $statement->fetch();
 
-    return $user ?: null;
+    if (!$user) {
+        return null;
+    }
+
+    $departments = departments_for_user((int) $user['id']);
+    $departmentNames = array_column($departments, 'name');
+
+    $user['departments'] = $departments;
+    $user['department_names'] = implode(', ', $departmentNames);
+    $user['department_name'] = $user['department_names'];
+
+    return $user;
 }
 
 function is_logged_in(): bool
@@ -63,17 +69,78 @@ function can_access_department(string $slug): bool
         return true;
     }
 
-    if (empty($user['department_id'])) {
-        return false;
-    }
-
-    $statement = db()->prepare('SELECT id FROM departments WHERE slug = :slug AND id = :id');
+    $statement = db()->prepare(
+        'SELECT departments.id
+         FROM departments
+         INNER JOIN user_departments ON user_departments.department_id = departments.id
+         WHERE departments.slug = :slug
+           AND user_departments.user_id = :user_id'
+    );
     $statement->execute([
         'slug' => $slug,
-        'id' => $user['department_id'],
+        'user_id' => $user['id'],
     ]);
 
     return (bool) $statement->fetch();
+}
+
+function departments_for_user(int $userId): array
+{
+    $statement = db()->prepare(
+        'SELECT departments.*
+         FROM departments
+         INNER JOIN user_departments ON user_departments.department_id = departments.id
+         WHERE user_departments.user_id = :user_id
+         ORDER BY departments.name'
+    );
+    $statement->execute(['user_id' => $userId]);
+    $departments = $statement->fetchAll();
+
+    if ($departments) {
+        return $departments;
+    }
+
+    $statement = db()->prepare(
+        'SELECT departments.*
+         FROM users
+         INNER JOIN departments ON departments.id = users.department_id
+         WHERE users.id = :user_id
+         ORDER BY departments.name'
+    );
+    $statement->execute(['user_id' => $userId]);
+
+    return $statement->fetchAll();
+}
+
+function department_ids_for_user(int $userId): array
+{
+    return array_map(fn($department) => (int) $department['id'], departments_for_user($userId));
+}
+
+function sync_user_departments(int $userId, array $departmentIds): void
+{
+    $departmentIds = array_values(array_unique(array_filter(array_map('intval', $departmentIds))));
+
+    $statement = db()->prepare('DELETE FROM user_departments WHERE user_id = :user_id');
+    $statement->execute(['user_id' => $userId]);
+
+    if (!$departmentIds) {
+        return;
+    }
+
+    $statement = db()->prepare(
+        'INSERT INTO user_departments (user_id, department_id)
+         SELECT :user_id, id
+         FROM departments
+         WHERE id = :department_id'
+    );
+
+    foreach ($departmentIds as $departmentId) {
+        $statement->execute([
+            'user_id' => $userId,
+            'department_id' => $departmentId,
+        ]);
+    }
 }
 
 function require_department_access(string $slug): void

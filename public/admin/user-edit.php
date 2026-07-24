@@ -16,7 +16,9 @@ if (!$portalUser) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $departmentId = $_POST['department_id'] !== '' ? (int) $_POST['department_id'] : null;
+    $departmentIds = (array) ($_POST['department_ids'] ?? []);
+    $departmentId = $departmentIds ? (int) reset($departmentIds) : null;
+    $previousDepartmentIds = department_ids_for_user($id);
     $isActive = isset($_POST['is_active']) ? 1 : 0;
     $password = trim($_POST['password'] ?? '');
 
@@ -64,13 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
     }
 
+    sync_user_departments($id, $departmentIds);
+
     audit_event('updated', 'user', (string) $id, [
         'email' => trim($_POST['email'] ?? ''),
         'previous_email' => $portalUser['email'],
         'role' => $_POST['role'] ?? 'standard_user',
         'previous_role' => $portalUser['role'],
-        'department_id' => $departmentId,
-        'previous_department_id' => $portalUser['department_id'],
+        'department_ids' => array_values(array_map('intval', $departmentIds)),
+        'previous_department_ids' => $previousDepartmentIds,
         'is_active' => $isActive,
         'previous_is_active' => $portalUser['is_active'],
         'password_reset' => $password !== '',
@@ -81,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $departments = db()->query('SELECT * FROM departments ORDER BY name')->fetchAll();
+$assignedDepartmentIds = department_ids_for_user($id);
 
 page_header('Edit User');
 ?>
@@ -111,22 +116,22 @@ page_header('Edit User');
             <label>
                 Role
                 <select name="role" required>
-                    <?php foreach (['standard_user' => 'Standard User', 'department_admin' => 'Department Admin', 'system_admin' => 'IT System Admin'] as $value => $label): ?>
+                    <?php foreach (['standard_user' => 'Standard User', 'department_admin' => 'Department Supervisor', 'system_admin' => 'IT System Admin'] as $value => $label): ?>
                         <option value="<?= e($value) ?>" <?= $portalUser['role'] === $value ? 'selected' : '' ?>><?= e($label) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
-            <label>
-                Department
-                <select name="department_id">
-                    <option value="">No department / IT admin</option>
+            <fieldset class="form-fieldset span-2">
+                <legend>Departments</legend>
+                <div class="checkbox-grid">
                     <?php foreach ($departments as $department): ?>
-                        <option value="<?= e((string) $department['id']) ?>" <?= (int) $portalUser['department_id'] === (int) $department['id'] ? 'selected' : '' ?>>
+                        <label class="check-option">
+                            <input type="checkbox" name="department_ids[]" value="<?= e((string) $department['id']) ?>" <?= in_array((int) $department['id'], $assignedDepartmentIds, true) ? 'checked' : '' ?>>
                             <?= e($department['name']) ?>
-                        </option>
+                        </label>
                     <?php endforeach; ?>
-                </select>
-            </label>
+                </div>
+            </fieldset>
             <label>
                 Temporary password
                 <input type="password" name="password" placeholder="Leave blank to keep current password">

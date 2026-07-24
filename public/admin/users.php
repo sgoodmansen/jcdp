@@ -3,12 +3,14 @@ require_once __DIR__ . '/../../app/bootstrap.php';
 require_system_admin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $departmentIds = (array) ($_POST['department_ids'] ?? []);
+    $departmentId = $departmentIds ? (int) reset($departmentIds) : null;
+
     $statement = db()->prepare(
         'INSERT INTO users (department_id, first_name, last_name, email, password_hash, role)
          VALUES (:department_id, :first_name, :last_name, :email, :password_hash, :role)'
     );
 
-    $departmentId = $_POST['department_id'] !== '' ? (int) $_POST['department_id'] : null;
     $statement->execute([
         'department_id' => $departmentId,
         'first_name' => trim($_POST['first_name'] ?? ''),
@@ -19,10 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
 
     $userId = (int) db()->lastInsertId();
+    sync_user_departments($userId, $departmentIds);
+
     audit_event('created', 'user', (string) $userId, [
         'email' => trim($_POST['email'] ?? ''),
         'role' => $_POST['role'] ?? 'standard_user',
-        'department_id' => $departmentId,
+        'department_ids' => array_values(array_map('intval', $departmentIds)),
     ]);
 
     flash('success', 'User account created.');
@@ -30,9 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $users = db()->query(
-    'SELECT users.*, departments.name AS department_name
+    'SELECT users.*, user_department_summary.department_names
      FROM users
-     LEFT JOIN departments ON departments.id = users.department_id
+     LEFT JOIN (
+        SELECT user_departments.user_id, GROUP_CONCAT(departments.name ORDER BY departments.name SEPARATOR ", ") AS department_names
+        FROM user_departments
+        INNER JOIN departments ON departments.id = user_departments.department_id
+        GROUP BY user_departments.user_id
+     ) AS user_department_summary ON user_department_summary.user_id = users.id
      ORDER BY users.last_name, users.first_name'
 )->fetchAll();
 
@@ -49,7 +58,7 @@ page_header('Manage Users');
             <div class="notice success"><?= e($message) ?></div>
         <?php endif; ?>
 
-        <form class="form" method="post">
+        <form class="form compact-form" method="post">
             <label>
                 First name
                 <input name="first_name" required>
@@ -70,20 +79,24 @@ page_header('Manage Users');
                 Role
                 <select name="role" required>
                     <option value="standard_user">Standard User</option>
-                    <option value="department_admin">Department Admin</option>
+                    <option value="department_admin">Department Supervisor</option>
                     <option value="system_admin">IT System Admin</option>
                 </select>
             </label>
-            <label>
-                Department
-                <select name="department_id">
-                    <option value="">No department / IT admin</option>
+            <fieldset class="form-fieldset span-2">
+                <legend>Departments</legend>
+                <div class="checkbox-grid">
                     <?php foreach ($departments as $department): ?>
-                        <option value="<?= e((string) $department['id']) ?>"><?= e($department['name']) ?></option>
+                        <label class="check-option">
+                            <input type="checkbox" name="department_ids[]" value="<?= e((string) $department['id']) ?>">
+                            <?= e($department['name']) ?>
+                        </label>
                     <?php endforeach; ?>
-                </select>
-            </label>
-            <button type="submit">Create user</button>
+                </div>
+            </fieldset>
+            <div class="actions span-2">
+                <button type="submit">Create user</button>
+            </div>
         </form>
     </section>
 
@@ -95,7 +108,7 @@ page_header('Manage Users');
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th>Department</th>
+                    <th>Departments</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -106,7 +119,7 @@ page_header('Manage Users');
                         <td><?= e($portalUser['first_name'] . ' ' . $portalUser['last_name']) ?></td>
                         <td><?= e($portalUser['email']) ?></td>
                         <td><?= e(status_badge($portalUser['role'])) ?></td>
-                        <td><?= e($portalUser['department_name'] ?? 'None') ?></td>
+                        <td><?= e($portalUser['department_names'] ?? 'None') ?></td>
                         <td><?= $portalUser['is_active'] ? 'Active' : 'Inactive' ?></td>
                         <td>
                             <div class="table-actions">

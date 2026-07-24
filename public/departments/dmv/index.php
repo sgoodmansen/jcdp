@@ -20,6 +20,18 @@ foreach ($statusRows as $row) {
     $statusCounts[$row['status']] = (int) $row['request_count'];
 }
 
+$actions = [
+    ['label' => 'New title request', 'href' => url('departments/dmv/title-request-create.php'), 'primary' => true],
+    ['label' => 'New lienholder', 'href' => url('departments/dmv/lienholder-create.php')],
+    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
+    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php')],
+    ['label' => 'Reports', 'href' => url('departments/dmv/report.php')],
+];
+
+if (can_manage_department('dmv')) {
+    $actions[] = ['label' => 'Vehicle lookups', 'href' => url('departments/dmv/vehicle-lookups.php')];
+}
+
 $recentRecords = db()->query(
     'SELECT
         dmv_title_requests.*,
@@ -37,42 +49,40 @@ $recentRecords = db()->query(
      LIMIT 5'
 )->fetchAll();
 
-page_header('DMV');
+page_header('DMV Home');
 ?>
 <main class="shell">
     <section class="panel">
-        <h1>DMV Title Requests</h1>
+        <h1>DMV Home</h1>
         <p>Create title request letters, track request status, and maintain reusable lienholder contact information.</p>
-        <div class="actions">
-            <a class="button" href="<?= e(url('departments/dmv/title-request-create.php')) ?>">New title request</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/lienholder-create.php')) ?>">New lienholder</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-requests.php')) ?>">Title requests</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/lienholders.php')) ?>">Lienholders</a>
-            <?php if (can_manage_department('dmv')): ?>
-                <a class="button secondary" href="<?= e(url('departments/dmv/vehicle-lookups.php')) ?>">Vehicle lookups</a>
-            <?php endif; ?>
-            <a class="button secondary" href="<?= e(url('departments/dmv/report.php')) ?>">Reports</a>
+        <?php page_actions($actions); ?>
+    </section>
+
+    <section class="dashboard-stat-row" style="margin-top: 18px;">
+        <div class="dashboard-stat-group status-summary-group">
+            <h2>Request Status</h2>
+            <div class="grid dashboard-stat-grid">
+                <?php foreach ($statusCounts as $status => $count): ?>
+                    <a class="card status-card" href="<?= e(url('departments/dmv/title-requests.php?status=' . $status)) ?>">
+                        <h3><?= e((string) $count) ?></h3>
+                        <p><?= e(ucfirst($status)) ?></p>
+                    </a>
+                <?php endforeach; ?>
+            </div>
         </div>
-    </section>
-
-    <section class="grid status-grid" style="margin-top: 18px;">
-        <?php foreach ($statusCounts as $status => $count): ?>
-            <a class="card status-card" href="<?= e(url('departments/dmv/title-requests.php?status=' . $status)) ?>">
-                <h2><?= e((string) $count) ?></h2>
-                <p><?= e(ucfirst($status)) ?> title requests</p>
-            </a>
-        <?php endforeach; ?>
-    </section>
-
-    <section class="grid" style="margin-top: 18px;">
-        <article class="card">
-            <h2><?= e((string) $totalRequests) ?></h2>
-            <p>Total title requests entered.</p>
-        </article>
-        <article class="card">
-            <h2><?= e((string) $totalLienholders) ?></h2>
-            <p>Lienholder contacts available for letters.</p>
-        </article>
+        <div class="dashboard-stat-group summary-stat-group">
+            <h2>Summary</h2>
+            <div class="grid dashboard-stat-grid">
+                <article class="card dashboard-stat-card">
+                    <h3><?= e((string) $totalRequests) ?></h3>
+                    <p>Total</p>
+                </article>
+                <article class="card dashboard-stat-card">
+                    <h3><?= e((string) $totalLienholders) ?></h3>
+                    <p>Lienholders</p>
+                </article>
+            </div>
+        </div>
     </section>
 
     <section class="panel" style="margin-top: 18px;">
@@ -80,7 +90,7 @@ page_header('DMV');
         <?php if (!$recentRecords): ?>
             <p>No title requests have been entered yet.</p>
         <?php else: ?>
-            <table class="table">
+            <table class="table mobile-card-table">
                 <thead>
                     <tr>
                         <th>Request Date</th>
@@ -94,12 +104,12 @@ page_header('DMV');
                 <tbody>
                     <?php foreach ($recentRecords as $record): ?>
                         <tr>
-                            <td><?= e($record['request_date']) ?></td>
-                            <td><?= e($record['registrant_name']) ?></td>
-                            <td><?= e($record['company_name']) ?></td>
-                            <td><?= e($record['status']) ?></td>
-                            <td><?= e(trim(($record['first_name'] ?? '') . ' ' . ($record['last_name'] ?? ''))) ?></td>
-                            <td>
+                            <td data-label="Request Date"><?= e($record['request_date']) ?></td>
+                            <td data-label="Registrant"><?= e($record['registrant_name']) ?></td>
+                            <td data-label="Lienholder"><?= e($record['company_name']) ?></td>
+                            <td data-label="Status"><?= e($record['status']) ?></td>
+                            <td data-label="Entered By"><?= e(trim(($record['first_name'] ?? '') . ' ' . ($record['last_name'] ?? ''))) ?></td>
+                            <td data-label="Actions">
                                 <div class="table-actions">
                                     <a class="icon-link" href="<?= e(url('departments/dmv/title-request-detail.php?id=' . $record['id'])) ?>" title="View details" aria-label="View title request details">▤</a>
                                     <a class="icon-link" href="<?= e(url('departments/dmv/title-request-edit.php?id=' . $record['id'])) ?>" title="Edit title request" aria-label="Edit title request">✎</a>

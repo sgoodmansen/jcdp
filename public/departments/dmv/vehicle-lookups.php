@@ -112,6 +112,12 @@ $aliases = db()->query(
      INNER JOIN dmv_vehicle_makes ON dmv_vehicle_makes.id = dmv_vehicle_make_aliases.make_id
      ORDER BY dmv_vehicle_makes.name, dmv_vehicle_make_aliases.alias'
 )->fetchAll();
+$actions = [
+    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php'), 'primary' => true],
+    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
+    ['label' => 'New title request', 'href' => url('departments/dmv/title-request-create.php')],
+    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php')],
+];
 
 page_header('Vehicle Lookups');
 ?>
@@ -127,12 +133,7 @@ page_header('Vehicle Lookups');
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
 
-        <div class="actions" style="margin-bottom: 18px;">
-            <a class="button secondary" href="<?= e(url('departments/dmv/index.php')) ?>">DMV home</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-requests.php')) ?>">Title requests</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-request-create.php')) ?>">New title request</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/lienholders.php')) ?>">Lienholders</a>
-        </div>
+        <?php page_actions($actions); ?>
     </section>
 
     <section class="grid" style="margin-top: 18px;">

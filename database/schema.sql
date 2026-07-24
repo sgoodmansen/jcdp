@@ -28,6 +28,19 @@ CREATE TABLE users (
         ON DELETE SET NULL
 );
 
+CREATE TABLE user_departments (
+    user_id INT UNSIGNED NOT NULL,
+    department_id INT UNSIGNED NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, department_id),
+    CONSTRAINT fk_user_departments_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_user_departments_department
+        FOREIGN KEY (department_id) REFERENCES departments(id)
+        ON DELETE CASCADE
+);
+
 CREATE TABLE audit_log (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id INT UNSIGNED NULL,
@@ -104,6 +117,11 @@ CREATE TABLE dmv_vehicle_makes (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    review_status ENUM('unreviewed', 'verified', 'needs_review', 'local_alias') NOT NULL DEFAULT 'unreviewed',
+    official_name VARCHAR(100) NULL,
+    review_notes TEXT NULL,
+    reviewed_by INT UNSIGNED NULL,
+    reviewed_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -112,6 +130,11 @@ CREATE TABLE dmv_vehicle_models (
     make_id INT UNSIGNED NOT NULL,
     name VARCHAR(100) NOT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    review_status ENUM('unreviewed', 'verified', 'needs_review', 'local_alias') NOT NULL DEFAULT 'unreviewed',
+    official_name VARCHAR(100) NULL,
+    review_notes TEXT NULL,
+    reviewed_by INT UNSIGNED NULL,
+    reviewed_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_dmv_model_make_name (make_id, name),
     CONSTRAINT fk_dmv_vehicle_models_make
@@ -126,6 +149,107 @@ CREATE TABLE dmv_vehicle_make_aliases (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_dmv_vehicle_make_aliases_make
         FOREIGN KEY (make_id) REFERENCES dmv_vehicle_makes(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE dare_schools (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(160) NOT NULL UNIQUE,
+    address VARCHAR(190) NULL,
+    city VARCHAR(100) NULL,
+    state VARCHAR(40) NULL,
+    zip_code VARCHAR(20) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE dare_officers (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NULL UNIQUE,
+    first_name VARCHAR(80) NOT NULL,
+    last_name VARCHAR(80) NOT NULL,
+    email VARCHAR(190) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_dare_officer_name (last_name, first_name),
+    CONSTRAINT fk_dare_officers_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE dare_teachers (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    school_id INT UNSIGNED NULL,
+    first_name VARCHAR(80) NOT NULL,
+    last_name VARCHAR(80) NOT NULL,
+    email VARCHAR(190) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_dare_teacher_name (last_name, first_name),
+    CONSTRAINT fk_dare_teachers_school
+        FOREIGN KEY (school_id) REFERENCES dare_schools(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE dare_classes (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    school_id INT UNSIGNED NOT NULL,
+    teacher_id INT UNSIGNED NULL,
+    officer_id INT UNSIGNED NULL,
+    created_by INT UNSIGNED NULL,
+    school_year VARCHAR(20) NULL,
+    class_name VARCHAR(160) NOT NULL,
+    semester VARCHAR(80) NULL,
+    period VARCHAR(40) NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    graduation_date DATE NULL,
+    status ENUM('active', 'completed', 'graduated', 'closed', 'cancelled') NOT NULL DEFAULT 'active',
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_dare_class_dates (start_date, end_date),
+    INDEX idx_dare_class_status (status),
+    CONSTRAINT fk_dare_classes_school
+        FOREIGN KEY (school_id) REFERENCES dare_schools(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_dare_classes_teacher
+        FOREIGN KEY (teacher_id) REFERENCES dare_teachers(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_dare_classes_officer
+        FOREIGN KEY (officer_id) REFERENCES dare_officers(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_dare_classes_created_by
+        FOREIGN KEY (created_by) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE dare_students (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(80) NOT NULL,
+    last_name VARCHAR(80) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_dare_student_name (last_name, first_name)
+);
+
+CREATE TABLE dare_class_students (
+    class_id INT UNSIGNED NOT NULL,
+    student_id INT UNSIGNED NOT NULL,
+    essay_completed TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (class_id, student_id),
+    CONSTRAINT fk_dare_class_students_class
+        FOREIGN KEY (class_id) REFERENCES dare_classes(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_dare_class_students_student
+        FOREIGN KEY (student_id) REFERENCES dare_students(id)
         ON DELETE CASCADE
 );
 

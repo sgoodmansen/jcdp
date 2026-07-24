@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $vehicleModelId = (int) ($_POST['vehicle_model_id'] ?? 0);
     $vehicleMake = '';
     $vehicleModel = '';
+    $vin = normalize_vin($_POST['vin'] ?? '');
 
     if ($vehicleMakeId > 0) {
         $makeStatement = db()->prepare('SELECT name FROM dmv_vehicle_makes WHERE id = :id AND is_active = 1');
@@ -42,10 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'lienholder_id' => (int) ($_POST['lienholder_id'] ?? 0),
         'created_by' => $user['id'],
         'request_date' => $_POST['request_date'] ?? date('Y-m-d'),
-        'registrant_name' => trim($_POST['registrant_name'] ?? ''),
-        'registrant_name_2' => trim($_POST['registrant_name_2'] ?? ''),
-        'registrant_address' => trim($_POST['registrant_address'] ?? ''),
-        'registrant_city' => trim($_POST['registrant_city'] ?? ''),
+        'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
+        'registrant_name_2' => title_case_name($_POST['registrant_name_2'] ?? ''),
+        'registrant_address' => title_case_address($_POST['registrant_address'] ?? ''),
+        'registrant_city' => title_case_name($_POST['registrant_city'] ?? ''),
         'registrant_state' => trim($_POST['registrant_state'] ?? ''),
         'registrant_zip_code' => trim($_POST['registrant_zip_code'] ?? ''),
         'registrant_phone' => trim($_POST['registrant_phone'] ?? ''),
@@ -54,14 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'vehicle_model_id' => $vehicleModelId > 0 ? $vehicleModelId : null,
         'vehicle_make' => $vehicleMake,
         'vehicle_model' => $vehicleModel,
-        'vin' => trim($_POST['vin'] ?? ''),
+        'vin' => $vin,
         'status' => $_POST['status'] ?? 'draft',
         'notes' => trim($_POST['notes'] ?? ''),
     ]);
 
     $requestId = (int) db()->lastInsertId();
     audit_event('created', 'dmv_title_request', (string) $requestId, [
-        'registrant_name' => trim($_POST['registrant_name'] ?? ''),
+        'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
         'lienholder_id' => (int) ($_POST['lienholder_id'] ?? 0),
         'status' => $_POST['status'] ?? 'draft',
     ]);
@@ -79,6 +80,9 @@ page_header('New Title Request');
 
         <?php if (!$lienholders): ?>
             <div class="notice error">Create at least one lienholder before creating a title request.</div>
+        <?php endif; ?>
+        <?php if ($message = flash('error')): ?>
+            <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
 
         <form class="form compact-form" method="post">
@@ -128,7 +132,8 @@ page_header('New Title Request');
             </label>
             <label>
                 VIN
-                <input name="vin">
+                <input name="vin" class="vin-input" title="Standard VINs are 17 letters or numbers and do not include I, O, or Q." data-vin-check-url="<?= e(url('departments/dmv/vin-check.php')) ?>">
+                <span class="field-warning vin-warning" aria-live="polite"></span>
             </label>
             <label>
                 Vehicle year
@@ -203,5 +208,5 @@ page_header('New Title Request');
         vehicleModel.disabled = false;
     });
 </script>
-<script src="<?= e(url('assets/forms.js?v=20260720')) ?>"></script>
+<script src="<?= e(url('assets/forms.js?v=20260722c')) ?>"></script>
 <?php page_footer(); ?>

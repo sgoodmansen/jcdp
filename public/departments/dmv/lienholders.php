@@ -4,6 +4,9 @@ require_department_access('dmv');
 
 $search = trim($_GET['search'] ?? '');
 $status = $_GET['status'] ?? 'active';
+$page = max(1, (int) ($_GET['page'] ?? 1));
+$perPage = 50;
+$offset = ($page - 1) * $perPage;
 $params = [];
 $whereParts = [];
 
@@ -21,15 +24,57 @@ if ($status === 'inactive') {
 
 $where = $whereParts ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
+$countStatement = db()->prepare("SELECT COUNT(*) FROM dmv_lienholders $where");
+$countStatement->execute($params);
+$totalLienholders = (int) $countStatement->fetchColumn();
+$totalPages = max(1, (int) ceil($totalLienholders / $perPage));
+
+if ($page > $totalPages) {
+    $page = $totalPages;
+    $offset = ($page - 1) * $perPage;
+}
+
 $statement = db()->prepare(
     "SELECT *
      FROM dmv_lienholders
      $where
      ORDER BY company_name
-     LIMIT 100"
+     LIMIT :limit OFFSET :offset"
 );
-$statement->execute($params);
+
+foreach ($params as $key => $value) {
+    $statement->bindValue(':' . $key, $value);
+}
+
+$statement->bindValue(':limit', $perPage, PDO::PARAM_INT);
+$statement->bindValue(':offset', $offset, PDO::PARAM_INT);
+$statement->execute();
 $lienholders = $statement->fetchAll();
+
+$queryBase = [
+    'search' => $search,
+    'status' => $status,
+];
+$actions = [
+    ['label' => 'New lienholder', 'href' => url('departments/dmv/lienholder-create.php'), 'primary' => true],
+    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
+    ['label' => 'New title request', 'href' => url('departments/dmv/title-request-create.php')],
+    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
+];
+
+if (can_manage_department('dmv')) {
+    $actions[] = ['label' => 'Merge lienholders', 'href' => url('departments/dmv/lienholder-merge.php')];
+}
+
+function lienholder_page_url(array $queryBase, int $page): string
+{
+    $query = array_filter(
+        array_merge($queryBase, ['page' => $page]),
+        fn($value) => $value !== '' && $value !== null
+    );
+
+    return url('departments/dmv/lienholders.php?' . http_build_query($query));
+}
 
 page_header('Lienholders');
 ?>
@@ -41,12 +86,11 @@ page_header('Lienholders');
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>
         <?php endif; ?>
+        <?php if ($message = flash('error')): ?>
+            <div class="notice error"><?= e($message) ?></div>
+        <?php endif; ?>
 
-        <div class="actions" style="margin-bottom: 18px;">
-            <a class="button secondary" href="<?= e(url('departments/dmv/index.php')) ?>">DMV home</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-request-create.php')) ?>">New title request</a>
-            <a class="button secondary" href="<?= e(url('departments/dmv/title-requests.php')) ?>">Title requests</a>
-        </div>
+        <?php page_actions($actions); ?>
 
         <form class="form" method="get">
             <label>
@@ -63,13 +107,18 @@ page_header('Lienholders');
             </label>
             <div class="actions">
                 <button type="submit">Search</button>
-                <a class="button" href="<?= e(url('departments/dmv/lienholder-create.php')) ?>">New lienholder</a>
             </div>
         </form>
     </section>
 
     <section class="panel" style="margin-top: 18px;">
-        <table class="table">
+        <div class="pagination-summary">
+            Showing <?= e((string) ($totalLienholders === 0 ? 0 : $offset + 1)) ?>
+            to <?= e((string) min($offset + $perPage, $totalLienholders)) ?>
+            of <?= e((string) $totalLienholders) ?> lienholders
+        </div>
+
+        <table class="table mobile-card-table">
             <thead>
                 <tr>
                     <th>Lienholder</th>
@@ -81,15 +130,18 @@ page_header('Lienholders');
             <tbody>
                 <?php foreach ($lienholders as $lienholder): ?>
                     <tr>
-                        <td><?= e($lienholder['company_name']) ?></td>
-                        <td><?= e($lienholder['mailing_address'] . ', ' . $lienholder['city'] . ', ' . $lienholder['state'] . ' ' . $lienholder['zip_code']) ?></td>
-                        <td>
+                        <td data-label="Lienholder"><?= e($lienholder['company_name']) ?></td>
+                        <td data-label="Address"><?= e($lienholder['mailing_address'] . ', ' . $lienholder['city'] . ', ' . $lienholder['state'] . ' ' . $lienholder['zip_code']) ?></td>
+                        <td data-label="Status">
                             <span class="badge <?= (int) $lienholder['is_active'] === 1 ? 'badge-success' : 'badge-muted' ?>">
                                 <?= (int) $lienholder['is_active'] === 1 ? 'Active' : 'Inactive' ?>
                             </span>
                         </td>
-                        <td>
+                        <td data-label="Actions">
                             <div class="table-actions">
+                                <?php if (can_manage_department('dmv')): ?>
+                                    <a class="icon-link" href="<?= e(url('departments/dmv/lienholder-merge.php?source_id=' . $lienholder['id'])) ?>" title="Merge lienholder" aria-label="Merge lienholder">⇄</a>
+                                <?php endif; ?>
                                 <a class="icon-link" href="<?= e(url('departments/dmv/lienholder-edit.php?id=' . $lienholder['id'])) ?>" title="Edit lienholder" aria-label="Edit lienholder">✎</a>
                             </div>
                         </td>
@@ -102,6 +154,24 @@ page_header('Lienholders');
                 <?php endif; ?>
             </tbody>
         </table>
+
+        <?php if ($totalPages > 1): ?>
+            <nav class="pagination" aria-label="Lienholder pages">
+                <?php if ($page > 1): ?>
+                    <a class="button secondary" href="<?= e(lienholder_page_url($queryBase, $page - 1)) ?>">Previous</a>
+                <?php else: ?>
+                    <span class="button secondary disabled-button" aria-disabled="true">Previous</span>
+                <?php endif; ?>
+
+                <span class="pagination-current">Page <?= e((string) $page) ?> of <?= e((string) $totalPages) ?></span>
+
+                <?php if ($page < $totalPages): ?>
+                    <a class="button secondary" href="<?= e(lienholder_page_url($queryBase, $page + 1)) ?>">Next</a>
+                <?php else: ?>
+                    <span class="button secondary disabled-button" aria-disabled="true">Next</span>
+                <?php endif; ?>
+            </nav>
+        <?php endif; ?>
     </section>
 </main>
 <?php page_footer(); ?>
