@@ -723,6 +723,37 @@ textarea {
     display: none;
 }
 
+.setup-section summary {
+    cursor: pointer;
+    list-style: none;
+    margin-bottom: 0;
+}
+
+.setup-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.setup-section summary h1 {
+    margin-bottom: 0;
+}
+
+.setup-section summary .button::after {
+    content: "";
+}
+
+.setup-section[open] summary {
+    margin-bottom: 18px;
+}
+
+.setup-section[open] summary .button {
+    font-size: 0;
+}
+
+.setup-section[open] summary .button::after {
+    content: "Hide section";
+    font-size: 14px;
+}
+
 .hamburger-lines,
 .hamburger-lines::before,
 .hamburger-lines::after {

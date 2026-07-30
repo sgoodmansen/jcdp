@@ -21,4 +21,5 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/dare.php';
+require_once __DIR__ . '/election.php';
 require_once __DIR__ . '/layout.php';

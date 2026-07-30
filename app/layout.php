@@ -149,6 +149,7 @@ function friendly_user_title(array $user): string
         return match ($departments) {
             'DMV' => 'DMV Clerk',
             'DARE' => 'DARE Officer',
+            'Election Training' => 'Election County Employee',
             default => 'Department User',
         };
     }
@@ -157,6 +158,7 @@ function friendly_user_title(array $user): string
         return match ($departments) {
             'DMV' => 'DMV Supervisor',
             'DARE' => 'DARE Supervisor',
+            'Election Training' => 'Election Supervisor',
             default => 'Department Supervisor',
         };
     }

@@ -14,8 +14,10 @@ if ($user['role'] === 'system_admin') {
 
 $hasDmvAccess = can_access_department('dmv');
 $hasDareAccess = can_access_department('dare');
+$hasElectionAccess = can_access_department('election');
 $dmvActions = [];
 $dareActions = [];
+$electionActions = [];
 $recentDmvRequests = [];
 $nextDareLessons = [];
 
@@ -65,6 +67,19 @@ if ($hasDareAccess) {
     }
 
     $nextDareLessons = dare_next_lessons_for_user($user, 5);
+}
+
+if ($hasElectionAccess) {
+    $electionActions = [
+        ['label' => 'Election Home', 'href' => url('departments/election/index.php'), 'primary' => true],
+        ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
+        ['label' => 'Workers', 'href' => url('departments/election/workers.php')],
+    ];
+
+    if (can_access_department('election')) {
+        $electionActions[] = ['label' => 'New class', 'href' => url('departments/election/class-edit.php')];
+        $electionActions[] = ['label' => 'Setup', 'href' => url('departments/election/setup.php')];
+    }
 }
 
 page_header('Dashboard');
@@ -180,6 +195,12 @@ page_header('Dashboard');
                     </table>
                 <?php endif; ?>
             </section>
+        <?php elseif ($department['slug'] === 'election'): ?>
+            <section class="panel" style="margin-top: 18px;">
+                <h1>Election Training</h1>
+                <p><?= e($department['description']) ?></p>
+                <?php page_actions($electionActions); ?>
+            </section>
         <?php else: ?>
             <section class="panel" style="margin-top: 18px;">
                 <h1><?= e($department['name']) ?></h1>
@@ -197,6 +218,7 @@ page_header('Dashboard');
             <div class="actions">
                 <a class="button" href="<?= e(url('admin/users.php')) ?>">Manage users</a>
                 <a class="button secondary" href="<?= e(url('admin/audit-log.php')) ?>">Audit log</a>
+                <a class="button secondary" href="<?= e(url('admin/setup-election-module.php')) ?>">Setup Election Module</a>
             </div>
         </section>
     <?php endif; ?>

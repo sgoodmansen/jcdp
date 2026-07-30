@@ -13,6 +13,8 @@ function formatPhoneNumber(value) {
 }
 
 document.querySelectorAll('.phone-input').forEach((input) => {
+    input.value = formatPhoneNumber(input.value);
+
     input.addEventListener('input', () => {
         input.value = formatPhoneNumber(input.value);
     });
