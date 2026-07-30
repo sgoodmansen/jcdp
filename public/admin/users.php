@@ -73,7 +73,7 @@ page_header('Manage Users');
             </label>
             <label>
                 Temporary password
-                <input type="password" name="password" required>
+                <input type="password" name="password" autocomplete="new-password" required>
             </label>
             <label>
                 Role

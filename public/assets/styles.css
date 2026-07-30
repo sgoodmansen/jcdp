@@ -8,9 +8,13 @@
     --panel: #f5f7fa;
     --primary: #1f6f8b;
     --primary-dark: #174f63;
-    --secondary-bg: #eef4f7;
-    --secondary-hover: #dfeaf0;
-    --status-panel-bg: #f8fafb;
+    --secondary-bg: #e3edf2;
+    --secondary-hover: #d2e2ea;
+    --secondary-border: #cfdae2;
+    --status-panel-bg: #eef3f6;
+    --badge-bg: #e3edf2;
+    --badge-muted-bg: #e2e8ee;
+    --hero-bg: linear-gradient(135deg, #ffffff 0%, #e9f3f7 100%);
     --focus-ring: rgba(31, 111, 139, 0.16);
     --shadow: rgba(23, 32, 42, 0.18);
     --accent: #d7a328;
@@ -30,7 +34,11 @@
     --primary-dark: #7fbad0;
     --secondary-bg: #263545;
     --secondary-hover: #314254;
+    --secondary-border: #354352;
     --status-panel-bg: #17212d;
+    --badge-bg: #263545;
+    --badge-muted-bg: #263545;
+    --hero-bg: linear-gradient(135deg, #1c2633 0%, #17212d 100%);
     --focus-ring: rgba(92, 166, 196, 0.25);
     --shadow: rgba(0, 0, 0, 0.35);
     --success: #73c994;
@@ -167,7 +175,7 @@ a {
 }
 
 .hero {
-    background: linear-gradient(135deg, #ffffff 0%, #e9f3f7 100%);
+    background: var(--hero-bg);
     border-bottom: 1px solid var(--line);
 }
 
@@ -204,6 +212,10 @@ a {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.two-column-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .card {
     background: var(--panel);
     border: 1px solid var(--line);
@@ -234,6 +246,22 @@ a {
     gap: 12px;
 }
 
+.dashboard-stat-card {
+    min-height: 94px;
+    padding: 18px 20px;
+}
+
+.dashboard-stat-card h3 {
+    font-size: 30px;
+    line-height: 1;
+    margin: 0 0 12px;
+}
+
+.dashboard-stat-card p {
+    font-size: 17px;
+    margin-bottom: 0;
+}
+
 .dashboard-stat-row {
     display: grid;
     gap: 14px;
@@ -258,22 +286,6 @@ a {
 
 .summary-stat-group .dashboard-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.dashboard-stat-row .card {
-    padding: 14px 12px;
-}
-
-.dashboard-stat-row h3 {
-    font-size: 28px;
-    line-height: 1;
-    margin: 0 0 8px;
-}
-
-.dashboard-stat-row p {
-    font-size: 14px;
-    margin-bottom: 0;
-    white-space: nowrap;
 }
 
 .status-card p {
@@ -301,11 +313,13 @@ button {
 
 .button.secondary {
     background: var(--secondary-bg);
+    border: 1px solid var(--secondary-border);
     color: var(--primary-dark);
 }
 
 button.secondary {
     background: var(--secondary-bg);
+    border: 1px solid var(--secondary-border);
     color: var(--primary-dark);
 }
 
@@ -464,6 +478,45 @@ select {
     min-height: 50px;
 }
 
+.password-field {
+    display: block;
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 52px;
+}
+
+.password-toggle {
+    align-items: center;
+    background: transparent;
+    border-radius: 4px;
+    color: var(--primary-dark);
+    display: inline-flex;
+    height: 36px;
+    justify-content: center;
+    min-height: 0;
+    padding: 0;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+}
+
+.password-toggle span::before {
+    content: "\1F441";
+    font-size: 18px;
+    line-height: 1;
+}
+
+.password-toggle:hover,
+.password-toggle:focus {
+    background: var(--secondary-bg);
+    box-shadow: none;
+    transform: translateY(-50%);
+}
+
 input[type="checkbox"] {
     min-height: 0;
     width: auto;
@@ -595,6 +648,15 @@ textarea {
     margin-bottom: 0;
 }
 
+.student-panel-actions {
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.student-panel-actions .meta {
+    margin-right: -2px;
+}
+
 .class-title-block {
     display: grid;
     gap: 8px;
@@ -616,6 +678,31 @@ textarea {
     color: var(--muted);
     display: inline-flex;
     font-weight: 700;
+}
+
+.class-header-layout {
+    align-items: start;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+}
+
+.class-header-status {
+    background: var(--status-panel-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+}
+
+.class-header-status .status-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.class-header-status .meta {
+    margin: 0;
 }
 
 .compact-button {
@@ -716,6 +803,14 @@ textarea {
     gap: 8px;
 }
 
+.student-status-table .table-actions {
+    flex-wrap: nowrap;
+}
+
+.student-status-table select {
+    min-width: 124px;
+}
+
 .icon-link {
     align-items: center;
     background: var(--secondary-bg);
@@ -739,6 +834,18 @@ textarea {
     box-shadow: 0 2px 6px var(--shadow);
     outline: none;
     transform: translateY(-1px);
+}
+
+.note-link-has-note {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+.note-link-has-note:hover,
+.note-link-has-note:focus {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
 }
 
 .detail-grid {
@@ -842,6 +949,450 @@ textarea {
     grid-template-columns: 58px minmax(0, 1fr);
 }
 
+.roster-shell {
+    max-width: 1040px;
+}
+
+.roster-header {
+    align-items: flex-start;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.roster-header h1 {
+    margin-bottom: 0;
+}
+
+.roster-summary {
+    display: grid;
+    gap: 4px 12px;
+    grid-template-columns: 110px minmax(0, 1fr);
+    margin: 0;
+}
+
+.roster-summary dt {
+    color: var(--muted);
+    font-weight: 700;
+    text-align: right;
+}
+
+.roster-summary dd {
+    margin: 0;
+}
+
+.roster-table {
+    margin-top: 24px;
+}
+
+.report-group-heading {
+    border-bottom: 2px solid var(--line);
+    font-size: 24px;
+    margin: 24px 0 10px;
+    padding-bottom: 6px;
+}
+
+.report-subgroup-heading {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 18px;
+    margin: 14px 0 6px;
+}
+
+.report-subgroup-heading span {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.report-compact-table {
+    margin-top: 0;
+}
+
+.report-compact-table th,
+.report-compact-table td {
+    padding: 4px 5px;
+}
+
+.report-compact-table th:nth-child(1),
+.report-compact-table td:nth-child(1) {
+    width: 28%;
+}
+
+.report-compact-table th:nth-child(2),
+.report-compact-table td:nth-child(2) {
+    width: 82px;
+}
+
+.report-compact-table th:nth-child(3),
+.report-compact-table td:nth-child(3) {
+    width: 68px;
+}
+
+.report-compact-table th:nth-child(4),
+.report-compact-table td:nth-child(4) {
+    width: auto;
+}
+
+.roster-number {
+    text-align: center !important;
+    width: 42px;
+}
+
+.roster-table th:nth-child(3),
+.roster-table td:nth-child(3) {
+    width: 86px;
+}
+
+.roster-table th:nth-child(4),
+.roster-table td:nth-child(4) {
+    width: 72px;
+}
+
+.roster-table th:nth-child(5),
+.roster-table td:nth-child(5) {
+    width: 84px;
+}
+
+.roster-table th:nth-child(6),
+.roster-table td:nth-child(6) {
+    width: 34%;
+}
+
+.certificate-shell {
+    max-width: 1320px;
+}
+
+.dare-certificate {
+    background: transparent;
+    border: 0;
+    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.18);
+    color: #111827;
+    font-family: Georgia, "Times New Roman", serif;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 1240px;
+    padding: 0;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+}
+
+.certificate-print-page {
+    margin-top: 18px;
+}
+
+.dare-certificate p {
+    color: #263447;
+    max-width: none;
+}
+
+.certificate-border {
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
+        url("certificate-flag-bg.svg") center / cover no-repeat;
+    border: 4px solid #1f4f86;
+    box-shadow:
+        inset 0 0 0 5px #ffffff,
+        inset 0 0 0 9px #c9182b,
+        inset 0 0 0 13px #ffffff;
+    min-height: 690px;
+    overflow: hidden;
+    padding: 36px 52px 34px;
+    position: relative;
+    text-align: center;
+}
+
+.certificate-border::before {
+    border: 1px solid rgba(215, 163, 40, 0.9);
+    content: "";
+    inset: 22px;
+    pointer-events: none;
+    position: absolute;
+}
+
+.certificate-border::after {
+    content: none;
+}
+
+.certificate-header {
+    align-items: center;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: 170px 1fr 170px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.certificate-header img {
+    height: auto;
+    justify-self: center;
+    width: 150px;
+}
+
+.certificate-logo {
+    width: 190px;
+}
+
+.certificate-flag-mark {
+    width: 170px;
+}
+
+.certificate-header div {
+    grid-column: 2;
+}
+
+.certificate-header p {
+    color: #1f4f86;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+}
+
+.certificate-header h1 {
+    color: #111827;
+    font-size: 52px;
+    line-height: 1.1;
+    margin: 0 0 8px;
+}
+
+.certificate-header strong {
+    color: #c9182b;
+    display: block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 24px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.certificate-stars {
+    color: #1f4f86;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin: 4px 0 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.certificate-stars span:nth-child(even) {
+    color: #c9182b;
+}
+
+.certificate-stars span {
+    font-size: 0;
+}
+
+.certificate-stars span::before {
+    content: "\2605";
+    font-size: 18px;
+}
+
+.certificate-intro {
+    color: #1f4f86;
+    font-size: 21px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.certificate-student-name {
+    border-bottom: 0;
+    color: #111827;
+    display: inline-block;
+    font-size: 54px;
+    font-weight: 700;
+    line-height: 1.15;
+    margin: 0 auto 18px;
+    min-width: 56%;
+    padding: 0 18px 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.certificate-program-line {
+    color: #111827;
+    font-size: 27px;
+    font-weight: 700;
+    line-height: 1.34;
+    margin: 0 auto 10px;
+    max-width: 880px;
+    position: relative;
+    z-index: 1;
+}
+
+.certificate-date-line {
+    background: #1f4f86;
+    border-radius: 999px;
+    color: #ffffff !important;
+    display: inline-block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    margin: 0 auto 18px;
+    padding: 8px 28px;
+    position: relative;
+    z-index: 1;
+}
+
+.certificate-body {
+    color: #111827;
+    font-size: 23px;
+    font-style: italic;
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 0 auto 34px;
+    max-width: 840px;
+    position: relative;
+    z-index: 1;
+}
+
+.certificate-meta-row {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0 auto 46px;
+    max-width: 900px;
+}
+
+.certificate-meta-row div {
+    border-top: 1px solid #cfd7df;
+    padding-top: 10px;
+}
+
+.certificate-meta-row span,
+.certificate-signatures p {
+    color: #4b5563;
+    display: block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.certificate-meta-row strong {
+    display: block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18px;
+    margin-top: 3px;
+}
+
+.certificate-signatures {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 36px;
+    position: relative;
+    z-index: 1;
+}
+
+.certificate-signatures span {
+    border-bottom: 3px solid #1f4f86;
+    display: block;
+    height: 32px;
+    margin-bottom: 10px;
+}
+
+.certificate-signatures strong {
+    color: #111827;
+    display: block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 17px;
+}
+
+.participation-certificate .certificate-signatures {
+    grid-template-columns: minmax(260px, 420px);
+    justify-content: center;
+    margin-top: 58px;
+}
+
+.template-certificate {
+    aspect-ratio: 1426 / 1103;
+    background: url("dare-certificate-bg.png") center / contain no-repeat;
+    border: 0;
+    box-shadow: none;
+    min-height: 0;
+    padding: 0;
+}
+
+.template-certificate::before,
+.template-certificate .certificate-header,
+.template-certificate .certificate-stars,
+.template-certificate .certificate-intro {
+    display: none;
+}
+
+.template-certificate .certificate-student-name,
+.template-certificate .certificate-program-line,
+.template-certificate .certificate-date-line,
+.template-certificate .certificate-body,
+.template-certificate .certificate-signatures {
+    left: 50%;
+    margin: 0;
+    position: absolute;
+    transform: translateX(-50%);
+    width: 60%;
+}
+
+.template-certificate .certificate-student-name {
+    border-bottom: 0;
+    color: #111827;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: clamp(28px, 3.5vw, 48px);
+    font-weight: 800;
+    line-height: 1.05;
+    padding: 0 12px;
+    top: 42%;
+    width: 72%;
+}
+
+.template-certificate .certificate-program-line {
+    color: #111827;
+    font-size: clamp(14px, 1.55vw, 20px);
+    font-weight: 700;
+    line-height: 1.32;
+    top: 54%;
+    width: 58%;
+}
+
+.template-certificate .certificate-date-line {
+    background: transparent;
+    color: #1f4f86 !important;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: clamp(13px, 1.3vw, 17px);
+    font-weight: 700;
+    padding: 0;
+    top: 62.5%;
+}
+
+.template-certificate .certificate-body {
+    color: #111827;
+    font-size: clamp(12px, 1.22vw, 16px);
+    line-height: 1.28;
+    max-width: none;
+    top: 65%;
+    width: 58%;
+}
+
+.template-certificate .certificate-signatures {
+    bottom: 12%;
+    display: grid;
+    gap: 34px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 72%;
+}
+
+.template-certificate .certificate-signatures span {
+    border-bottom: 2px solid #1f4f86;
+    height: 28px;
+}
+
 @media print {
     .topbar,
     .footer,
@@ -862,6 +1413,115 @@ textarea {
         border: 0;
         font-size: 12pt;
         padding: 0.5in;
+    }
+
+    .roster-toolbar {
+        display: none;
+    }
+
+    .roster-shell {
+        max-width: none;
+        padding: 0;
+    }
+
+    .printable-roster {
+        border: 0;
+        padding: 0;
+    }
+
+    .roster-header {
+        gap: 0.25in;
+        grid-template-columns: minmax(0, 1fr) 2.9in;
+    }
+
+    .roster-header h1 {
+        font-size: 24pt;
+    }
+
+    .roster-table th,
+    .roster-table td {
+        border: 1px solid #9ca3af;
+        color: #111827;
+        font-size: 11pt;
+        padding: 7px 8px;
+    }
+
+    .roster-table td {
+        height: 0.36in;
+    }
+
+    .report-compact-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    .report-compact-table th,
+    .report-compact-table td {
+        font-size: 10pt;
+        height: auto;
+        line-height: 1.15;
+        padding: 2px 4px;
+    }
+
+    .report-compact-table th:nth-child(1),
+    .report-compact-table td:nth-child(1) {
+        width: 28%;
+    }
+
+    .report-compact-table th:nth-child(2),
+    .report-compact-table td:nth-child(2) {
+        width: 0.8in;
+    }
+
+    .report-compact-table th:nth-child(3),
+    .report-compact-table td:nth-child(3) {
+        width: 0.62in;
+    }
+
+    .report-compact-table th:nth-child(4),
+    .report-compact-table td:nth-child(4) {
+        width: auto;
+        white-space: nowrap;
+    }
+
+    .certificate-shell {
+        max-width: none;
+        padding: 0;
+    }
+
+    .dare-certificate {
+        border: 0;
+        box-shadow: none;
+        height: 8.45in;
+        margin: 0 auto !important;
+        max-width: none;
+        padding: 0;
+        width: 10.95in;
+    }
+
+    .certificate-border {
+        height: 100%;
+        min-height: 0;
+        padding: 0.3in 0.42in 0.25in;
+        width: 100%;
+    }
+
+    .template-certificate {
+        aspect-ratio: 1426 / 1103;
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+        width: 100%;
+    }
+
+    .certificate-print-page {
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .certificate-print-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
     }
 }
 
@@ -901,10 +1561,6 @@ textarea {
     justify-content: space-between;
 }
 
-.student-mobile-tools {
-    display: none;
-}
-
 .pagination-summary {
     color: var(--muted);
     font-size: 14px;
@@ -939,7 +1595,7 @@ textarea {
 }
 
 .badge {
-    background: #eef4f7;
+    background: var(--badge-bg);
     border-radius: 999px;
     color: var(--primary-dark);
     display: inline-block;
@@ -954,7 +1610,7 @@ textarea {
 }
 
 .badge-muted {
-    background: #edf0f2;
+    background: var(--badge-muted-bg);
     color: var(--muted);
 }
 
@@ -1059,6 +1715,10 @@ textarea {
         width: 100%;
     }
 
+    .class-header-layout {
+        grid-template-columns: 1fr;
+    }
+
     .detail-grid,
     .detail-list {
         grid-template-columns: 1fr;
@@ -1086,31 +1746,6 @@ textarea {
         display: none;
     }
 
-    .student-mobile-tools {
-        display: grid;
-        gap: 8px;
-        margin: 10px 0 14px;
-    }
-
-    .student-status-table thead {
-        display: table-header-group;
-    }
-
-    .student-status-table thead th {
-        display: none;
-    }
-
-    .student-status-table thead th:nth-child(2) {
-        border-bottom: 0;
-        display: block;
-        padding: 0 0 12px;
-        width: 100%;
-    }
-
-    .student-status-table thead th:nth-child(2) .table-header-control {
-        justify-content: flex-start;
-    }
-
     .mobile-card-table tr {
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -1136,5 +1771,46 @@ textarea {
 
     .mobile-card-table .table-actions {
         justify-content: flex-start;
+    }
+
+    .certificate-border {
+        min-height: 0;
+        padding: 28px 20px;
+    }
+
+    .certificate-header {
+        grid-template-columns: 1fr;
+    }
+
+    .certificate-header div {
+        grid-column: auto;
+    }
+
+    .certificate-header img {
+        margin: 0 auto;
+        width: 120px;
+    }
+
+    .certificate-header h1,
+    .certificate-student-name {
+        font-size: 34px;
+    }
+
+    .certificate-body {
+        font-size: 19px;
+    }
+
+    .certificate-meta-row,
+    .certificate-signatures {
+        grid-template-columns: 1fr;
+    }
+
+    .template-certificate {
+        aspect-ratio: 1426 / 1103;
+        padding: 0;
+    }
+
+    .template-certificate .certificate-signatures {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }

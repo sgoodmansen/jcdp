@@ -154,18 +154,27 @@ CREATE TABLE dmv_vehicle_make_aliases (
 
 CREATE TABLE dare_schools (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    access_school_id VARCHAR(40) NULL UNIQUE,
     name VARCHAR(160) NOT NULL UNIQUE,
     address VARCHAR(190) NULL,
     city VARCHAR(100) NULL,
     state VARCHAR(40) NULL,
     zip_code VARCHAR(20) NULL,
+    principal_name VARCHAR(160) NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE dare_settings (
+    setting_key VARCHAR(80) NOT NULL PRIMARY KEY,
+    setting_value TEXT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 CREATE TABLE dare_officers (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    access_instructor_id VARCHAR(40) NULL UNIQUE,
     user_id INT UNSIGNED NULL UNIQUE,
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
@@ -181,6 +190,7 @@ CREATE TABLE dare_officers (
 
 CREATE TABLE dare_teachers (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    access_teacher_id VARCHAR(40) NULL UNIQUE,
     school_id INT UNSIGNED NULL,
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
@@ -196,6 +206,7 @@ CREATE TABLE dare_teachers (
 
 CREATE TABLE dare_classes (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    access_dareclass_id VARCHAR(40) NULL UNIQUE,
     school_id INT UNSIGNED NOT NULL,
     teacher_id INT UNSIGNED NULL,
     officer_id INT UNSIGNED NULL,
@@ -204,8 +215,8 @@ CREATE TABLE dare_classes (
     class_name VARCHAR(160) NOT NULL,
     semester VARCHAR(80) NULL,
     period VARCHAR(40) NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
+    start_date DATE NULL,
+    end_date DATE NULL,
     graduation_date DATE NULL,
     status ENUM('active', 'completed', 'graduated', 'closed', 'cancelled') NOT NULL DEFAULT 'active',
     notes TEXT NULL,
@@ -229,6 +240,7 @@ CREATE TABLE dare_classes (
 
 CREATE TABLE dare_students (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    access_student_id VARCHAR(40) NULL UNIQUE,
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
@@ -242,6 +254,8 @@ CREATE TABLE dare_class_students (
     class_id INT UNSIGNED NOT NULL,
     student_id INT UNSIGNED NOT NULL,
     essay_completed TINYINT(1) NOT NULL DEFAULT 0,
+    essay_winner TINYINT(1) NOT NULL DEFAULT 0,
+    gender VARCHAR(20) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (class_id, student_id),
@@ -251,6 +265,40 @@ CREATE TABLE dare_class_students (
     CONSTRAINT fk_dare_class_students_student
         FOREIGN KEY (student_id) REFERENCES dare_students(id)
         ON DELETE CASCADE
+);
+
+CREATE TABLE dare_lessons (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(160) NOT NULL,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    notes TEXT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_dare_lessons_active_order (is_active, sort_order, title)
+);
+
+CREATE TABLE dare_class_lessons (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    class_id INT UNSIGNED NOT NULL,
+    lesson_id INT UNSIGNED NULL,
+    lesson_title VARCHAR(160) NOT NULL,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    completed_at TIMESTAMP NULL,
+    completed_by INT UNSIGNED NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_dare_class_lesson (class_id, sort_order, lesson_title),
+    INDEX idx_dare_class_lessons_class_completed (class_id, completed_at),
+    CONSTRAINT fk_dare_class_lessons_class
+        FOREIGN KEY (class_id) REFERENCES dare_classes(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_dare_class_lessons_lesson
+        FOREIGN KEY (lesson_id) REFERENCES dare_lessons(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_dare_class_lessons_completed_by
+        FOREIGN KEY (completed_by) REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
 INSERT INTO departments (name, slug, description) VALUES

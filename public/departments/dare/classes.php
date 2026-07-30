@@ -42,7 +42,7 @@ $statement = db()->prepare(
      LEFT JOIN dare_class_students ON dare_class_students.class_id = dare_classes.id
      $where
      GROUP BY dare_classes.id
-     ORDER BY dare_classes.start_date DESC, dare_classes.school_year DESC, dare_classes.semester, dare_classes.period"
+     ORDER BY dare_classes.start_date IS NULL, dare_classes.start_date DESC, dare_classes.school_year DESC, dare_classes.semester, dare_classes.period"
 );
 $statement->execute($params);
 $classes = $statement->fetchAll();
@@ -51,6 +51,7 @@ $actions = [
     ['label' => 'New class', 'href' => url('departments/dare/class-create.php'), 'primary' => true],
     ['label' => 'DARE Home', 'href' => url('departments/dare/index.php')],
     ['label' => 'Student search', 'href' => url('departments/dare/students.php')],
+    ['label' => 'Reports', 'href' => url('departments/dare/report.php')],
     ['label' => 'Teachers', 'href' => url('departments/dare/teachers.php')],
 ];
 
@@ -102,7 +103,13 @@ page_header('DARE Classes');
                         <td data-label="School"><?= e($class['school_name']) ?></td>
                         <td data-label="Teacher"><?= e(trim(($class['teacher_first_name'] ?? '') . ' ' . ($class['teacher_last_name'] ?? '')) ?: 'Not assigned') ?></td>
                         <td data-label="Officer"><?= e(trim(($class['officer_first_name'] ?? '') . ' ' . ($class['officer_last_name'] ?? '')) ?: 'Not assigned') ?></td>
-                        <td data-label="Dates"><?= e($class['start_date']) ?> to <?= e($class['end_date']) ?></td>
+                        <td data-label="Dates">
+                            <?php if ($class['start_date'] || $class['end_date']): ?>
+                                <?= e($class['start_date'] ?: 'Not set') ?> to <?= e($class['end_date'] ?: 'Not set') ?>
+                            <?php else: ?>
+                                Not set
+                            <?php endif; ?>
+                        </td>
                         <td data-label="Graduation"><?= e($class['graduation_date'] ?: 'Not set') ?></td>
                         <td data-label="Status"><?= e(dare_class_status_label($class['status'])) ?></td>
                         <td data-label="Actions">

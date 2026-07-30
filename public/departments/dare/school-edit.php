@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'city' => title_case_name($_POST['city'] ?? ''),
         'state' => trim($_POST['state'] ?? ''),
         'zip_code' => trim($_POST['zip_code'] ?? ''),
+        'principal_name' => title_case_name($_POST['principal_name'] ?? ''),
         'is_active' => isset($_POST['is_active']) ? 1 : 0,
     ];
 
@@ -36,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              city = :city,
              state = :state,
              zip_code = :zip_code,
+             principal_name = :principal_name,
              is_active = :is_active
          WHERE id = :id'
     );
@@ -88,6 +90,10 @@ page_header('Edit School');
             <label>
                 ZIP code
                 <input name="zip_code" value="<?= e($school['zip_code']) ?>">
+            </label>
+            <label>
+                Principal name
+                <input name="principal_name" value="<?= e($school['principal_name']) ?>">
             </label>
             <label class="check-label compact-check">
                 <input type="checkbox" name="is_active" value="1" <?= (int) $school['is_active'] === 1 ? 'checked' : '' ?>>

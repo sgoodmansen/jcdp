@@ -16,6 +16,7 @@ $essayCompleted = (int) db()->query(
      FROM dare_class_students
      WHERE essay_completed = 1'
 )->fetchColumn();
+$nextLessons = dare_next_lessons_for_user($user);
 
 $recentStatement = db()->prepare(
     'SELECT
@@ -46,11 +47,19 @@ $actions = [
     ['label' => 'New class', 'href' => url('departments/dare/class-create.php'), 'primary' => true],
     ['label' => 'Classes', 'href' => url('departments/dare/classes.php')],
     ['label' => 'Student search', 'href' => url('departments/dare/students.php')],
+    ['label' => 'Reports', 'href' => url('departments/dare/report.php')],
     ['label' => 'Teachers', 'href' => url('departments/dare/teachers.php')],
 ];
 
 if (can_manage_department('dare')) {
     $actions[] = ['label' => 'Schools & officers', 'href' => url('departments/dare/lookups.php')];
+    $actions[] = ['label' => 'Lessons', 'href' => url('departments/dare/lessons.php')];
+}
+
+if (is_system_admin()) {
+    $actions[] = ['label' => 'Import preview', 'href' => url('departments/dare/import-preview.php')];
+    $actions[] = ['label' => 'Import data', 'href' => url('departments/dare/import.php')];
+    $actions[] = ['label' => 'Cleanup', 'href' => url('departments/dare/cleanup.php')];
 }
 
 page_header('DARE Home');
@@ -60,6 +69,13 @@ page_header('DARE Home');
         <h1>DARE Home</h1>
         <p>Track DARE classes, students, essay completion, and certificate readiness.</p>
         <?php page_actions($actions); ?>
+
+        <?php if ($message = flash('success')): ?>
+            <div class="notice success"><?= e($message) ?></div>
+        <?php endif; ?>
+        <?php if ($message = flash('error')): ?>
+            <div class="notice error"><?= e($message) ?></div>
+        <?php endif; ?>
     </section>
 
     <section class="dashboard-stat-row" style="margin-top: 18px;">
@@ -89,6 +105,47 @@ page_header('DARE Home');
         </div>
     </section>
 
+    <?php if ($nextLessons): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <h1>Next Lessons</h1>
+            <table class="table mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>School</th>
+                        <th>School Year</th>
+                        <th>Semester</th>
+                        <th>Period</th>
+                        <th>Teacher</th>
+                        <th>Next Lesson</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($nextLessons as $lesson): ?>
+                        <tr>
+                            <td data-label="School"><?= e($lesson['school_name']) ?></td>
+                            <td data-label="School Year"><?= e($lesson['school_year'] ?: 'Not set') ?></td>
+                            <td data-label="Semester"><?= e($lesson['semester'] ?: 'Not set') ?></td>
+                            <td data-label="Period"><?= e($lesson['period'] ?: 'Not set') ?></td>
+                            <td data-label="Teacher"><?= e(trim(($lesson['teacher_first_name'] ?? '') . ' ' . ($lesson['teacher_last_name'] ?? '')) ?: 'Not assigned') ?></td>
+                            <td data-label="Next Lesson"><?= e($lesson['lesson_title']) ?></td>
+                            <td data-label="Actions">
+                                <div class="table-actions">
+                                    <form method="post" action="<?= e(url('departments/dare/lesson-complete.php')) ?>">
+                                        <input type="hidden" name="class_lesson_id" value="<?= e((string) $lesson['class_lesson_id']) ?>">
+                                        <input type="hidden" name="return_to" value="dashboard">
+                                        <button type="submit" class="secondary compact-button">Mark taught</button>
+                                    </form>
+                                    <a class="icon-link" href="<?= e(url('departments/dare/class-detail.php?id=' . $lesson['class_id'])) ?>" title="View class" aria-label="View DARE class">&#9636;</a>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </section>
+    <?php endif; ?>
+
     <section class="panel" style="margin-top: 18px;">
         <h1>Current Classes</h1>
         <?php if (!$classes): ?>
@@ -103,6 +160,7 @@ page_header('DARE Home');
                         <th>Teacher</th>
                         <th>School</th>
                         <th>Officer</th>
+                        <th>Ends In</th>
                         <th>Students</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -117,6 +175,7 @@ page_header('DARE Home');
                             <td data-label="Teacher"><?= e(trim(($class['teacher_first_name'] ?? '') . ' ' . ($class['teacher_last_name'] ?? '')) ?: 'Not assigned') ?></td>
                             <td data-label="School"><?= e($class['school_name']) ?></td>
                             <td data-label="Officer"><?= e(trim(($class['officer_first_name'] ?? '') . ' ' . ($class['officer_last_name'] ?? '')) ?: 'Not assigned') ?></td>
+                            <td data-label="Ends In"><?= e(dare_class_end_countdown($class['end_date'])) ?></td>
                             <td data-label="Students"><?= e((string) $class['student_count']) ?> / <?= e((string) ($class['graduate_count'] ?? 0)) ?> essays</td>
                             <td data-label="Status"><?= e(dare_class_status_label($class['status'])) ?></td>
                             <td data-label="Actions">

@@ -2,6 +2,8 @@
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_department_access('dare');
 
+$showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] === '1';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $statement = db()->prepare(
         'INSERT INTO dare_teachers (school_id, first_name, last_name, email)
@@ -21,12 +23,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $schools = db()->query('SELECT * FROM dare_schools WHERE is_active = 1 ORDER BY name')->fetchAll();
-$teachers = db()->query(
-    'SELECT dare_teachers.*, dare_schools.name AS school_name
+$teacherWhere = $showInactive ? '' : 'WHERE dare_teachers.is_active = 1';
+$teacherStatement = db()->prepare(
+    "SELECT dare_teachers.*, dare_schools.name AS school_name
      FROM dare_teachers
      LEFT JOIN dare_schools ON dare_schools.id = dare_teachers.school_id
-     ORDER BY dare_teachers.last_name, dare_teachers.first_name'
-)->fetchAll();
+     $teacherWhere
+     ORDER BY dare_teachers.last_name, dare_teachers.first_name"
+);
+$teacherStatement->execute();
+$teachers = $teacherStatement->fetchAll();
+
+$teacherCounts = db()->query(
+    'SELECT
+        SUM(is_active = 1) AS active_count,
+        SUM(is_active = 0) AS inactive_count,
+        COUNT(*) AS total_count
+     FROM dare_teachers'
+)->fetch() ?: ['active_count' => 0, 'inactive_count' => 0, 'total_count' => 0];
 
 $actions = [
     ['label' => 'DARE Home', 'href' => url('departments/dare/index.php'), 'primary' => true],
@@ -75,7 +89,23 @@ page_header('DARE Teachers');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
-        <h1>Existing Teachers</h1>
+        <div class="section-heading-row">
+            <div>
+                <h1>Existing Teachers</h1>
+                <p class="meta">
+                    Showing <?= e((string) count($teachers)) ?> teacher<?= count($teachers) === 1 ? '' : 's' ?>.
+                    <?= e((string) ((int) ($teacherCounts['active_count'] ?? 0))) ?> active,
+                    <?= e((string) ((int) ($teacherCounts['inactive_count'] ?? 0))) ?> inactive.
+                </p>
+            </div>
+            <div class="actions">
+                <?php if ($showInactive): ?>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/dare/teachers.php')) ?>">Hide inactive</a>
+                <?php else: ?>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/dare/teachers.php?show_inactive=1')) ?>">Show inactive</a>
+                <?php endif; ?>
+            </div>
+        </div>
         <table class="table mobile-card-table">
             <thead>
                 <tr>

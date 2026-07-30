@@ -19,7 +19,7 @@ function page_header(string $title): void
                 document.documentElement.dataset.theme = savedTheme || (prefersDark ? 'dark' : 'light');
             })();
         </script>
-        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260723b')) ?>">
+        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260729h')) ?>">
     </head>
     <body>
         <header class="topbar">
@@ -89,6 +89,42 @@ function page_footer(): void
                 });
 
                 setButtonText();
+            })();
+        </script>
+        <script>
+            (function () {
+                document.querySelectorAll('input[type="password"]').forEach(function (input, index) {
+                    if (input.closest('.password-field')) {
+                        return;
+                    }
+
+                    const wrapper = document.createElement('span');
+                    wrapper.className = 'password-field';
+                    input.parentNode.insertBefore(wrapper, input);
+                    wrapper.appendChild(input);
+
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'password-toggle';
+                    button.setAttribute('aria-label', 'Show password');
+                    button.setAttribute('aria-pressed', 'false');
+                    button.setAttribute('title', 'Show password');
+                    button.innerHTML = '<span aria-hidden="true"></span>';
+
+                    const inputId = input.id || 'password-field-' + index;
+                    input.id = inputId;
+                    button.setAttribute('aria-controls', inputId);
+
+                    button.addEventListener('click', function () {
+                        const showing = input.type === 'text';
+                        input.type = showing ? 'password' : 'text';
+                        button.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+                        button.setAttribute('aria-pressed', showing ? 'false' : 'true');
+                        button.setAttribute('title', showing ? 'Show password' : 'Hide password');
+                    });
+
+                    wrapper.appendChild(button);
+                });
             })();
         </script>
     </body>

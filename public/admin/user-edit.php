@@ -134,7 +134,7 @@ page_header('Edit User');
             </fieldset>
             <label>
                 Temporary password
-                <input type="password" name="password" placeholder="Leave blank to keep current password">
+                <input type="password" name="password" autocomplete="new-password" placeholder="Leave blank to keep current password">
             </label>
             <label class="check-label">
                 <input type="checkbox" name="is_active" <?= $portalUser['is_active'] ? 'checked' : '' ?>>

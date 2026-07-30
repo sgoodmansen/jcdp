@@ -27,10 +27,10 @@ page_header('Sign in');
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
 
-        <form class="form" method="post">
+        <form class="form" method="post" autocomplete="on">
             <label>
                 Email
-                <input type="email" name="email" autocomplete="email" required>
+                <input type="email" name="email" autocomplete="username" required>
             </label>
             <label>
                 Password

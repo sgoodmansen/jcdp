@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" role="img" aria-label="DARE">
+  <rect width="360" height="180" rx="18" fill="#111827"/>
+  <rect x="15" y="15" width="330" height="150" rx="12" fill="#ffffff"/>
+  <path d="M36 132 L78 48 H112 L154 132 H121 L114 116 H76 L69 132 Z" fill="#d71920"/>
+  <path d="M94 70 L84 94 H106 Z" fill="#ffffff"/>
+  <path d="M162 48 H210 C238 48 258 66 258 90 C258 115 238 132 210 132 H162 Z" fill="#111827"/>
+  <path d="M194 75 V105 H208 C219 105 226 99 226 90 C226 81 219 75 208 75 Z" fill="#ffffff"/>
+  <path d="M268 48 H323 V75 H299 V132 H268 Z" fill="#d71920"/>
+  <text x="180" y="154" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#111827">Drug Abuse Resistance Education</text>
+</svg>

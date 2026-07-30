@@ -17,6 +17,7 @@ $hasDareAccess = can_access_department('dare');
 $dmvActions = [];
 $dareActions = [];
 $recentDmvRequests = [];
+$nextDareLessons = [];
 
 if ($hasDmvAccess) {
     $dmvActions = [
@@ -60,7 +61,10 @@ if ($hasDareAccess) {
 
     if (can_manage_department('dare')) {
         $dareActions[] = ['label' => 'Schools & officers', 'href' => url('departments/dare/lookups.php')];
+        $dareActions[] = ['label' => 'Lessons', 'href' => url('departments/dare/lessons.php')];
     }
+
+    $nextDareLessons = dare_next_lessons_for_user($user, 5);
 }
 
 page_header('Dashboard');
@@ -70,10 +74,13 @@ page_header('Dashboard');
         <h1>Welcome, <?= e($user['first_name']) ?></h1>
         <p>
             <?= e($roleLabel) ?>
-            <?php if ($user['department_names'] && $user['department_names'] !== 'DMV'): ?>
-                <br>Departments: <?= e($user['department_names']) ?>
-            <?php endif; ?>
         </p>
+        <?php if ($message = flash('success')): ?>
+            <div class="notice success"><?= e($message) ?></div>
+        <?php endif; ?>
+        <?php if ($message = flash('error')): ?>
+            <div class="notice error"><?= e($message) ?></div>
+        <?php endif; ?>
     </section>
 
     <?php if (!$departments): ?>
@@ -133,6 +140,45 @@ page_header('Dashboard');
                 <h1>DARE</h1>
                 <p><?= e($department['description']) ?></p>
                 <?php page_actions($dareActions); ?>
+
+                <?php if ($nextDareLessons): ?>
+                    <h2 style="margin-top: 24px;">Next Lessons</h2>
+                    <table class="table mobile-card-table">
+                        <thead>
+                            <tr>
+                                <th>School</th>
+                                <th>School Year</th>
+                                <th>Semester</th>
+                                <th>Period</th>
+                                <th>Teacher</th>
+                                <th>Next Lesson</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($nextDareLessons as $lesson): ?>
+                                <tr>
+                                    <td data-label="School"><?= e($lesson['school_name']) ?></td>
+                                    <td data-label="School Year"><?= e($lesson['school_year'] ?: 'Not set') ?></td>
+                                    <td data-label="Semester"><?= e($lesson['semester'] ?: 'Not set') ?></td>
+                                    <td data-label="Period"><?= e($lesson['period'] ?: 'Not set') ?></td>
+                                    <td data-label="Teacher"><?= e(trim(($lesson['teacher_first_name'] ?? '') . ' ' . ($lesson['teacher_last_name'] ?? '')) ?: 'Not assigned') ?></td>
+                                    <td data-label="Next Lesson"><?= e($lesson['lesson_title']) ?></td>
+                                    <td data-label="Actions">
+                                        <div class="table-actions">
+                                            <form method="post" action="<?= e(url('departments/dare/lesson-complete.php')) ?>">
+                                                <input type="hidden" name="class_lesson_id" value="<?= e((string) $lesson['class_lesson_id']) ?>">
+                                                <input type="hidden" name="return_to" value="main_dashboard">
+                                                <button type="submit" class="secondary compact-button">Mark taught</button>
+                                            </form>
+                                            <a class="icon-link" href="<?= e(url('departments/dare/class-detail.php?id=' . $lesson['class_id'])) ?>" title="View class" aria-label="View DARE class">&#9636;</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
             </section>
         <?php else: ?>
             <section class="panel" style="margin-top: 18px;">

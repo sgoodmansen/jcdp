@@ -52,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
 
     $classId = (int) db()->lastInsertId();
+    dare_seed_class_lessons($classId);
     audit_event('created', 'dare_class', (string) $classId, [
         'school_year' => $schoolYear,
         'semester' => $semester,

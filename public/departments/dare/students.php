@@ -11,7 +11,10 @@ if ($search !== '') {
             dare_students.id AS student_id,
             dare_students.first_name,
             dare_students.last_name,
+            dare_students.notes,
             dare_class_students.essay_completed,
+            dare_class_students.essay_winner,
+            dare_class_students.gender,
             dare_classes.id AS class_id,
             dare_classes.school_year,
             dare_classes.semester,
@@ -75,8 +78,11 @@ page_header('DARE Student Search');
                         <th>Student</th>
                         <th>School Year</th>
                         <th>School</th>
+                        <th>Gender</th>
                         <th>Teacher</th>
                         <th>DARE Officer</th>
+                        <th>Essay Winner</th>
+                        <th>Note</th>
                         <th>Class</th>
                     </tr>
                 </thead>
@@ -97,8 +103,19 @@ page_header('DARE Student Search');
                                 <?php endif; ?>
                             </td>
                             <td data-label="School"><?= e($student['school_name']) ?></td>
+                            <td data-label="Gender"><?= e($student['gender'] ?: '') ?></td>
                             <td data-label="Teacher"><?= e(trim(($student['teacher_first_name'] ?? '') . ' ' . ($student['teacher_last_name'] ?? '')) ?: 'Not assigned') ?></td>
                             <td data-label="DARE Officer"><?= e(trim(($student['officer_first_name'] ?? '') . ' ' . ($student['officer_last_name'] ?? '')) ?: 'Not assigned') ?></td>
+                            <td data-label="Essay Winner"><?= (int) $student['essay_winner'] === 1 ? 'Yes' : '' ?></td>
+                            <td data-label="Note">
+                                <?php $hasStudentNote = trim($student['notes'] ?? '') !== ''; ?>
+                                <a
+                                    class="icon-link <?= $hasStudentNote ? 'note-link-has-note' : '' ?>"
+                                    href="<?= e(url('departments/dare/student-note.php?class_id=' . $student['class_id'] . '&student_id=' . $student['student_id'])) ?>"
+                                    title="<?= $hasStudentNote ? 'Edit student note' : 'Add student note' ?>"
+                                    aria-label="<?= $hasStudentNote ? 'Edit student note' : 'Add student note' ?>"
+                                >&#9997;</a>
+                            </td>
                             <td data-label="Class">
                                 <a class="button secondary compact-button" href="<?= e(url('departments/dare/class-detail.php?id=' . $student['class_id'])) ?>">View class</a>
                             </td>
