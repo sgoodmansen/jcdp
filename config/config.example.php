@@ -12,4 +12,8 @@ return [
         'password' => '',
         'charset' => 'utf8mb4',
     ],
+    'password_reset' => [
+        'from_email' => 'no-reply@jeffersoncounty.local',
+        'show_test_link' => false,
+    ],
 ];

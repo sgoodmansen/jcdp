@@ -19,10 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 page_header('Sign in');
 ?>
 <main class="shell">
-    <section class="panel">
+    <section class="panel login-panel">
         <h1>Employee Sign In</h1>
         <p>Use your portal account to access assigned department tools.</p>
 
+        <?php if ($message = flash('success')): ?>
+            <div class="notice success"><?= e($message) ?></div>
+        <?php endif; ?>
         <?php if ($message = flash('error')): ?>
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
@@ -37,6 +40,7 @@ page_header('Sign in');
                 <input type="password" name="password" autocomplete="current-password" required>
             </label>
             <button type="submit">Sign in</button>
+            <a class="form-link" href="<?= e(url('forgot-password.php')) ?>">Forgot your password?</a>
         </form>
     </section>
 </main>

@@ -8,12 +8,18 @@
     --panel: #f5f7fa;
     --primary: #1f6f8b;
     --primary-dark: #174f63;
+    --on-primary: #ffffff;
     --secondary-bg: #e3edf2;
     --secondary-hover: #d2e2ea;
     --secondary-border: #cfdae2;
     --status-panel-bg: #eef3f6;
     --badge-bg: #e3edf2;
     --badge-muted-bg: #e2e8ee;
+    --badge-success-bg: #e6f3ec;
+    --badge-warning-bg: #fff4d8;
+    --warning: #6f4b10;
+    --notice-error-bg: #f8e8e8;
+    --notice-success-bg: #e6f3ec;
     --hero-bg: linear-gradient(135deg, #ffffff 0%, #e9f3f7 100%);
     --focus-ring: rgba(31, 111, 139, 0.16);
     --shadow: rgba(23, 32, 42, 0.18);
@@ -32,12 +38,18 @@
     --panel: #1c2633;
     --primary: #5ca6c4;
     --primary-dark: #7fbad0;
+    --on-primary: #0f1722;
     --secondary-bg: #263545;
     --secondary-hover: #314254;
     --secondary-border: #354352;
     --status-panel-bg: #17212d;
     --badge-bg: #263545;
     --badge-muted-bg: #263545;
+    --badge-success-bg: #173323;
+    --badge-warning-bg: #3a2d11;
+    --warning: #f7d27a;
+    --notice-error-bg: #3a1d22;
+    --notice-success-bg: #173323;
     --hero-bg: linear-gradient(135deg, #1c2633 0%, #17212d 100%);
     --focus-ring: rgba(92, 166, 196, 0.25);
     --shadow: rgba(0, 0, 0, 0.35);
@@ -95,7 +107,7 @@ a {
     align-items: center;
     background: var(--primary);
     border-radius: 6px;
-    color: white;
+    color: var(--on-primary);
     display: inline-flex;
     height: 38px;
     justify-content: center;
@@ -206,6 +218,31 @@ a {
     padding: 26px;
 }
 
+.login-panel {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+}
+
+.login-panel p,
+.login-panel .notice,
+.login-panel .form {
+    width: min(100%, 520px);
+}
+
+.login-panel p {
+    max-width: 520px;
+}
+
+.login-panel .form {
+    text-align: left;
+}
+
+.form-link {
+    font-weight: 700;
+    text-align: center;
+}
+
 .grid {
     display: grid;
     gap: 18px;
@@ -301,7 +338,7 @@ button {
     background: var(--primary);
     border: 0;
     border-radius: 6px;
-    color: white;
+    color: var(--on-primary);
     cursor: pointer;
     display: inline-block;
     font-size: 15px;
@@ -347,6 +384,12 @@ button:focus {
     color: var(--primary-dark);
     min-height: 38px;
     padding: 8px 12px;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus {
+    background: var(--secondary-hover);
+    color: var(--primary-dark);
 }
 
 .form {
@@ -415,7 +458,7 @@ button:focus {
 .check-option:has(input:checked) {
     background: var(--primary);
     border-color: var(--primary);
-    color: white;
+    color: var(--on-primary);
     font-weight: 700;
 }
 
@@ -433,7 +476,7 @@ button:focus {
 }
 
 .field-warning {
-    color: #c85656;
+    color: var(--danger);
     display: none;
     font-size: 12px;
     font-weight: 400;
@@ -476,6 +519,43 @@ option {
 input,
 select {
     min-height: 50px;
+}
+
+.clearable-field {
+    display: block;
+    position: relative;
+}
+
+.clearable-field input {
+    padding-right: 48px;
+}
+
+.field-clear-button {
+    align-items: center;
+    background: var(--secondary-bg);
+    border: 1px solid var(--secondary-border);
+    border-radius: 999px;
+    color: var(--primary-dark);
+    display: inline-flex;
+    font-size: 20px;
+    height: 30px;
+    justify-content: center;
+    line-height: 1;
+    min-height: 0;
+    padding: 0;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+}
+
+.field-clear-button:hover,
+.field-clear-button:focus {
+    background: var(--secondary-hover);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+    color: var(--primary-dark);
+    transform: translateY(-50%);
 }
 
 .password-field {
@@ -839,7 +919,7 @@ textarea {
 .note-link-has-note {
     background: var(--primary);
     border-color: var(--primary);
-    color: #ffffff;
+    color: var(--on-primary);
 }
 
 .note-link-has-note:hover,
@@ -1532,12 +1612,12 @@ textarea {
 }
 
 .notice.error {
-    background: #f8e8e8;
+    background: var(--notice-error-bg);
     color: var(--danger);
 }
 
 .notice.success {
-    background: #e6f3ec;
+    background: var(--notice-success-bg);
     color: var(--success);
 }
 
@@ -1590,7 +1670,6 @@ textarea {
     box-shadow: none;
     color: var(--muted);
     cursor: not-allowed;
-    opacity: 0.62;
     transform: none;
 }
 
@@ -1605,7 +1684,7 @@ textarea {
 }
 
 .badge-success {
-    background: #e6f3ec;
+    background: var(--badge-success-bg);
     color: var(--success);
 }
 
@@ -1615,8 +1694,8 @@ textarea {
 }
 
 .badge-warning {
-    background: #fff4d8;
-    color: #7a5414;
+    background: var(--badge-warning-bg);
+    color: var(--warning);
 }
 
 .review-form {

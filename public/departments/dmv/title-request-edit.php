@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'lienholder_id' => (int) ($_POST['lienholder_id'] ?? 0),
         'request_date' => $_POST['request_date'] ?? date('Y-m-d'),
         'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
-        'registrant_name_2' => title_case_name($_POST['registrant_name_2'] ?? ''),
+        'registrant_name_2' => title_case_name($_POST['registrant_name_2'] ?? '') ?: null,
         'registrant_address' => title_case_address($_POST['registrant_address'] ?? ''),
         'registrant_city' => title_case_name($_POST['registrant_city'] ?? ''),
         'registrant_state' => trim($_POST['registrant_state'] ?? ''),
@@ -156,7 +156,10 @@ page_header('Edit Title Request');
             </label>
             <label>
                 Additional registrant name
-                <input name="registrant_name_2" value="<?= e($request['registrant_name_2']) ?>">
+                <span class="clearable-field">
+                    <input name="registrant_name_2" value="<?= e($request['registrant_name_2']) ?>">
+                    <button type="button" class="field-clear-button" data-clear-field="registrant_name_2" title="Clear additional registrant name" aria-label="Clear additional registrant name">×</button>
+                </span>
             </label>
             <label class="span-2">
                 Registrant address
@@ -256,5 +259,5 @@ page_header('Edit Title Request');
         vehicleModel.disabled = false;
     });
 </script>
-<script src="<?= e(url('assets/forms.js?v=20260722c')) ?>"></script>
+<script src="<?= e(url('assets/forms.js?v=20260730a')) ?>"></script>
 <?php page_footer(); ?>

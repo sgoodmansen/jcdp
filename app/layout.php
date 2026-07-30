@@ -19,7 +19,7 @@ function page_header(string $title): void
                 document.documentElement.dataset.theme = savedTheme || (prefersDark ? 'dark' : 'light');
             })();
         </script>
-        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260729h')) ?>">
+        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260730d')) ?>">
     </head>
     <body>
         <header class="topbar">
@@ -31,7 +31,6 @@ function page_header(string $title): void
                 <?php if ($user): ?>
                     <nav class="nav desktop-nav">
                         <a href="<?= e(url('dashboard.php')) ?>">Dashboard</a>
-                        <a href="<?= e(url('departments/index.php')) ?>">Departments</a>
                         <a href="<?= e(url('account.php')) ?>">My Account</a>
                         <?php if ($user['role'] === 'system_admin'): ?>
                             <a href="<?= e(url('admin/users.php')) ?>">Admin</a>
@@ -46,7 +45,6 @@ function page_header(string $title): void
                         </summary>
                         <nav class="site-menu-list">
                             <a href="<?= e(url('dashboard.php')) ?>">Dashboard</a>
-                            <a href="<?= e(url('departments/index.php')) ?>">Departments</a>
                             <a href="<?= e(url('account.php')) ?>">My Account</a>
                             <?php if ($user['role'] === 'system_admin'): ?>
                                 <a href="<?= e(url('admin/users.php')) ?>">Admin</a>

@@ -56,6 +56,40 @@ CREATE TABLE audit_log (
         ON DELETE SET NULL
 );
 
+CREATE TABLE login_attempts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email_hash CHAR(64) NOT NULL,
+    request_ip VARCHAR(45) NULL,
+    was_success TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_login_attempts_email_time (email_hash, created_at),
+    INDEX idx_login_attempts_ip_time (request_ip, created_at)
+);
+
+CREATE TABLE password_reset_requests (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email_hash CHAR(64) NOT NULL,
+    request_ip VARCHAR(45) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_password_reset_requests_email_time (email_hash, created_at),
+    INDEX idx_password_reset_requests_ip_time (request_ip, created_at)
+);
+
+CREATE TABLE password_reset_tokens (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    request_ip VARCHAR(45) NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_password_reset_tokens_user (user_id),
+    INDEX idx_password_reset_tokens_expires (expires_at),
+    CONSTRAINT fk_password_reset_tokens_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
 CREATE TABLE dmv_lienholders (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     access_lienholder_id INT UNSIGNED NULL UNIQUE,

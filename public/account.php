@@ -19,8 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect_to('account.php');
     }
 
-    if (strlen($newPassword) < 8) {
-        flash('error', 'New password must be at least 8 characters.');
+    if (strlen($newPassword) < 10) {
+        flash('error', 'New password must be at least 10 characters.');
         redirect_to('account.php');
     }
 
@@ -87,11 +87,11 @@ page_header('My Account');
                 </label>
                 <label>
                     New password
-                    <input type="password" name="new_password" autocomplete="new-password" minlength="8" required>
+                    <input type="password" name="new_password" autocomplete="new-password" minlength="10" required>
                 </label>
                 <label>
                     Confirm new password
-                    <input type="password" name="confirm_password" autocomplete="new-password" minlength="8" required>
+                    <input type="password" name="confirm_password" autocomplete="new-password" minlength="10" required>
                 </label>
                 <button type="submit">Change password</button>
             </form>

@@ -104,3 +104,26 @@ document.querySelectorAll('.vin-input').forEach((input) => {
     updateVinWarning();
     scheduleVinCheck();
 });
+
+document.querySelectorAll('.clearable-field').forEach((field) => {
+    const input = field.querySelector('input');
+    const button = field.querySelector('[data-clear-field]');
+
+    if (!input || !button) {
+        return;
+    }
+
+    const updateButton = () => {
+        button.hidden = input.value.trim() === '';
+    };
+
+    button.addEventListener('click', () => {
+        input.value = '';
+        input.focus();
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        updateButton();
+    });
+
+    input.addEventListener('input', updateButton);
+    updateButton();
+});

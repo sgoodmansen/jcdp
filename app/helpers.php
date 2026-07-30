@@ -15,6 +15,20 @@ function url(string $path = ''): string
     return $base . '/' . ltrim($path, '/');
 }
 
+function absolute_url(string $path = ''): string
+{
+    $url = url($path);
+
+    if (preg_match('/^https?:\/\//i', $url)) {
+        return $url;
+    }
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+    return $scheme . '://' . $host . $url;
+}
+
 function redirect_to(string $path): never
 {
     header('Location: ' . url($path));
