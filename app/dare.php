@@ -63,12 +63,13 @@ function dare_class_end_countdown(?string $endDate): string
 
     $days = (int) $today->diff($end)->format('%r%a');
 
-    if ($days > 1) {
-        return $days . ' days left';
+    if ($days >= 7) {
+        $weeks = (int) ceil($days / 7);
+        return $weeks === 1 ? '1 week left' : $weeks . ' weeks left';
     }
 
-    if ($days === 1) {
-        return '1 day left';
+    if ($days > 0) {
+        return 'Less than 1 week left';
     }
 
     if ($days === 0) {
@@ -76,7 +77,12 @@ function dare_class_end_countdown(?string $endDate): string
     }
 
     $daysPast = abs($days);
-    return $daysPast === 1 ? 'Ended 1 day ago' : 'Ended ' . $daysPast . ' days ago';
+    if ($daysPast < 7) {
+        return 'Ended less than 1 week ago';
+    }
+
+    $weeksPast = (int) floor($daysPast / 7);
+    return $weeksPast === 1 ? 'Ended 1 week ago' : 'Ended ' . $weeksPast . ' weeks ago';
 }
 
 function dare_seed_class_lessons(int $classId): void

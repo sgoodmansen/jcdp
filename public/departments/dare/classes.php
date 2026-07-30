@@ -60,26 +60,25 @@ page_header('DARE Classes');
 <main class="shell">
     <section class="panel">
         <h1>DARE Classes</h1>
-        <p>View classes by status, school, teacher, or officer.</p>
         <?php page_actions($actions); ?>
+        <p class="filter-description">View classes by status.</p>
 
-        <form class="form compact-form" method="get">
-            <label>
-                Search classes
-                <input name="search" value="<?= e($search) ?>">
-            </label>
-            <label>
-                Status
-                <select name="status">
-                    <?php foreach ($statusOptions + ['all' => 'All'] as $value => $label): ?>
-                        <option value="<?= e($value) ?>" <?= $status === $value ? 'selected' : '' ?>><?= e($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <div class="actions span-2">
-                <button type="submit">Search</button>
-            </div>
-        </form>
+        <div class="filter-button-group" aria-label="Class status filters">
+            <?php foreach (['active' => 'Active'] + $statusOptions + ['all' => 'All'] as $value => $label): ?>
+                <?php
+                if ($value === 'active' && isset($statusOptions['active'])) {
+                    $label = $statusOptions['active'];
+                }
+                $query = ['status' => $value];
+                if ($search !== '') {
+                    $query['search'] = $search;
+                }
+                ?>
+                <a class="button compact-button <?= $status === $value ? '' : 'secondary' ?>" href="<?= e(url('departments/dare/classes.php?' . http_build_query($query))) ?>">
+                    <?= e($label) ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
     </section>
 
     <section class="panel" style="margin-top: 18px;">
