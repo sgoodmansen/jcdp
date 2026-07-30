@@ -416,6 +416,61 @@ button:focus {
     min-width: 0;
 }
 
+.label-with-help {
+    align-items: center;
+    display: inline-flex;
+    gap: 8px;
+}
+
+.info-tooltip {
+    align-items: center;
+    background: var(--secondary-bg);
+    border: 1px solid var(--secondary-border);
+    border-radius: 999px;
+    color: var(--primary-dark);
+    cursor: help;
+    display: inline-flex;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 800;
+    height: 20px;
+    justify-content: center;
+    line-height: 1;
+    position: relative;
+    width: 20px;
+}
+
+.info-tooltip::after {
+    background: var(--ink);
+    border-radius: 6px;
+    bottom: calc(100% + 8px);
+    color: var(--panel);
+    content: attr(aria-label);
+    font-size: 13px;
+    font-weight: 700;
+    left: 50%;
+    line-height: 1.35;
+    opacity: 0;
+    padding: 8px 10px;
+    pointer-events: none;
+    position: absolute;
+    text-align: left;
+    transform: translateX(-50%);
+    transition: opacity 140ms ease;
+    width: 260px;
+    z-index: 40;
+}
+
+.info-tooltip:hover::after,
+.info-tooltip:focus::after {
+    opacity: 1;
+}
+
+.info-tooltip:focus {
+    box-shadow: 0 0 0 3px var(--focus-ring);
+    outline: none;
+}
+
 .form-fieldset {
     border: 1px solid var(--line);
     border-radius: 6px;

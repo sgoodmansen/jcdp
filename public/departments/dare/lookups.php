@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save_certificate_settings') {
-        $sheriffName = title_case_name($_POST['sheriff_name'] ?? '');
+        $sheriffName = trim($_POST['sheriff_name'] ?? '');
         dare_save_setting('sheriff_name', $sheriffName);
         audit_event('updated', 'dare_setting', 'sheriff_name', ['sheriff_name' => $sheriffName]);
         flash('success', 'Certificate settings saved.');
@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'state' => trim($_POST['state'] ?? ''),
             'zip_code' => trim($_POST['zip_code'] ?? ''),
             'principal_name' => title_case_name($_POST['principal_name'] ?? ''),
+            'sheriff_name' => trim($_POST['sheriff_name'] ?? ''),
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
         ];
 
@@ -35,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      state = :state,
                      zip_code = :zip_code,
                      principal_name = :principal_name,
+                     sheriff_name = :sheriff_name,
                      is_active = :is_active
                  WHERE id = :id'
             );
@@ -42,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_event('updated', 'dare_school', (string) $schoolId, ['name' => $params['name']]);
         } else {
             $statement = db()->prepare(
-                'INSERT INTO dare_schools (name, address, city, state, zip_code, principal_name, is_active)
-                 VALUES (:name, :address, :city, :state, :zip_code, :principal_name, 1)'
+                'INSERT INTO dare_schools (name, address, city, state, zip_code, principal_name, sheriff_name, is_active)
+                 VALUES (:name, :address, :city, :state, :zip_code, :principal_name, :sheriff_name, 1)'
             );
             unset($params['is_active']);
             $statement->execute($params);
@@ -176,7 +178,10 @@ page_header('DARE Setup');
         <form class="form compact-form" method="post">
             <input type="hidden" name="action" value="save_certificate_settings">
             <label>
-                Sheriff name
+                <span class="label-with-help">
+                    Sheriff name
+                    <span class="info-tooltip" tabindex="0" aria-label="Default Sheriff name used on certificates unless a school has its own Sheriff name.">i</span>
+                </span>
                 <input name="sheriff_name" value="<?= e($sheriffName) ?>" placeholder="Name printed under Sheriff signature line">
             </label>
             <div class="actions">
@@ -215,6 +220,10 @@ page_header('DARE Setup');
                 Principal name
                 <input name="principal_name" placeholder="Name printed under Principal signature line">
             </label>
+            <label>
+                Sheriff name
+                <input name="sheriff_name" placeholder="Leave blank to use default Sheriff">
+            </label>
             <div class="actions">
                 <button type="submit">Add school</button>
             </div>
@@ -249,6 +258,7 @@ page_header('DARE Setup');
                     <th>School</th>
                     <th>Address</th>
                     <th>Principal</th>
+                    <th>Sheriff</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -267,6 +277,7 @@ page_header('DARE Setup');
                             <?php endif; ?>
                         </td>
                         <td data-label="Principal"><?= e($school['principal_name'] ?: 'Not provided') ?></td>
+                        <td data-label="Sheriff"><?= e($school['sheriff_name'] ?: ($sheriffName ?: 'Not provided')) ?></td>
                         <td data-label="Status">
                             <span class="badge <?= (int) $school['is_active'] === 1 ? 'badge-success' : 'badge-muted' ?>">
                                 <?= (int) $school['is_active'] === 1 ? 'Active' : 'Inactive' ?>
@@ -281,7 +292,7 @@ page_header('DARE Setup');
                 <?php endforeach; ?>
                 <?php if (!$schools): ?>
                     <tr>
-                        <td colspan="5">No schools have been added yet.</td>
+                        <td colspan="6">No schools have been added yet.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

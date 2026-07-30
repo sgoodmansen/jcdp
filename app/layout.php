@@ -19,7 +19,7 @@ function page_header(string $title): void
                 document.documentElement.dataset.theme = savedTheme || (prefersDark ? 'dark' : 'light');
             })();
         </script>
-        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260730d')) ?>">
+        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260730e')) ?>">
     </head>
     <body>
         <header class="topbar">

@@ -10,6 +10,7 @@ $statement = db()->prepare(
         dare_classes.*,
         dare_schools.name AS school_name,
         dare_schools.principal_name,
+        dare_schools.sheriff_name AS school_sheriff_name,
         dare_students.first_name AS student_first_name,
         dare_students.last_name AS student_last_name,
         dare_class_students.essay_completed,
@@ -42,7 +43,7 @@ $studentName = dare_person_name([
     'last_name' => $certificate['student_last_name'],
 ]);
 $officerName = trim(($certificate['officer_first_name'] ?? '') . ' ' . ($certificate['officer_last_name'] ?? ''));
-$sheriffName = dare_setting('sheriff_name');
+$sheriffName = trim($certificate['school_sheriff_name'] ?? '') ?: dare_setting('sheriff_name');
 $principalName = trim($certificate['principal_name'] ?? '');
 $isGraduationCertificate = (int) $certificate['essay_completed'] === 1;
 $graduationDate = $certificate['graduation_date']
@@ -111,7 +112,7 @@ page_header($certificateTitle);
                     <div>
                         <span></span>
                         <strong><?= e($sheriffName ?: 'Sheriff') ?></strong>
-                        <p>Jefferson County Sheriff</p>
+                        <p>County Sheriff</p>
                     </div>
                     <div>
                         <span></span>
