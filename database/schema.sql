@@ -376,17 +376,26 @@ CREATE TABLE election_positions (
     INDEX idx_election_position_active_order (is_active, sort_order, name)
 );
 
+CREATE TABLE election_settings (
+    setting_key VARCHAR(80) NOT NULL PRIMARY KEY,
+    setting_value TEXT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 CREATE TABLE election_workers (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    election_period_id INT UNSIGNED NOT NULL,
-    precinct_id INT UNSIGNED NOT NULL,
-    position_id INT UNSIGNED NOT NULL,
+    election_period_id INT UNSIGNED NULL,
+    precinct_id INT UNSIGNED NULL,
+    position_id INT UNSIGNED NULL,
     recruited_by_worker_id INT UNSIGNED NULL,
     created_by_user_id INT UNSIGNED NULL,
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
     email VARCHAR(190) NULL,
+    email_normalized VARCHAR(190) NULL,
     phone VARCHAR(40) NULL,
+    phone_digits VARCHAR(20) NULL,
+    name_key VARCHAR(170) NULL,
     mobile_phone VARCHAR(40) NULL,
     mailing_address VARCHAR(190) NULL,
     city VARCHAR(100) NULL,
@@ -402,6 +411,9 @@ CREATE TABLE election_workers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_election_worker_name (last_name, first_name),
+    INDEX idx_election_worker_email_normalized (email_normalized),
+    INDEX idx_election_worker_phone_digits (phone_digits),
+    INDEX idx_election_worker_name_key (name_key, zip_code),
     INDEX idx_election_worker_lookup (election_period_id, precinct_id, position_id, is_active),
     CONSTRAINT fk_election_workers_period
         FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
@@ -417,6 +429,69 @@ CREATE TABLE election_workers (
         ON DELETE SET NULL,
     CONSTRAINT fk_election_workers_created_by
         FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_worker_assignments (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    worker_id INT UNSIGNED NOT NULL,
+    election_period_id INT UNSIGNED NOT NULL,
+    precinct_id INT UNSIGNED NOT NULL,
+    position_id INT UNSIGNED NOT NULL,
+    recruited_by_assignment_id INT UNSIGNED NULL,
+    created_by_user_id INT UNSIGNED NULL,
+    is_extra TINYINT(1) NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_election_assignment (worker_id, election_period_id, precinct_id, position_id),
+    INDEX idx_election_assignment_lookup (election_period_id, precinct_id, position_id, is_active),
+    CONSTRAINT fk_election_assignments_worker
+        FOREIGN KEY (worker_id) REFERENCES election_workers(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_election_assignments_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_assignments_precinct
+        FOREIGN KEY (precinct_id) REFERENCES election_precincts(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_assignments_position
+        FOREIGN KEY (position_id) REFERENCES election_positions(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_assignments_recruited_by
+        FOREIGN KEY (recruited_by_assignment_id) REFERENCES election_worker_assignments(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_election_assignments_created_by
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_precinct_roles (
+    election_period_id INT UNSIGNED NOT NULL,
+    precinct_id INT UNSIGNED NOT NULL,
+    role_key VARCHAR(80) NOT NULL,
+    assignment_id INT UNSIGNED NULL,
+    created_by_user_id INT UNSIGNED NULL,
+    updated_by_user_id INT UNSIGNED NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (election_period_id, precinct_id, role_key),
+    INDEX idx_election_precinct_roles_assignment (assignment_id),
+    CONSTRAINT fk_election_precinct_roles_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_precinct_roles_precinct
+        FOREIGN KEY (precinct_id) REFERENCES election_precincts(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_precinct_roles_assignment
+        FOREIGN KEY (assignment_id) REFERENCES election_worker_assignments(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_election_precinct_roles_created_by
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_election_precinct_roles_updated_by
+        FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
         ON DELETE SET NULL
 );
 
@@ -461,8 +536,9 @@ CREATE TABLE election_training_class_positions (
 CREATE TABLE election_training_registrations (
     class_id INT UNSIGNED NOT NULL,
     worker_id INT UNSIGNED NOT NULL,
+    assignment_id INT UNSIGNED NULL,
     registered_by_user_id INT UNSIGNED NULL,
-    registered_by_worker_id INT UNSIGNED NULL,
+    registered_by_assignment_id INT UNSIGNED NULL,
     attended TINYINT(1) NOT NULL DEFAULT 0,
     attended_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -474,11 +550,14 @@ CREATE TABLE election_training_registrations (
     CONSTRAINT fk_election_registrations_worker
         FOREIGN KEY (worker_id) REFERENCES election_workers(id)
         ON DELETE CASCADE,
+    CONSTRAINT fk_election_registrations_assignment
+        FOREIGN KEY (assignment_id) REFERENCES election_worker_assignments(id)
+        ON DELETE CASCADE,
     CONSTRAINT fk_election_registrations_user
         FOREIGN KEY (registered_by_user_id) REFERENCES users(id)
         ON DELETE SET NULL,
-    CONSTRAINT fk_election_registrations_worker_by
-        FOREIGN KEY (registered_by_worker_id) REFERENCES election_workers(id)
+    CONSTRAINT fk_election_registrations_assignment_by
+        FOREIGN KEY (registered_by_assignment_id) REFERENCES election_worker_assignments(id)
         ON DELETE SET NULL
 );
 

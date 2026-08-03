@@ -43,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'lienholder_id' => (int) ($_POST['lienholder_id'] ?? 0),
         'created_by' => $user['id'],
         'request_date' => $_POST['request_date'] ?? date('Y-m-d'),
-        'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
-        'registrant_name_2' => title_case_name($_POST['registrant_name_2'] ?? '') ?: null,
+        'registrant_name' => preserve_name_case($_POST['registrant_name'] ?? ''),
+        'registrant_name_2' => preserve_name_case($_POST['registrant_name_2'] ?? '') ?: null,
         'registrant_address' => title_case_address($_POST['registrant_address'] ?? ''),
         'registrant_city' => title_case_name($_POST['registrant_city'] ?? ''),
         'registrant_state' => trim($_POST['registrant_state'] ?? ''),
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $requestId = (int) db()->lastInsertId();
     audit_event('created', 'dmv_title_request', (string) $requestId, [
-        'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
+        'registrant_name' => preserve_name_case($_POST['registrant_name'] ?? ''),
         'lienholder_id' => (int) ($_POST['lienholder_id'] ?? 0),
         'status' => $_POST['status'] ?? 'draft',
     ]);

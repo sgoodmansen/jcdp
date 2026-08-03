@@ -86,8 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'id' => $id,
         'lienholder_id' => (int) ($_POST['lienholder_id'] ?? 0),
         'request_date' => $_POST['request_date'] ?? date('Y-m-d'),
-        'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
-        'registrant_name_2' => title_case_name($_POST['registrant_name_2'] ?? '') ?: null,
+        'registrant_name' => preserve_name_case($_POST['registrant_name'] ?? ''),
+        'registrant_name_2' => preserve_name_case($_POST['registrant_name_2'] ?? '') ?: null,
         'registrant_address' => title_case_address($_POST['registrant_address'] ?? ''),
         'registrant_city' => title_case_name($_POST['registrant_city'] ?? ''),
         'registrant_state' => trim($_POST['registrant_state'] ?? ''),
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
 
     audit_event('updated', 'dmv_title_request', (string) $id, [
-        'registrant_name' => title_case_name($_POST['registrant_name'] ?? ''),
+        'registrant_name' => preserve_name_case($_POST['registrant_name'] ?? ''),
         'previous_registrant_name' => $request['registrant_name'],
         'status' => $_POST['status'] ?? 'draft',
         'previous_status' => $request['status'],

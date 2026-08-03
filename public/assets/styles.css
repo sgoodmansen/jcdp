@@ -325,6 +325,59 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.attention-stat-row {
+    grid-template-columns: 1fr;
+}
+
+.attention-stat-row .attention-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.election-home-stat-row {
+    grid-template-columns: 1fr;
+}
+
+.election-home-stat-row .election-home-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.election-tool-groups {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 18px;
+}
+
+.election-tool-group {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.election-tool-group h2 {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+}
+
+.election-tool-links {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.staffing-progress-stat-row {
+    grid-template-columns: 1fr;
+}
+
+.staffing-progress-stat-row .staffing-progress-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .status-card p {
     margin-bottom: 0;
 }
@@ -754,6 +807,178 @@ textarea {
     font-size: 14px;
 }
 
+.precinct-worker-section {
+    border-top: 1px solid var(--border);
+    margin-top: 0 !important;
+    padding: 10px 0;
+}
+
+.precinct-worker-section summary h2 {
+    font-size: 20px;
+    margin-bottom: 0;
+}
+
+.precinct-worker-title {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.precinct-worker-section .section-heading-row {
+    margin-bottom: 0;
+}
+
+.precinct-worker-section[open] summary {
+    margin-bottom: 12px;
+}
+
+.position-history-list {
+    color: var(--muted);
+    display: inline-block;
+    line-height: 1.45;
+}
+
+.staffing-extra-role {
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.6fr);
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+}
+
+.staffing-extra-role h2 {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.staffing-extra-workers {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.staffing-extra-worker-row,
+.staffing-add-extra-form {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.staffing-extra-worker-row {
+    color: var(--muted);
+    font-size: 13px;
+    justify-content: space-between;
+}
+
+.staffing-worker-contact {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.staffing-add-extra {
+    margin-top: 8px;
+}
+
+.staffing-status-stack {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.staffing-add-extra summary {
+    cursor: pointer;
+    display: inline-flex;
+    list-style: none;
+}
+
+.staffing-add-extra summary::-webkit-details-marker {
+    display: none;
+}
+
+.staffing-add-extra-form {
+    margin-top: 8px;
+}
+
+.staffing-add-extra-form select {
+    min-width: 190px;
+}
+
+.staffing-sheet-precinct {
+    break-inside: avoid;
+    margin-top: 18px;
+    page-break-inside: avoid;
+}
+
+.staffing-sheet-precinct h2 {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+.staffing-sheet-table {
+    table-layout: fixed;
+}
+
+.staffing-sheet-table th:nth-child(1),
+.staffing-sheet-table td:nth-child(1) {
+    width: 16%;
+}
+
+.staffing-sheet-table th:nth-child(2),
+.staffing-sheet-table td:nth-child(2) {
+    width: 22%;
+}
+
+.staffing-sheet-table th:nth-child(3),
+.staffing-sheet-table td:nth-child(3) {
+    text-align: center;
+    width: 10%;
+}
+
+.staffing-sheet-table th:nth-child(4),
+.staffing-sheet-table td:nth-child(4) {
+    width: 28%;
+}
+
+.staffing-sheet-table th:nth-child(5),
+.staffing-sheet-table td:nth-child(5) {
+    white-space: nowrap;
+    width: 24%;
+}
+
+.email-template-preview pre {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--ink);
+    font-family: inherit;
+    line-height: 1.5;
+    margin-top: 12px;
+    padding: 14px;
+    white-space: pre-wrap;
+}
+
+.reuse-precinct-section {
+    padding-bottom: 14px;
+    padding-top: 14px;
+}
+
+.reuse-precinct-section summary h2 {
+    font-size: 20px;
+    margin-bottom: 0;
+}
+
+.reuse-precinct-section .section-heading-row {
+    margin-bottom: 0;
+}
+
+.reuse-precinct-section[open] summary {
+    margin-bottom: 12px;
+}
+
 .hamburger-lines,
 .hamburger-lines::before,
 .hamburger-lines::after {
@@ -812,6 +1037,126 @@ textarea {
     outline: none;
 }
 
+.election-nav-block {
+    margin-bottom: 18px;
+}
+
+.election-nav {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.election-nav > .button {
+    margin: 0;
+}
+
+.election-nav-menu {
+    position: relative;
+}
+
+.election-nav-menu summary {
+    align-items: center;
+    background: var(--secondary-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--primary-dark);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 15px;
+    font-weight: 700;
+    gap: 8px;
+    list-style: none;
+    min-height: 45px;
+    padding: 10px 14px;
+}
+
+.election-nav-menu summary::after {
+    content: "▾";
+    font-size: 11px;
+    line-height: 1;
+}
+
+.election-nav-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.election-nav-menu summary.active,
+.election-nav-menu[open] summary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
+}
+
+.election-nav-list {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px var(--shadow);
+    display: grid;
+    gap: 4px;
+    left: 0;
+    margin-top: 8px;
+    min-width: 220px;
+    padding: 8px;
+    position: absolute;
+    top: 100%;
+    z-index: 20;
+}
+
+.election-nav-list a {
+    border-radius: 6px;
+    color: var(--ink);
+    font-weight: 700;
+    padding: 9px 10px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.election-nav-list a:hover,
+.election-nav-list a:focus,
+.election-nav-list a.active {
+    background: var(--secondary-bg);
+    color: var(--primary-dark);
+}
+
+.election-nav-menu summary::after {
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    content: "";
+    font-size: 0;
+    height: 0;
+    line-height: 0;
+    width: 0;
+}
+
+.election-breadcrumb {
+    align-items: center;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 13px;
+    gap: 7px;
+}
+
+.election-breadcrumb a {
+    color: var(--primary-dark);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.election-breadcrumb a:hover,
+.election-breadcrumb a:focus {
+    text-decoration: underline;
+}
+
+.election-breadcrumb-separator {
+    color: var(--muted);
+}
+
 .section-heading-row {
     align-items: center;
     display: flex;
@@ -823,6 +1168,20 @@ textarea {
 
 .section-heading-row h1 {
     margin-bottom: 0;
+}
+
+.address-book-tools,
+.segmented-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.segmented-actions .button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
 }
 
 .student-panel-actions {
@@ -978,6 +1337,43 @@ textarea {
     align-items: center;
     display: flex;
     gap: 8px;
+}
+
+.election-period-table {
+    table-layout: fixed;
+}
+
+.election-period-table th:nth-child(1),
+.election-period-table td:nth-child(1) {
+    width: 40%;
+}
+
+.election-period-table th:nth-child(2),
+.election-period-table td:nth-child(2) {
+    width: 29%;
+}
+
+.election-period-table th:nth-child(3),
+.election-period-table td:nth-child(3) {
+    width: 11%;
+}
+
+.election-period-table th:nth-child(4),
+.election-period-table td:nth-child(4) {
+    width: 20%;
+}
+
+.election-period-actions {
+    flex-wrap: nowrap;
+}
+
+.election-period-actions form {
+    margin: 0;
+}
+
+.election-period-actions .button,
+.election-period-actions button {
+    white-space: nowrap;
 }
 
 .student-status-table .table-actions {
@@ -1661,6 +2057,26 @@ textarea {
         white-space: nowrap;
     }
 
+    .staffing-sheet-print {
+        font-size: 10pt;
+    }
+
+    .staffing-sheet-precinct {
+        margin-top: 0.18in;
+    }
+
+    .staffing-sheet-precinct h2 {
+        font-size: 14pt;
+        margin-bottom: 0.06in;
+    }
+
+    .staffing-sheet-table th,
+    .staffing-sheet-table td {
+        font-size: 9pt;
+        line-height: 1.15;
+        padding: 3px 4px;
+    }
+
     .certificate-shell {
         max-width: none;
         padding: 0;
@@ -1857,6 +2273,22 @@ textarea {
         width: 100%;
     }
 
+    .election-nav {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .election-nav > .button,
+    .election-nav-menu summary {
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .election-nav-list {
+        position: static;
+        width: 100%;
+    }
+
     .grid {
         grid-template-columns: 1fr;
     }
@@ -1875,6 +2307,15 @@ textarea {
 
     .status-summary-group .dashboard-stat-grid,
     .summary-stat-group .dashboard-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .attention-stat-row .attention-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .election-home-stat-row .election-home-stat-grid,
+    .staffing-progress-stat-row .staffing-progress-stat-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -1897,6 +2338,10 @@ textarea {
 
     .detail-grid,
     .detail-list {
+        grid-template-columns: 1fr;
+    }
+
+    .election-tool-groups {
         grid-template-columns: 1fr;
     }
 
@@ -1947,6 +2392,29 @@ textarea {
 
     .mobile-card-table .table-actions {
         justify-content: flex-start;
+    }
+
+    .staffing-add-extra-form,
+    .staffing-extra-worker-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .staffing-add-extra-form select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .election-period-table {
+        table-layout: auto;
+    }
+
+    .election-period-actions {
+        flex-wrap: wrap;
+    }
+
+    .staffing-extra-role {
+        grid-template-columns: 1fr;
     }
 
     .certificate-border {

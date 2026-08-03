@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'duration_minutes' => (int) ($_POST['duration_minutes'] ?? 60),
         'building_address' => title_case_address($_POST['building_address'] ?? ''),
         'room_location' => trim($_POST['room_location'] ?? ''),
-        'instructor_name' => title_case_name($_POST['instructor_name'] ?? ''),
+        'instructor_name' => preserve_name_case($_POST['instructor_name'] ?? ''),
         'seats_total' => (int) ($_POST['seats_total'] ?? 0),
         'notes' => trim($_POST['notes'] ?? ''),
         'is_cancelled' => isset($_POST['is_cancelled']) ? 1 : 0,
@@ -112,7 +112,7 @@ page_header($pageTitle);
     <section class="panel">
         <h1><?= e($pageTitle) ?></h1>
         <p><?= $isCopy ? 'Review the copied details, choose the new date and time, then save the new class.' : 'Set the schedule, location, instructor, seats, and positions allowed to attend.' ?></p>
-        <?php page_actions($actions); ?>
+        <?php election_navigation('class-edit'); ?>
 
         <?php if ($isCopy): ?>
             <div class="notice success">Copied from <?= e($class['class_title']) ?>. Saving will create a new class.</div>

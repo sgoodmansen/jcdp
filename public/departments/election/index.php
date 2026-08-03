@@ -1,36 +1,84 @@
 <?php
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_election_access();
+election_require_assignment_setup();
 
 $portalUser = current_user();
 $worker = current_election_worker();
+$assignment = current_election_assignment();
+
+if ($worker && !$assignment) {
+    redirect_to('departments/election/select-assignment.php');
+}
+
 $isManager = can_manage_election_module();
-$isChief = $worker && ((int) $worker['is_chief_judge'] === 1 || (int) $worker['is_assistant_chief_judge'] === 1);
+$isChief = $assignment && election_assignment_has_chief_permissions($assignment);
 
 $activePeriods = election_active_periods();
-$activeWorkerCount = (int) db()->query('SELECT COUNT(*) FROM election_workers WHERE is_active = 1')->fetchColumn();
+$activeWorkerCount = (int) db()->query('SELECT COUNT(*) FROM election_worker_assignments WHERE is_active = 1')->fetchColumn();
 $upcomingClassCount = (int) db()->query(
     'SELECT COUNT(*) FROM election_training_classes
      WHERE is_cancelled = 0
        AND class_date >= CURDATE()'
 )->fetchColumn();
 
-$actions = [
-    ['label' => 'Training classes', 'href' => url('departments/election/classes.php'), 'primary' => true],
-];
-
+$primaryActions = [];
+$toolGroups = [];
 if ($isManager || $isChief) {
-    $actions[] = ['label' => 'Workers', 'href' => url('departments/election/workers.php')];
+    $primaryActions = [
+        ['label' => 'Needs Attention', 'href' => url('departments/election/needs-attention.php'), 'primary' => true],
+        ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')],
+        ['label' => 'Workers', 'href' => url('departments/election/workers.php')],
+        ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
+    ];
+
+    $toolGroups[] = [
+        'title' => 'Staffing',
+        'links' => [
+            ['label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php')],
+            ['label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php')],
+            ['label' => 'Reuse past workers', 'href' => url('departments/election/reuse-workers.php')],
+        ],
+    ];
 }
 
 if ($isManager) {
-    $actions[] = ['label' => 'New class', 'href' => url('departments/election/class-edit.php')];
-    $actions[] = ['label' => 'Setup', 'href' => url('departments/election/setup.php')];
+    $toolGroups[] = [
+        'title' => 'Worker Tools',
+        'links' => [
+            ['label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php')],
+            ['label' => 'Merge contacts', 'href' => url('departments/election/merge-workers.php')],
+        ],
+    ];
+    $toolGroups[] = [
+        'title' => 'Training Setup',
+        'links' => [
+            ['label' => 'New class', 'href' => url('departments/election/class-edit.php')],
+            ['label' => 'Email Template', 'href' => url('departments/election/email-template.php')],
+        ],
+    ];
+    $toolGroups[] = [
+        'title' => 'Admin',
+        'links' => [
+            ['label' => 'Setup', 'href' => url('departments/election/setup.php')],
+        ],
+    ];
+}
+
+if (!$primaryActions) {
+    $primaryActions = [
+        ['label' => 'Training classes', 'href' => url('departments/election/classes.php'), 'primary' => true],
+    ];
 }
 
 if ($worker) {
-    $actions[] = ['label' => 'My information', 'href' => url('departments/election/worker-edit.php?id=' . $worker['id'])];
-    $actions[] = ['label' => 'Sign out', 'href' => url('departments/election/sign-out.php')];
+    $toolGroups[] = [
+        'title' => 'My Account',
+        'links' => [
+            ['label' => 'My information', 'href' => url('departments/election/worker-edit.php?id=' . $worker['id'])],
+            ['label' => 'Sign out', 'href' => url('departments/election/sign-out.php')],
+        ],
+    ];
 }
 
 $registeredClasses = [];
@@ -39,10 +87,10 @@ if ($worker) {
         'SELECT election_training_classes.*, election_training_registrations.attended
          FROM election_training_registrations
          INNER JOIN election_training_classes ON election_training_classes.id = election_training_registrations.class_id
-         WHERE election_training_registrations.worker_id = :worker_id
+         WHERE election_training_registrations.assignment_id = :assignment_id
          ORDER BY election_training_classes.class_date, election_training_classes.start_time'
     );
-    $statement->execute(['worker_id' => $worker['id']]);
+    $statement->execute(['assignment_id' => $assignment['id']]);
     $registeredClasses = $statement->fetchAll();
 }
 
@@ -52,11 +100,11 @@ page_header('Election Training');
     <section class="panel">
         <h1>Election Training</h1>
         <?php if ($worker): ?>
-            <p><?= e(election_person_name($worker)) ?> - <?= e($worker['position_name']) ?>, <?= e($worker['precinct_name']) ?></p>
+            <p><?= e(election_person_name($worker)) ?> - <?= e($assignment['position_name']) ?>, <?= e($assignment['precinct_name']) ?></p>
         <?php else: ?>
             <p>Manage election workers, precinct assignments, training classes, and attendance.</p>
         <?php endif; ?>
-        <?php page_actions($actions); ?>
+        <?php election_navigation('home'); ?>
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>
@@ -67,10 +115,10 @@ page_header('Election Training');
     </section>
 
     <?php if ($portalUser): ?>
-        <section class="dashboard-stat-row" style="margin-top: 18px;">
+        <section class="dashboard-stat-row election-home-stat-row" style="margin-top: 18px;">
             <div class="dashboard-stat-group summary-stat-group">
                 <h2>Current Work</h2>
-                <div class="grid dashboard-stat-grid">
+                <div class="grid dashboard-stat-grid election-home-stat-grid">
                     <article class="card dashboard-stat-card">
                         <h3><?= e((string) count($activePeriods)) ?></h3>
                         <p>Active elections</p>
@@ -110,7 +158,7 @@ page_header('Election Training');
                     <tbody>
                         <?php foreach ($registeredClasses as $class): ?>
                             <tr>
-                                <td data-label="Date"><?= e($class['class_date']) ?> <?= e(substr($class['start_time'], 0, 5)) ?></td>
+                                <td data-label="Date"><?= e(format_display_date($class['class_date'])) ?> <?= e(format_display_time($class['start_time'])) ?></td>
                                 <td data-label="Class"><?= e($class['class_title']) ?></td>
                                 <td data-label="Location"><?= e($class['building_address']) ?><br><span class="meta"><?= e($class['room_location'] ?: 'Room not provided') ?></span></td>
                                 <td data-label="Attendance">
@@ -123,6 +171,7 @@ page_header('Election Training');
                                         <form method="post" action="<?= e(url('departments/election/leave-class.php')) ?>">
                                             <input type="hidden" name="class_id" value="<?= e((string) $class['id']) ?>">
                                             <input type="hidden" name="worker_id" value="<?= e((string) $worker['id']) ?>">
+                                            <input type="hidden" name="assignment_id" value="<?= e((string) $assignment['id']) ?>">
                                             <button type="submit" class="secondary compact-button">Leave class</button>
                                         </form>
                                     <?php endif; ?>

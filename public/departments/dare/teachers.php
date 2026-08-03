@@ -11,8 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     );
     $statement->execute([
         'school_id' => (int) ($_POST['school_id'] ?? 0) ?: null,
-        'first_name' => title_case_name($_POST['first_name'] ?? ''),
-        'last_name' => title_case_name($_POST['last_name'] ?? ''),
+        'first_name' => preserve_name_case($_POST['first_name'] ?? ''),
+        'last_name' => preserve_name_case($_POST['last_name'] ?? ''),
         'email' => trim($_POST['email'] ?? ''),
     ]);
     $teacherId = (int) db()->lastInsertId();

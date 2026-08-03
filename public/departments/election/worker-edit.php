@@ -1,13 +1,18 @@
 <?php
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_election_access();
+election_require_assignment_setup();
 
 $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
+$assignmentId = (int) ($_GET['assignment_id'] ?? $_POST['assignment_id'] ?? 0);
+$isNewAssignment = $id > 0 && (($_GET['new_assignment'] ?? $_POST['new_assignment'] ?? '') === '1');
 $currentWorker = current_election_worker();
+$currentAssignment = current_election_assignment();
 $isManager = can_manage_election_module();
 $canManageWorkers = current_election_actor_can_manage_workers();
 
 $worker = null;
+$assignment = null;
 if ($id > 0) {
     $statement = db()->prepare('SELECT * FROM election_workers WHERE id = :id');
     $statement->execute(['id' => $id]);
@@ -19,6 +24,20 @@ if ($id > 0) {
         echo '<main class="shell"><section class="panel"><h1>Worker not found</h1><p>The selected election worker could not be found.</p></section></main>';
         page_footer();
         exit;
+    }
+
+    if (!$isNewAssignment) {
+        $assignmentSql = 'SELECT * FROM election_worker_assignments WHERE worker_id = :worker_id';
+        $assignmentParams = ['worker_id' => $id];
+        if ($assignmentId > 0) {
+            $assignmentSql .= ' AND id = :assignment_id';
+            $assignmentParams['assignment_id'] = $assignmentId;
+        }
+        $assignmentSql .= ' ORDER BY is_active DESC, election_period_id DESC, id DESC LIMIT 1';
+        $statement = db()->prepare($assignmentSql);
+        $statement->execute($assignmentParams);
+        $assignment = $statement->fetch() ?: null;
+        $assignmentId = (int) ($assignment['id'] ?? 0);
     }
 }
 
@@ -32,9 +51,9 @@ if (!$isSelfEdit && !$canManageWorkers) {
     exit;
 }
 
-if ($currentWorker && $worker && !$isManager) {
-    if ((int) $worker['precinct_id'] !== (int) $currentWorker['precinct_id']
-        || (int) $worker['election_period_id'] !== (int) $currentWorker['election_period_id']) {
+if ($currentAssignment && $assignment && !$isManager) {
+    if ((int) $assignment['precinct_id'] !== (int) $currentAssignment['precinct_id']
+        || (int) $assignment['election_period_id'] !== (int) $currentAssignment['election_period_id']) {
         http_response_code(403);
         page_header('Access denied');
         echo '<main class="shell"><section class="panel"><h1>Access denied</h1><p>You can only manage workers in your assigned precinct.</p></section></main>';
@@ -51,60 +70,153 @@ if ($id === 0 && !$canManageWorkers) {
     exit;
 }
 
-$generatedAccessUrl = null;
+$sentAccessUrl = null;
+$possibleMatches = [];
+$workerStatus = $worker ? election_worker_status($worker) : ELECTION_WORKER_STATUS_ACTIVE;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'save_worker';
 
-    if ($action === 'generate_token' && $worker && !$isSelfEdit && $canManageWorkers) {
-        $token = election_generate_worker_token((int) $worker['id']);
-        $generatedAccessUrl = election_worker_access_url((int) $worker['id'], $token);
-        audit_event('generated_access_link', 'election_worker', (string) $worker['id']);
-    } else {
-        $periodId = (int) ($_POST['election_period_id'] ?? ($worker['election_period_id'] ?? 0));
-        $precinctId = (int) ($_POST['precinct_id'] ?? ($worker['precinct_id'] ?? 0));
-        $positionId = (int) ($_POST['position_id'] ?? ($worker['position_id'] ?? 0));
+    if ($action === 'send_welcome_email' && $worker && !$isSelfEdit && $canManageWorkers) {
+        $emailWorker = election_worker_for_email((int) $worker['id'], $assignmentId > 0 ? $assignmentId : null);
 
-        if ($currentWorker && !$isManager) {
-            $periodId = (int) $currentWorker['election_period_id'];
-            $precinctId = (int) $currentWorker['precinct_id'];
+        if (!$emailWorker || trim((string) ($emailWorker['email'] ?? '')) === '') {
+            flash('error', 'Add an email address before sending the welcome email.');
+            redirect_to('departments/election/worker-edit.php?id=' . (int) $worker['id']);
         }
 
-        if ($isSelfEdit) {
-            $positionId = (int) $worker['position_id'];
-            $periodId = (int) $worker['election_period_id'];
-            $precinctId = (int) $worker['precinct_id'];
+        $token = election_generate_worker_token((int) $worker['id']);
+        $sentAccessUrl = election_worker_access_url((int) $worker['id'], $token);
+        $emailSent = election_send_worker_welcome_email($emailWorker, $sentAccessUrl);
+
+        audit_event('sent_welcome_email', 'election_worker', (string) $worker['id'], [
+            'email_sent' => $emailSent,
+        ]);
+
+        if ($emailSent) {
+            flash('success', 'Welcome email sent to ' . $emailWorker['email'] . '.');
+            redirect_to('departments/election/worker-edit.php?id=' . (int) $worker['id']);
+        }
+
+        flash('error', 'The welcome email could not be sent. The access link was generated but mail delivery failed.');
+    } else {
+        $periodId = (int) ($_POST['election_period_id'] ?? ($assignment['election_period_id'] ?? 0));
+        $precinctId = (int) ($_POST['precinct_id'] ?? ($assignment['precinct_id'] ?? 0));
+        $positionId = (int) ($_POST['position_id'] ?? ($assignment['position_id'] ?? 0));
+
+        if ($currentAssignment && !$isManager) {
+            $periodId = (int) $currentAssignment['election_period_id'];
+            $precinctId = (int) $currentAssignment['precinct_id'];
+        }
+
+        if ($isSelfEdit && $assignment) {
+            $positionId = (int) $assignment['position_id'];
+            $periodId = (int) $assignment['election_period_id'];
+            $precinctId = (int) $assignment['precinct_id'];
+        }
+
+        $regularPositionIds = array_map(
+            fn($position) => (int) $position['id'],
+            array_filter(election_positions(), fn($position) => (int) $position['is_assistant_chief_judge'] !== 1)
+        );
+        $shouldManageAssignment = !$isSelfEdit && ($id === 0 || $assignmentId > 0 || $isNewAssignment);
+        if ($shouldManageAssignment && !in_array($positionId, $regularPositionIds, true)) {
+            flash('error', 'Assistant Chief Judge is assigned as an extra responsibility on Precinct Staffing.');
+            redirect_to('departments/election/worker-edit.php' . ($id > 0 ? '?id=' . $id : ''));
         }
 
         $params = [
-            'election_period_id' => $periodId,
-            'precinct_id' => $precinctId,
-            'position_id' => $positionId,
-            'first_name' => title_case_name($_POST['first_name'] ?? ''),
-            'last_name' => title_case_name($_POST['last_name'] ?? ''),
+            'first_name' => preserve_name_case($_POST['first_name'] ?? ''),
+            'last_name' => preserve_name_case($_POST['last_name'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
+            'email_normalized' => election_normalized_email($_POST['email'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),
+            'phone_digits' => election_phone_digits($_POST['phone'] ?? ''),
+            'name_key' => election_worker_name_key($_POST['first_name'] ?? '', $_POST['last_name'] ?? ''),
             'mailing_address' => title_case_address($_POST['mailing_address'] ?? ''),
             'city' => title_case_name($_POST['city'] ?? ''),
             'state' => trim($_POST['state'] ?? ''),
             'zip_code' => trim($_POST['zip_code'] ?? ''),
             'wants_email_reminders' => isset($_POST['wants_email_reminders']) ? 1 : 0,
             'wants_text_reminders' => isset($_POST['wants_text_reminders']) ? 1 : 0,
-            'is_active' => $isSelfEdit ? (int) ($worker['is_active'] ?? 1) : (isset($_POST['is_active']) ? 1 : 0),
-            'notes' => $isSelfEdit ? (string) ($worker['notes'] ?? '') : trim($_POST['notes'] ?? ''),
         ];
+        $postedWorkerStatus = $_POST['availability_status'] ?? $workerStatus;
+        if (!array_key_exists($postedWorkerStatus, election_worker_status_options())) {
+            $postedWorkerStatus = ELECTION_WORKER_STATUS_ACTIVE;
+        }
+        if ($isSelfEdit) {
+            $postedWorkerStatus = $workerStatus;
+        }
+        $params['availability_status'] = $postedWorkerStatus;
+        $params['unavailable_reason'] = $postedWorkerStatus === ELECTION_WORKER_STATUS_UNAVAILABLE
+            ? trim($_POST['unavailable_reason'] ?? '')
+            : '';
+        $params['contact_is_active'] = $postedWorkerStatus === ELECTION_WORKER_STATUS_ACTIVE ? 1 : 0;
+
+        $assignmentParams = [
+            'election_period_id' => $periodId,
+            'precinct_id' => $precinctId,
+            'position_id' => $positionId,
+            'is_active' => $isSelfEdit ? (int) ($assignment['is_active'] ?? 1) : (isset($_POST['is_active']) ? 1 : 0),
+            'notes' => $isSelfEdit ? (string) ($assignment['notes'] ?? '') : trim($_POST['notes'] ?? ''),
+        ];
+
+        if ($id === 0 && $action === 'use_existing_worker') {
+            $existingWorkerId = (int) ($_POST['existing_worker_id'] ?? 0);
+            $statement = db()->prepare('SELECT id, availability_status, is_active FROM election_workers WHERE id = :id');
+            $statement->execute(['id' => $existingWorkerId]);
+            $existingWorker = $statement->fetch();
+
+            if (!$existingWorker) {
+                flash('error', 'Select an existing worker before adding the assignment.');
+                redirect_to('departments/election/worker-edit.php');
+            }
+
+            if (election_worker_status($existingWorker) !== ELECTION_WORKER_STATUS_ACTIVE) {
+                flash('error', 'That worker is marked unavailable or inactive. Change the worker status before adding an assignment.');
+                redirect_to('departments/election/worker-edit.php');
+            }
+
+            $assignmentParams['worker_id'] = $existingWorkerId;
+            $assignmentParams['created_by_user_id'] = current_user()['id'] ?? null;
+            $assignmentParams['recruited_by_assignment_id'] = $currentAssignment['id'] ?? null;
+            $statement = db()->prepare(
+                'INSERT IGNORE INTO election_worker_assignments (
+                    worker_id, election_period_id, precinct_id, position_id, recruited_by_assignment_id,
+                    created_by_user_id, is_active, notes
+                 )
+                 VALUES (
+                    :worker_id, :election_period_id, :precinct_id, :position_id, :recruited_by_assignment_id,
+                    :created_by_user_id, :is_active, :notes
+                 )'
+            );
+            $statement->execute($assignmentParams);
+
+            if ($statement->rowCount() === 0) {
+                flash('error', 'That worker already has this assignment.');
+            } else {
+                audit_event('created_assignment', 'election_worker', (string) $existingWorkerId, [
+                    'election_period_id' => $periodId,
+                    'precinct_id' => $precinctId,
+                    'position_id' => $positionId,
+                ]);
+                flash('success', 'Existing worker found. New assignment added.');
+            }
+
+            redirect_to('departments/election/workers.php');
+        }
 
         if ($id > 0) {
             $params['id'] = $id;
             $statement = db()->prepare(
                 'UPDATE election_workers
-                 SET election_period_id = :election_period_id,
-                     precinct_id = :precinct_id,
-                     position_id = :position_id,
-                     first_name = :first_name,
+                 SET first_name = :first_name,
                      last_name = :last_name,
                      email = :email,
+                     email_normalized = :email_normalized,
                      phone = :phone,
+                     phone_digits = :phone_digits,
+                     name_key = :name_key,
                      mailing_address = :mailing_address,
                      city = :city,
                      state = :state,
@@ -112,51 +224,192 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      wants_email_reminders = :wants_email_reminders,
                      wants_text_reminders = :wants_text_reminders,
                      reminder_preferences_asked_at = COALESCE(reminder_preferences_asked_at, NOW()),
-                     is_active = :is_active,
-                     notes = :notes
+                     availability_status = :availability_status,
+                     unavailable_reason = :unavailable_reason,
+                     is_active = :contact_is_active,
+                     access_token_hash = CASE WHEN :contact_is_active_token = 1 THEN access_token_hash ELSE NULL END,
+                     access_token_created_at = CASE WHEN :contact_is_active_token_created = 1 THEN access_token_created_at ELSE NULL END
                  WHERE id = :id'
             );
+            $params['contact_is_active_token'] = $params['contact_is_active'];
+            $params['contact_is_active_token_created'] = $params['contact_is_active'];
             $statement->execute($params);
+
+            if (!$isSelfEdit && $assignmentId > 0) {
+                $assignmentParams['id'] = $assignmentId;
+                $statement = db()->prepare(
+                    'UPDATE election_worker_assignments
+                     SET election_period_id = :election_period_id,
+                         precinct_id = :precinct_id,
+                         position_id = :position_id,
+                         is_active = :is_active,
+                         notes = :notes
+                     WHERE id = :id'
+                );
+                $statement->execute($assignmentParams);
+            } elseif (!$isSelfEdit && $isNewAssignment) {
+                $assignmentParams['worker_id'] = $id;
+                $assignmentParams['created_by_user_id'] = current_user()['id'] ?? null;
+                $assignmentParams['recruited_by_assignment_id'] = $currentAssignment['id'] ?? null;
+                $statement = db()->prepare(
+                    'INSERT INTO election_worker_assignments (
+                        worker_id, election_period_id, precinct_id, position_id, recruited_by_assignment_id,
+                        created_by_user_id, is_active, notes
+                     )
+                     VALUES (
+                        :worker_id, :election_period_id, :precinct_id, :position_id, :recruited_by_assignment_id,
+                        :created_by_user_id, :is_active, :notes
+                     )'
+                );
+                $statement->execute($assignmentParams);
+            }
+
             audit_event('updated', 'election_worker', (string) $id, ['name' => $params['first_name'] . ' ' . $params['last_name']]);
             flash('success', 'Worker saved.');
             redirect_to($isSelfEdit ? 'departments/election/index.php' : 'departments/election/workers.php');
         }
 
+        if ($action === 'save_worker' && empty($_POST['create_anyway'])) {
+            $possibleMatches = election_find_possible_worker_matches($params);
+            if ($possibleMatches) {
+                $worker = $params;
+                $assignment = $assignmentParams;
+            }
+        }
+
+        if (!$possibleMatches) {
         $params['created_by_user_id'] = current_user()['id'] ?? null;
-        $params['recruited_by_worker_id'] = $currentWorker['id'] ?? null;
         $statement = db()->prepare(
             'INSERT INTO election_workers (
                 election_period_id, precinct_id, position_id, recruited_by_worker_id, created_by_user_id,
-                first_name, last_name, email, phone, mailing_address, city, state, zip_code,
-                wants_email_reminders, wants_text_reminders, is_active, notes
+                first_name, last_name, email, email_normalized, phone, phone_digits, name_key, mailing_address, city, state, zip_code,
+                wants_email_reminders, wants_text_reminders, availability_status, unavailable_reason, is_active, notes
              )
              VALUES (
-                :election_period_id, :precinct_id, :position_id, :recruited_by_worker_id, :created_by_user_id,
-                :first_name, :last_name, :email, :phone, :mailing_address, :city, :state, :zip_code,
-                :wants_email_reminders, :wants_text_reminders, 1, :notes
+                :election_period_id, :precinct_id, :position_id, NULL, :created_by_user_id,
+                :first_name, :last_name, :email, :email_normalized, :phone, :phone_digits, :name_key, :mailing_address, :city, :state, :zip_code,
+                :wants_email_reminders, :wants_text_reminders, :availability_status, :unavailable_reason, :contact_is_active, NULL
              )'
         );
-        unset($params['is_active']);
-        $statement->execute($params);
+        $legacyParams = [
+            'election_period_id' => $assignmentParams['election_period_id'],
+            'precinct_id' => $assignmentParams['precinct_id'],
+            'position_id' => $assignmentParams['position_id'],
+            'created_by_user_id' => $params['created_by_user_id'],
+            'first_name' => $params['first_name'],
+            'last_name' => $params['last_name'],
+            'email' => $params['email'],
+            'email_normalized' => $params['email_normalized'],
+            'phone' => $params['phone'],
+            'phone_digits' => $params['phone_digits'],
+            'name_key' => $params['name_key'],
+            'mailing_address' => $params['mailing_address'],
+            'city' => $params['city'],
+            'state' => $params['state'],
+            'zip_code' => $params['zip_code'],
+            'wants_email_reminders' => $params['wants_email_reminders'],
+            'wants_text_reminders' => $params['wants_text_reminders'],
+            'availability_status' => ELECTION_WORKER_STATUS_ACTIVE,
+            'unavailable_reason' => '',
+            'contact_is_active' => 1,
+        ];
+        $statement->execute($legacyParams);
         $id = (int) db()->lastInsertId();
-        $token = election_generate_worker_token($id);
-        $generatedAccessUrl = election_worker_access_url($id, $token);
+
+        $assignmentParams['worker_id'] = $id;
+        $assignmentParams['created_by_user_id'] = current_user()['id'] ?? null;
+        $assignmentParams['recruited_by_assignment_id'] = $currentAssignment['id'] ?? null;
+        $statement = db()->prepare(
+            'INSERT INTO election_worker_assignments (
+                worker_id, election_period_id, precinct_id, position_id, recruited_by_assignment_id,
+                created_by_user_id, is_active, notes
+             )
+             VALUES (
+                :worker_id, :election_period_id, :precinct_id, :position_id, :recruited_by_assignment_id,
+                :created_by_user_id, 1, :notes
+             )'
+        );
+        unset($assignmentParams['is_active']);
+        $statement->execute($assignmentParams);
+
         audit_event('created', 'election_worker', (string) $id, ['name' => $params['first_name'] . ' ' . $params['last_name']]);
 
         $statement = db()->prepare('SELECT * FROM election_workers WHERE id = :id');
         $statement->execute(['id' => $id]);
         $worker = $statement->fetch();
-        flash('success', 'Worker added. Copy the access link before leaving this page.');
+        flash('success', 'Worker added. Send the welcome email when you are ready to share the access link.');
+        redirect_to('departments/election/workers.php');
+        }
     }
 }
 
 $periods = election_active_periods();
 $precincts = election_precincts();
-$positions = election_positions();
+$positions = array_values(array_filter(election_positions(), fn($position) => (int) $position['is_assistant_chief_judge'] !== 1));
 
-if ($currentWorker && !$isManager) {
-    $periods = array_values(array_filter($periods, fn($period) => (int) $period['id'] === (int) $currentWorker['election_period_id']));
-    $precincts = array_values(array_filter($precincts, fn($precinct) => (int) $precinct['id'] === (int) $currentWorker['precinct_id']));
+if ($currentAssignment && !$isManager) {
+    $periods = array_values(array_filter($periods, fn($period) => (int) $period['id'] === (int) $currentAssignment['election_period_id']));
+    $precincts = array_values(array_filter($precincts, fn($precinct) => (int) $precinct['id'] === (int) $currentAssignment['precinct_id']));
+}
+
+$selectedPeriodId = (int) ($assignment['election_period_id'] ?? 0);
+if ($selectedPeriodId === 0 && count($periods) === 1) {
+    $selectedPeriodId = (int) $periods[0]['id'];
+}
+
+$assignmentHistory = [];
+if ($worker) {
+    $historySql = 'SELECT election_worker_assignments.*,
+                          election_periods.name AS election_name,
+                          election_periods.starts_on,
+                          election_periods.ends_on,
+                          election_periods.is_active AS election_is_active,
+                          election_precincts.name AS precinct_name,
+                          election_positions.name AS position_name,
+                          CASE WHEN election_precinct_roles.assignment_id IS NULL THEN 0 ELSE 1 END AS is_assistant_chief_judge_extra,
+                          COUNT(DISTINCT election_training_registrations.class_id) AS training_registration_count,
+                          SUM(CASE WHEN election_training_registrations.attended = 1 THEN 1 ELSE 0 END) AS training_attended_count,
+                          GROUP_CONCAT(
+                              DISTINCT CONCAT(
+                                  election_training_classes.class_title,
+                                  " - ",
+                                  DATE_FORMAT(election_training_classes.class_date, "%m-%d-%Y"),
+                                  " ",
+                                  CASE WHEN election_training_registrations.attended = 1 THEN "Complete" ELSE "Registered" END
+                              )
+                              ORDER BY election_training_classes.class_date, election_training_classes.start_time
+                              SEPARATOR "\n"
+                          ) AS training_summary
+                   FROM election_worker_assignments
+                   INNER JOIN election_periods ON election_periods.id = election_worker_assignments.election_period_id
+                   INNER JOIN election_precincts ON election_precincts.id = election_worker_assignments.precinct_id
+                   INNER JOIN election_positions ON election_positions.id = election_worker_assignments.position_id
+                   LEFT JOIN election_precinct_roles ON election_precinct_roles.assignment_id = election_worker_assignments.id
+                       AND election_precinct_roles.role_key = :assistant_role_key
+                   LEFT JOIN election_training_registrations ON election_training_registrations.assignment_id = election_worker_assignments.id
+                   LEFT JOIN election_training_classes ON election_training_classes.id = election_training_registrations.class_id
+                   WHERE election_worker_assignments.worker_id = :worker_id';
+    $historyParams = [
+        'assistant_role_key' => ELECTION_ROLE_ASSISTANT_CHIEF_JUDGE,
+        'worker_id' => (int) $worker['id'],
+    ];
+
+    if (!$isManager && $currentAssignment && !$isSelfEdit) {
+        $historySql .= ' AND election_worker_assignments.election_period_id = :history_election_period_id
+                         AND election_worker_assignments.precinct_id = :history_precinct_id';
+        $historyParams['history_election_period_id'] = (int) $currentAssignment['election_period_id'];
+        $historyParams['history_precinct_id'] = (int) $currentAssignment['precinct_id'];
+    }
+
+    $historySql .= ' GROUP BY election_worker_assignments.id
+                     ORDER BY election_periods.starts_on DESC,
+                              election_precincts.name,
+                              election_positions.sort_order,
+                              election_worker_assignments.is_extra,
+                              election_worker_assignments.id DESC';
+    $statement = db()->prepare($historySql);
+    $statement->execute($historyParams);
+    $assignmentHistory = $statement->fetchAll();
 }
 
 $actions = [
@@ -164,14 +417,15 @@ $actions = [
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
 ];
 
-page_header($id > 0 ? 'Edit Election Worker' : 'Add Election Worker');
+$pageTitle = $isNewAssignment ? 'Add Worker Assignment' : ($id > 0 ? 'Edit Election Worker' : 'Add Election Worker');
+page_header($pageTitle);
 ?>
 <main class="shell">
     <section class="panel">
-        <h1><?= $id > 0 ? 'Edit Election Worker' : 'Add Election Worker' ?></h1>
+        <h1><?= e($pageTitle) ?></h1>
         <p><?= $isSelfEdit ? 'Update your contact information and reminder preferences.' : 'Assign the worker to an election, precinct, and position.' ?></p>
         <?php if (!$isSelfEdit): ?>
-            <?php page_actions($actions); ?>
+            <?php election_navigation('workers'); ?>
         <?php endif; ?>
 
         <?php if ($message = flash('success')): ?>
@@ -180,23 +434,102 @@ page_header($id > 0 ? 'Edit Election Worker' : 'Add Election Worker');
         <?php if ($message = flash('error')): ?>
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
-        <?php if ($generatedAccessUrl): ?>
-            <div class="notice success">
-                Access link: <a href="<?= e($generatedAccessUrl) ?>"><?= e($generatedAccessUrl) ?></a>
+        <?php if ($sentAccessUrl): ?>
+            <div class="notice error">
+                Access link generated but email was not sent: <a href="<?= e($sentAccessUrl) ?>"><?= e($sentAccessUrl) ?></a>
             </div>
         <?php endif; ?>
     </section>
 
+    <?php if ($possibleMatches): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <h1>Possible Existing Worker</h1>
+            <p>One or more people already look similar to this worker. Use an existing worker to add a new assignment, or create a separate person if this is someone else.</p>
+            <table class="table mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Assignments</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($possibleMatches as $match): ?>
+                        <tr>
+                            <td data-label="Name"><?= e(election_person_name($match)) ?></td>
+                            <td data-label="Contact">
+                                <?= e($match['email'] ?: 'No email') ?><br>
+                                <span class="meta"><?= e($match['phone'] ?: 'No phone') ?></span>
+                            </td>
+                            <td data-label="Assignments">
+                                <?php foreach (array_filter(explode("\n", (string) ($match['assignment_summary'] ?? ''))) as $summary): ?>
+                                    <?= e($summary) ?><br>
+                                <?php endforeach; ?>
+                                <?php if (empty($match['assignment_summary'])): ?>
+                                    <span class="meta">No assignments yet</span>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="Action">
+                                <form method="post">
+                                    <input type="hidden" name="action" value="use_existing_worker">
+                                    <input type="hidden" name="existing_worker_id" value="<?= e((string) $match['id']) ?>">
+                                    <input type="hidden" name="election_period_id" value="<?= e((string) ($assignment['election_period_id'] ?? 0)) ?>">
+                                    <input type="hidden" name="precinct_id" value="<?= e((string) ($assignment['precinct_id'] ?? 0)) ?>">
+                                    <input type="hidden" name="position_id" value="<?= e((string) ($assignment['position_id'] ?? 0)) ?>">
+                                    <?php if ((int) ($assignment['is_active'] ?? 1) === 1): ?>
+                                        <input type="hidden" name="is_active" value="1">
+                                    <?php endif; ?>
+                                    <input type="hidden" name="notes" value="<?= e($assignment['notes'] ?? '') ?>">
+                                    <button type="submit" class="secondary compact-button">Use existing</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <form method="post" style="margin-top: 18px;">
+                <input type="hidden" name="create_anyway" value="1">
+                <input type="hidden" name="election_period_id" value="<?= e((string) ($assignment['election_period_id'] ?? 0)) ?>">
+                <input type="hidden" name="precinct_id" value="<?= e((string) ($assignment['precinct_id'] ?? 0)) ?>">
+                <input type="hidden" name="position_id" value="<?= e((string) ($assignment['position_id'] ?? 0)) ?>">
+                <input type="hidden" name="first_name" value="<?= e($worker['first_name'] ?? '') ?>">
+                <input type="hidden" name="last_name" value="<?= e($worker['last_name'] ?? '') ?>">
+                <input type="hidden" name="email" value="<?= e($worker['email'] ?? '') ?>">
+                <input type="hidden" name="phone" value="<?= e($worker['phone'] ?? '') ?>">
+                <input type="hidden" name="mailing_address" value="<?= e($worker['mailing_address'] ?? '') ?>">
+                <input type="hidden" name="city" value="<?= e($worker['city'] ?? '') ?>">
+                <input type="hidden" name="state" value="<?= e($worker['state'] ?? '') ?>">
+                <input type="hidden" name="zip_code" value="<?= e($worker['zip_code'] ?? '') ?>">
+                <?php if ((int) ($worker['wants_email_reminders'] ?? 0) === 1): ?>
+                    <input type="hidden" name="wants_email_reminders" value="1">
+                <?php endif; ?>
+                <?php if ((int) ($worker['wants_text_reminders'] ?? 0) === 1): ?>
+                    <input type="hidden" name="wants_text_reminders" value="1">
+                <?php endif; ?>
+                <input type="hidden" name="availability_status" value="<?= e($workerStatus) ?>">
+                <input type="hidden" name="unavailable_reason" value="<?= e($worker['unavailable_reason'] ?? '') ?>">
+                <?php if ((int) ($assignment['is_active'] ?? 1) === 1): ?>
+                    <input type="hidden" name="is_active" value="1">
+                <?php endif; ?>
+                <input type="hidden" name="notes" value="<?= e($assignment['notes'] ?? '') ?>">
+                <button type="submit">Create new person anyway</button>
+            </form>
+        </section>
+    <?php endif; ?>
+
     <section class="panel" style="margin-top: 18px;">
         <form class="form compact-form" method="post">
             <input type="hidden" name="id" value="<?= e((string) $id) ?>">
+            <input type="hidden" name="assignment_id" value="<?= e((string) $assignmentId) ?>">
+            <input type="hidden" name="new_assignment" value="<?= $isNewAssignment ? '1' : '0' ?>">
             <?php if (!$isSelfEdit): ?>
                 <label class="span-2">
                     Election
                     <select name="election_period_id" required>
                         <option value="">Select election</option>
                         <?php foreach ($periods as $period): ?>
-                            <option value="<?= e((string) $period['id']) ?>" <?= (int) ($worker['election_period_id'] ?? 0) === (int) $period['id'] ? 'selected' : '' ?>><?= e($period['name']) ?></option>
+                            <option value="<?= e((string) $period['id']) ?>" <?= $selectedPeriodId === (int) $period['id'] ? 'selected' : '' ?>><?= e($period['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </label>
@@ -205,7 +538,7 @@ page_header($id > 0 ? 'Edit Election Worker' : 'Add Election Worker');
                     <select name="precinct_id" required>
                         <option value="">Select precinct</option>
                         <?php foreach ($precincts as $precinct): ?>
-                            <option value="<?= e((string) $precinct['id']) ?>" <?= (int) ($worker['precinct_id'] ?? 0) === (int) $precinct['id'] ? 'selected' : '' ?>><?= e($precinct['name']) ?></option>
+                            <option value="<?= e((string) $precinct['id']) ?>" <?= (int) ($assignment['precinct_id'] ?? 0) === (int) $precinct['id'] ? 'selected' : '' ?>><?= e($precinct['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </label>
@@ -214,7 +547,7 @@ page_header($id > 0 ? 'Edit Election Worker' : 'Add Election Worker');
                     <select name="position_id" required>
                         <option value="">Select position</option>
                         <?php foreach ($positions as $position): ?>
-                            <option value="<?= e((string) $position['id']) ?>" <?= (int) ($worker['position_id'] ?? 0) === (int) $position['id'] ? 'selected' : '' ?>><?= e($position['name']) ?></option>
+                            <option value="<?= e((string) $position['id']) ?>" <?= (int) ($assignment['position_id'] ?? 0) === (int) $position['id'] ? 'selected' : '' ?>><?= e($position['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </label>
@@ -262,13 +595,25 @@ page_header($id > 0 ? 'Edit Election Worker' : 'Add Election Worker');
                 Text reminders
             </label>
             <?php if (!$isSelfEdit): ?>
+                <label>
+                    Worker status
+                    <select name="availability_status">
+                        <?php foreach (election_worker_status_options() as $statusValue => $statusLabel): ?>
+                            <option value="<?= e($statusValue) ?>" <?= $workerStatus === $statusValue ? 'selected' : '' ?>><?= e($statusLabel) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label>
+                    Unavailable reason
+                    <input name="unavailable_reason" value="<?= e($worker['unavailable_reason'] ?? '') ?>" placeholder="Moved, deceased, health, do not contact">
+                </label>
                 <label class="check-label">
-                    <input type="checkbox" name="is_active" <?= (int) ($worker['is_active'] ?? 1) === 1 ? 'checked' : '' ?>>
-                    Active worker
+                    <input type="checkbox" name="is_active" <?= (int) ($assignment['is_active'] ?? 1) === 1 ? 'checked' : '' ?>>
+                    Active assignment
                 </label>
                 <label class="span-2">
                     Notes
-                    <textarea name="notes"><?= e($worker['notes'] ?? '') ?></textarea>
+                    <textarea name="notes"><?= e($assignment['notes'] ?? '') ?></textarea>
                 </label>
             <?php endif; ?>
             <div class="actions span-2">
@@ -282,14 +627,85 @@ page_header($id > 0 ? 'Edit Election Worker' : 'Add Election Worker');
         </form>
     </section>
 
+    <?php if ($worker): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <div class="section-heading-row">
+                <h1>Assignment History</h1>
+                <?php if (!$isSelfEdit && $canManageWorkers): ?>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'] . '&new_assignment=1')) ?>">Add assignment</a>
+                <?php endif; ?>
+            </div>
+            <table class="table mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Election</th>
+                        <th>Precinct</th>
+                        <th>Position</th>
+                        <th>Assignment</th>
+                        <th>Training</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($assignmentHistory as $history): ?>
+                        <tr>
+                            <td data-label="Election">
+                                <?= e($history['election_name']) ?><br>
+                                <span class="meta"><?= e(format_display_date($history['starts_on'])) ?> - <?= e(format_display_date($history['ends_on'])) ?></span>
+                            </td>
+                            <td data-label="Precinct"><?= e($history['precinct_name']) ?></td>
+                            <td data-label="Position">
+                                <?= e($history['position_name']) ?>
+                                <?php if ((int) ($history['is_assistant_chief_judge_extra'] ?? 0) === 1): ?>
+                                    <br><span class="badge badge-muted">Assistant Chief</span>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="Assignment">
+                                <span class="badge <?= (int) $history['is_active'] === 1 ? 'badge-success' : 'badge-muted' ?>">
+                                    <?= (int) $history['is_active'] === 1 ? 'Active' : 'Inactive' ?>
+                                </span>
+                                <?php if ((int) ($history['is_extra'] ?? 0) === 1): ?>
+                                    <br><span class="badge badge-muted">Extra worker</span>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="Training">
+                                <?php if ((int) $history['training_registration_count'] > 0): ?>
+                                    <span class="badge <?= (int) $history['training_attended_count'] > 0 ? 'badge-success' : 'badge-muted' ?>">
+                                        <?= e((string) (int) $history['training_attended_count']) ?> complete / <?= e((string) (int) $history['training_registration_count']) ?> registered
+                                    </span>
+                                    <?php foreach (array_filter(explode("\n", (string) ($history['training_summary'] ?? ''))) as $trainingSummary): ?>
+                                        <br><span class="meta"><?= e($trainingSummary) ?></span>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span class="meta">No training registration</span>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="Actions">
+                                <?php if (!$isSelfEdit && $canManageWorkers): ?>
+                                    <a class="button secondary compact-button" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'] . '&assignment_id=' . (int) $history['id'])) ?>">Edit assignment</a>
+                                <?php else: ?>
+                                    <span class="meta">View only</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$assignmentHistory): ?>
+                        <tr><td colspan="6">No assignment history has been recorded for this worker yet.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </section>
+    <?php endif; ?>
+
     <?php if ($worker && !$isSelfEdit && $canManageWorkers): ?>
         <section class="panel" style="margin-top: 18px;">
-            <h1>Access Link</h1>
-            <p>Generate a fresh access link when a worker needs to sign in without a username and password.</p>
+            <h1>Welcome Email</h1>
+            <p>Send the worker a welcome letter with instructions and a fresh access link.</p>
             <form method="post">
                 <input type="hidden" name="id" value="<?= e((string) $worker['id']) ?>">
-                <input type="hidden" name="action" value="generate_token">
-                <button type="submit" class="secondary">Generate new link</button>
+                <input type="hidden" name="assignment_id" value="<?= e((string) $assignmentId) ?>">
+                <input type="hidden" name="action" value="send_welcome_email">
+                <button type="submit" class="secondary">Send welcome email</button>
             </form>
         </section>
     <?php endif; ?>

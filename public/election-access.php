@@ -22,6 +22,7 @@ if (!$worker) {
 }
 
 $_SESSION['election_worker_id'] = $worker['id'];
+unset($_SESSION['election_assignment_id']);
 session_regenerate_id(true);
 
 if (empty($worker['reminder_preferences_asked_at'])) {

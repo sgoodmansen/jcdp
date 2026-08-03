@@ -180,12 +180,12 @@ function dare_import_star_exception(string $firstName, string $lastName): bool
 
 function dare_import_clean_name(string $value): string
 {
-    return title_case_name(str_replace('*', '', $value));
+    return preserve_name_case(str_replace('*', '', $value));
 }
 
 function dare_import_person_parts(string $fullName): array
 {
-    $fullName = title_case_name($fullName);
+    $fullName = preserve_name_case($fullName);
     $parts = preg_split('/\s+/', trim($fullName));
 
     if (!$parts || count($parts) === 1) {

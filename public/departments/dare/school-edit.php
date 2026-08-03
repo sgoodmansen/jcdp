@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'city' => title_case_name($_POST['city'] ?? ''),
         'state' => trim($_POST['state'] ?? ''),
         'zip_code' => trim($_POST['zip_code'] ?? ''),
-        'principal_name' => title_case_name($_POST['principal_name'] ?? ''),
+        'principal_name' => preserve_name_case($_POST['principal_name'] ?? ''),
         'sheriff_name' => trim($_POST['sheriff_name'] ?? ''),
         'is_active' => isset($_POST['is_active']) ? 1 : 0,
     ];

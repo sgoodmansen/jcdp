@@ -1,9 +1,11 @@
 <?php
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_election_access();
+election_require_assignment_setup();
 
 $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
 $worker = current_election_worker();
+$assignment = current_election_assignment();
 $isManager = can_manage_election_module();
 $canManageWorkers = current_election_actor_can_manage_workers();
 
@@ -25,7 +27,19 @@ if (!$class) {
 }
 
 $allowedPositionIds = election_class_allowed_position_ids($id);
-if ($worker && !in_array((int) $worker['position_id'], $allowedPositionIds, true) && !$canManageWorkers) {
+if ($worker && !$assignment) {
+    redirect_to('departments/election/select-assignment.php');
+}
+
+if ($assignment && (int) $assignment['election_period_id'] !== (int) $class['election_period_id'] && !$isManager) {
+    http_response_code(403);
+    page_header('Access denied');
+    echo '<main class="shell"><section class="panel"><h1>Access denied</h1><p>This class is not available for your selected election assignment.</p></section></main>';
+    page_footer();
+    exit;
+}
+
+if ($assignment && !array_intersect(election_assignment_training_position_ids($assignment), $allowedPositionIds) && !$canManageWorkers) {
     http_response_code(403);
     page_header('Access denied');
     echo '<main class="shell"><section class="panel"><h1>Access denied</h1><p>This class is not available for your position.</p></section></main>';
@@ -42,30 +56,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
         exit;
     }
 
-    $attendedWorkerIds = array_map('intval', (array) ($_POST['attended_worker_ids'] ?? []));
-    $registeredStatement = db()->prepare('SELECT worker_id FROM election_training_registrations WHERE class_id = :class_id');
+    $attendedAssignmentIds = array_map('intval', (array) ($_POST['attended_assignment_ids'] ?? []));
+    $registeredStatement = db()->prepare('SELECT assignment_id FROM election_training_registrations WHERE class_id = :class_id');
     $registeredStatement->execute(['class_id' => $id]);
-    $registeredWorkerIds = array_map('intval', array_column($registeredStatement->fetchAll(), 'worker_id'));
+    $registeredAssignmentIds = array_map('intval', array_column($registeredStatement->fetchAll(), 'assignment_id'));
 
     $updateStatement = db()->prepare(
         'UPDATE election_training_registrations
          SET attended = :attended,
              attended_at = CASE WHEN :attended_again = 1 THEN COALESCE(attended_at, NOW()) ELSE NULL END
          WHERE class_id = :class_id
-           AND worker_id = :worker_id'
+           AND assignment_id = :assignment_id'
     );
 
-    foreach ($registeredWorkerIds as $registeredWorkerId) {
-        $attended = in_array($registeredWorkerId, $attendedWorkerIds, true) ? 1 : 0;
+    foreach ($registeredAssignmentIds as $registeredAssignmentId) {
+        $attended = in_array($registeredAssignmentId, $attendedAssignmentIds, true) ? 1 : 0;
         $updateStatement->execute([
             'attended' => $attended,
             'attended_again' => $attended,
             'class_id' => $id,
-            'worker_id' => $registeredWorkerId,
+            'assignment_id' => $registeredAssignmentId,
         ]);
     }
 
-    audit_event('recorded_attendance', 'election_training_class', (string) $id, ['attended_count' => count($attendedWorkerIds)]);
+    audit_event('recorded_attendance', 'election_training_class', (string) $id, ['attended_count' => count($attendedAssignmentIds)]);
     flash('success', 'Attendance saved.');
     redirect_to('departments/election/class-detail.php?id=' . $id);
 }
@@ -80,6 +94,7 @@ if ($allowedPositionIds) {
 }
 
 $registrationSql = 'SELECT election_training_registrations.*,
+                           election_worker_assignments.id AS assignment_id,
                            election_workers.first_name,
                            election_workers.last_name,
                            election_workers.email,
@@ -88,18 +103,19 @@ $registrationSql = 'SELECT election_training_registrations.*,
                            election_precincts.name AS precinct_name
                     FROM election_training_registrations
                     INNER JOIN election_workers ON election_workers.id = election_training_registrations.worker_id
-                    INNER JOIN election_positions ON election_positions.id = election_workers.position_id
-                    INNER JOIN election_precincts ON election_precincts.id = election_workers.precinct_id
+                    INNER JOIN election_worker_assignments ON election_worker_assignments.id = election_training_registrations.assignment_id
+                    INNER JOIN election_positions ON election_positions.id = election_worker_assignments.position_id
+                    INNER JOIN election_precincts ON election_precincts.id = election_worker_assignments.precinct_id
                     WHERE election_training_registrations.class_id = :class_id';
 $registrationParams = ['class_id' => $id];
-if ($worker && !$isManager) {
-    if ((int) $worker['is_chief_judge'] === 1 || (int) $worker['is_assistant_chief_judge'] === 1) {
-        $registrationSql .= ' AND election_workers.precinct_id = :precinct_id AND election_workers.election_period_id = :period_id';
-        $registrationParams['precinct_id'] = (int) $worker['precinct_id'];
-        $registrationParams['period_id'] = (int) $worker['election_period_id'];
+if ($assignment && !$isManager) {
+    if (election_assignment_has_chief_permissions($assignment)) {
+        $registrationSql .= ' AND election_worker_assignments.precinct_id = :precinct_id AND election_worker_assignments.election_period_id = :period_id';
+        $registrationParams['precinct_id'] = (int) $assignment['precinct_id'];
+        $registrationParams['period_id'] = (int) $assignment['election_period_id'];
     } else {
-        $registrationSql .= ' AND election_workers.id = :worker_id';
-        $registrationParams['worker_id'] = (int) $worker['id'];
+        $registrationSql .= ' AND election_worker_assignments.id = :assignment_id';
+        $registrationParams['assignment_id'] = (int) $assignment['id'];
     }
 }
 $registrationSql .= ' ORDER BY election_precincts.name, election_workers.last_name, election_workers.first_name';
@@ -110,33 +126,46 @@ $registrations = $registrationStatement->fetchAll();
 $eligibleWorkers = [];
 if ($canManageWorkers) {
     $eligibleSql = 'SELECT election_workers.*,
+                          election_worker_assignments.id AS assignment_id,
                           election_positions.name AS position_name,
                           election_precincts.name AS precinct_name
-                   FROM election_workers
-                   INNER JOIN election_positions ON election_positions.id = election_workers.position_id
-                   INNER JOIN election_precincts ON election_precincts.id = election_workers.precinct_id
-                   LEFT JOIN election_training_registrations ON election_training_registrations.worker_id = election_workers.id
+                   FROM election_worker_assignments
+                   INNER JOIN election_workers ON election_workers.id = election_worker_assignments.worker_id
+                   INNER JOIN election_positions ON election_positions.id = election_worker_assignments.position_id
+                   LEFT JOIN election_precinct_roles ON election_precinct_roles.assignment_id = election_worker_assignments.id
+                       AND election_precinct_roles.role_key = "' . ELECTION_ROLE_ASSISTANT_CHIEF_JUDGE . '"
+                   INNER JOIN election_precincts ON election_precincts.id = election_worker_assignments.precinct_id
+                   LEFT JOIN election_training_registrations ON election_training_registrations.assignment_id = election_worker_assignments.id
                        AND election_training_registrations.class_id = :class_id
-                   LEFT JOIN election_training_registrations AS period_registrations ON period_registrations.worker_id = election_workers.id
+                   LEFT JOIN election_training_registrations AS period_registrations ON period_registrations.assignment_id = election_worker_assignments.id
                    LEFT JOIN election_training_classes AS period_classes ON period_classes.id = period_registrations.class_id
                        AND period_classes.election_period_id = :period_id_for_existing
-                   WHERE election_workers.is_active = 1
-                     AND election_workers.election_period_id = :period_id
-                     AND election_training_registrations.worker_id IS NULL
+                   WHERE election_workers.availability_status = :availability_status
+                     AND election_workers.is_active = 1
+                     AND election_worker_assignments.is_active = 1
+                     AND election_worker_assignments.election_period_id = :period_id
+                     AND election_training_registrations.assignment_id IS NULL
                      AND period_classes.id IS NULL';
     $eligibleParams = [
         'class_id' => $id,
         'period_id' => (int) $class['election_period_id'],
         'period_id_for_existing' => (int) $class['election_period_id'],
+        'availability_status' => ELECTION_WORKER_STATUS_ACTIVE,
     ];
     if ($allowedPositionIds) {
-        $eligibleSql .= ' AND election_workers.position_id IN (' . implode(',', array_map('intval', $allowedPositionIds)) . ')';
+        $assistantPositionIds = election_assistant_chief_position_ids();
+        $allowsAssistantChief = (bool) array_intersect($allowedPositionIds, $assistantPositionIds);
+        $eligibleSql .= ' AND (election_worker_assignments.position_id IN (' . implode(',', array_map('intval', $allowedPositionIds)) . ')';
+        if ($allowsAssistantChief) {
+            $eligibleSql .= ' OR election_precinct_roles.assignment_id IS NOT NULL';
+        }
+        $eligibleSql .= ')';
     } else {
         $eligibleSql .= ' AND 1 = 0';
     }
-    if ($worker && !$isManager) {
-        $eligibleSql .= ' AND election_workers.precinct_id = :precinct_id';
-        $eligibleParams['precinct_id'] = (int) $worker['precinct_id'];
+    if ($assignment && !$isManager) {
+        $eligibleSql .= ' AND election_worker_assignments.precinct_id = :precinct_id';
+        $eligibleParams['precinct_id'] = (int) $assignment['precinct_id'];
     }
     $eligibleSql .= ' ORDER BY election_precincts.name, election_workers.last_name, election_workers.first_name';
     $eligibleStatement = db()->prepare($eligibleSql);
@@ -158,8 +187,14 @@ page_header('Training Class');
 <main class="shell">
     <section class="panel">
         <h1><?= e($class['class_title']) ?></h1>
-        <p><?= e($class['class_date']) ?> at <?= e(substr($class['start_time'], 0, 5)) ?> - <?= e($class['duration_minutes']) ?> minutes</p>
-        <?php page_actions($actions); ?>
+        <p><?= e(format_display_date($class['class_date'])) ?> at <?= e(format_display_time($class['start_time'])) ?> - <?= e($class['duration_minutes']) ?> minutes</p>
+        <?php election_navigation('classes'); ?>
+        <?php if ($isManager): ?>
+            <div class="actions" style="margin-bottom: 18px;">
+                <a class="button secondary" href="<?= e(url('departments/election/class-edit.php?id=' . $id)) ?>">Edit class</a>
+                <a class="button secondary" href="<?= e(url('departments/election/class-edit.php?copy_id=' . $id)) ?>">Copy class</a>
+            </div>
+        <?php endif; ?>
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>
@@ -192,10 +227,10 @@ page_header('Training Class');
                 <input type="hidden" name="class_id" value="<?= e((string) $id) ?>">
                 <label>
                     Worker
-                    <select name="worker_id" required>
+                    <select name="assignment_id" required>
                         <option value="">Select worker</option>
                         <?php foreach ($eligibleWorkers as $eligibleWorker): ?>
-                            <option value="<?= e((string) $eligibleWorker['id']) ?>">
+                            <option value="<?= e((string) $eligibleWorker['assignment_id']) ?>">
                                 <?= e(election_person_name($eligibleWorker)) ?> - <?= e($eligibleWorker['position_name']) ?>, <?= e($eligibleWorker['precinct_name']) ?>
                             </option>
                         <?php endforeach; ?>
@@ -236,7 +271,7 @@ page_header('Training Class');
                         <tr>
                             <td data-label="Attended">
                                 <?php if ($isManager): ?>
-                                    <input type="checkbox" name="attended_worker_ids[]" value="<?= e((string) $registration['worker_id']) ?>" <?= (int) $registration['attended'] === 1 ? 'checked' : '' ?>>
+                                    <input type="checkbox" name="attended_assignment_ids[]" value="<?= e((string) $registration['assignment_id']) ?>" <?= (int) $registration['attended'] === 1 ? 'checked' : '' ?>>
                                 <?php else: ?>
                                     <?= (int) $registration['attended'] === 1 ? 'Yes' : 'No' ?>
                                 <?php endif; ?>

@@ -67,8 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $params = [
         'id' => $officerId,
         'user_id' => $userId,
-        'first_name' => title_case_name($portalUser['first_name'] ?? ''),
-        'last_name' => title_case_name($portalUser['last_name'] ?? ''),
+        'first_name' => preserve_name_case($portalUser['first_name'] ?? ''),
+        'last_name' => preserve_name_case($portalUser['last_name'] ?? ''),
         'email' => trim($portalUser['email'] ?? ''),
         'is_active' => isset($_POST['is_active']) ? 1 : 0,
     ];

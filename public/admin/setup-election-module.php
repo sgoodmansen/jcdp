@@ -50,17 +50,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INDEX idx_election_position_active_order (is_active, sort_order, name)
         )",
 
+        "CREATE TABLE IF NOT EXISTS election_settings (
+            setting_key VARCHAR(80) NOT NULL PRIMARY KEY,
+            setting_value TEXT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )",
+
         "CREATE TABLE IF NOT EXISTS election_workers (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            election_period_id INT UNSIGNED NOT NULL,
-            precinct_id INT UNSIGNED NOT NULL,
-            position_id INT UNSIGNED NOT NULL,
+            election_period_id INT UNSIGNED NULL,
+            precinct_id INT UNSIGNED NULL,
+            position_id INT UNSIGNED NULL,
             recruited_by_worker_id INT UNSIGNED NULL,
             created_by_user_id INT UNSIGNED NULL,
             first_name VARCHAR(80) NOT NULL,
             last_name VARCHAR(80) NOT NULL,
             email VARCHAR(190) NULL,
+            email_normalized VARCHAR(190) NULL,
             phone VARCHAR(40) NULL,
+            phone_digits VARCHAR(20) NULL,
+            name_key VARCHAR(170) NULL,
             mobile_phone VARCHAR(40) NULL,
             mailing_address VARCHAR(190) NULL,
             city VARCHAR(100) NULL,
@@ -71,11 +80,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             reminder_preferences_asked_at TIMESTAMP NULL,
             access_token_hash CHAR(64) NULL UNIQUE,
             access_token_created_at TIMESTAMP NULL,
+            availability_status VARCHAR(20) NOT NULL DEFAULT 'active',
+            unavailable_reason TEXT NULL,
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             notes TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_election_worker_name (last_name, first_name),
+            INDEX idx_election_worker_email_normalized (email_normalized),
+            INDEX idx_election_worker_phone_digits (phone_digits),
+            INDEX idx_election_worker_name_key (name_key, zip_code),
+            INDEX idx_election_worker_availability (availability_status, is_active),
             INDEX idx_election_worker_lookup (election_period_id, precinct_id, position_id, is_active),
             CONSTRAINT fk_election_workers_period FOREIGN KEY (election_period_id) REFERENCES election_periods(id) ON DELETE RESTRICT,
             CONSTRAINT fk_election_workers_precinct FOREIGN KEY (precinct_id) REFERENCES election_precincts(id) ON DELETE RESTRICT,
@@ -105,6 +120,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             CONSTRAINT fk_election_classes_created_by FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
         )",
 
+        "CREATE TABLE IF NOT EXISTS election_worker_assignments (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            worker_id INT UNSIGNED NOT NULL,
+            election_period_id INT UNSIGNED NOT NULL,
+            precinct_id INT UNSIGNED NOT NULL,
+            position_id INT UNSIGNED NOT NULL,
+            recruited_by_assignment_id INT UNSIGNED NULL,
+            created_by_user_id INT UNSIGNED NULL,
+            is_extra TINYINT(1) NOT NULL DEFAULT 0,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            notes TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_election_assignment (worker_id, election_period_id, precinct_id, position_id),
+            INDEX idx_election_assignment_lookup (election_period_id, precinct_id, position_id, is_active),
+            CONSTRAINT fk_election_assignments_worker FOREIGN KEY (worker_id) REFERENCES election_workers(id) ON DELETE CASCADE,
+            CONSTRAINT fk_election_assignments_period FOREIGN KEY (election_period_id) REFERENCES election_periods(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_assignments_precinct FOREIGN KEY (precinct_id) REFERENCES election_precincts(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_assignments_position FOREIGN KEY (position_id) REFERENCES election_positions(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_assignments_recruited_by FOREIGN KEY (recruited_by_assignment_id) REFERENCES election_worker_assignments(id) ON DELETE SET NULL,
+            CONSTRAINT fk_election_assignments_created_by FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+        )",
+
+        "CREATE TABLE IF NOT EXISTS election_precinct_roles (
+            election_period_id INT UNSIGNED NOT NULL,
+            precinct_id INT UNSIGNED NOT NULL,
+            role_key VARCHAR(80) NOT NULL,
+            assignment_id INT UNSIGNED NULL,
+            created_by_user_id INT UNSIGNED NULL,
+            updated_by_user_id INT UNSIGNED NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (election_period_id, precinct_id, role_key),
+            INDEX idx_election_precinct_roles_assignment (assignment_id),
+            CONSTRAINT fk_election_precinct_roles_period FOREIGN KEY (election_period_id) REFERENCES election_periods(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_precinct_roles_precinct FOREIGN KEY (precinct_id) REFERENCES election_precincts(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_precinct_roles_assignment FOREIGN KEY (assignment_id) REFERENCES election_worker_assignments(id) ON DELETE SET NULL,
+            CONSTRAINT fk_election_precinct_roles_created_by FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+            CONSTRAINT fk_election_precinct_roles_updated_by FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+        )",
+
         "CREATE TABLE IF NOT EXISTS election_training_class_positions (
             class_id INT UNSIGNED NOT NULL,
             position_id INT UNSIGNED NOT NULL,
@@ -118,7 +174,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             class_id INT UNSIGNED NOT NULL,
             worker_id INT UNSIGNED NOT NULL,
             registered_by_user_id INT UNSIGNED NULL,
-            registered_by_worker_id INT UNSIGNED NULL,
+            assignment_id INT UNSIGNED NULL,
+            registered_by_assignment_id INT UNSIGNED NULL,
             attended TINYINT(1) NOT NULL DEFAULT 0,
             attended_at TIMESTAMP NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -126,8 +183,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             PRIMARY KEY (class_id, worker_id),
             CONSTRAINT fk_election_registrations_class FOREIGN KEY (class_id) REFERENCES election_training_classes(id) ON DELETE CASCADE,
             CONSTRAINT fk_election_registrations_worker FOREIGN KEY (worker_id) REFERENCES election_workers(id) ON DELETE CASCADE,
+            CONSTRAINT fk_election_registrations_assignment FOREIGN KEY (assignment_id) REFERENCES election_worker_assignments(id) ON DELETE CASCADE,
             CONSTRAINT fk_election_registrations_user FOREIGN KEY (registered_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
-            CONSTRAINT fk_election_registrations_worker_by FOREIGN KEY (registered_by_worker_id) REFERENCES election_workers(id) ON DELETE SET NULL
+            CONSTRAINT fk_election_registrations_assignment_by FOREIGN KEY (registered_by_assignment_id) REFERENCES election_worker_assignments(id) ON DELETE SET NULL
         )",
 
         "INSERT INTO election_positions (name, sort_order, is_chief_judge, is_assistant_chief_judge)
@@ -183,6 +241,153 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (in_array('room_location', $columnNames, true)) {
         db()->exec("ALTER TABLE election_precincts MODIFY room_location VARCHAR(160) NULL");
     }
+
+    $workerColumns = db()->query("SHOW COLUMNS FROM election_workers")->fetchAll();
+    $workerColumnNames = array_column($workerColumns, 'Field');
+    $workerColumnSql = [
+        'email_normalized' => "ALTER TABLE election_workers ADD COLUMN email_normalized VARCHAR(190) NULL AFTER email",
+        'phone_digits' => "ALTER TABLE election_workers ADD COLUMN phone_digits VARCHAR(20) NULL AFTER phone",
+        'name_key' => "ALTER TABLE election_workers ADD COLUMN name_key VARCHAR(170) NULL AFTER phone_digits",
+        'availability_status' => "ALTER TABLE election_workers ADD COLUMN availability_status VARCHAR(20) NOT NULL DEFAULT 'active' AFTER access_token_created_at",
+        'unavailable_reason' => "ALTER TABLE election_workers ADD COLUMN unavailable_reason TEXT NULL AFTER availability_status",
+    ];
+
+    foreach ($workerColumnSql as $columnName => $sql) {
+        if (!in_array($columnName, $workerColumnNames, true)) {
+            db()->exec($sql);
+        }
+    }
+
+    db()->exec("ALTER TABLE election_workers MODIFY election_period_id INT UNSIGNED NULL");
+    db()->exec("ALTER TABLE election_workers MODIFY precinct_id INT UNSIGNED NULL");
+    db()->exec("ALTER TABLE election_workers MODIFY position_id INT UNSIGNED NULL");
+
+    db()->exec(
+        "UPDATE election_workers
+         SET email_normalized = NULLIF(LOWER(TRIM(email)), ''),
+             phone_digits = NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''),
+             name_key = NULLIF(CONCAT(LOWER(REPLACE(TRIM(first_name), ' ', '')), '|', LOWER(REPLACE(TRIM(last_name), ' ', ''))), '|'),
+             availability_status = CASE
+                 WHEN availability_status IN ('unavailable', 'inactive') THEN availability_status
+                 ELSE 'active'
+             END,
+             is_active = CASE
+                 WHEN availability_status IN ('unavailable', 'inactive') THEN 0
+                 ELSE 1
+             END"
+    );
+
+    $workerIndexes = db()->query("SHOW INDEX FROM election_workers")->fetchAll();
+    $workerIndexNames = array_unique(array_column($workerIndexes, 'Key_name'));
+    $workerIndexSql = [
+        'idx_election_worker_email_normalized' => 'ALTER TABLE election_workers ADD INDEX idx_election_worker_email_normalized (email_normalized)',
+        'idx_election_worker_phone_digits' => 'ALTER TABLE election_workers ADD INDEX idx_election_worker_phone_digits (phone_digits)',
+        'idx_election_worker_name_key' => 'ALTER TABLE election_workers ADD INDEX idx_election_worker_name_key (name_key, zip_code)',
+        'idx_election_worker_availability' => 'ALTER TABLE election_workers ADD INDEX idx_election_worker_availability (availability_status, is_active)',
+    ];
+
+    foreach ($workerIndexSql as $indexName => $sql) {
+        if (!in_array($indexName, $workerIndexNames, true)) {
+            db()->exec($sql);
+        }
+    }
+
+    $registrationColumns = db()->query("SHOW COLUMNS FROM election_training_registrations")->fetchAll();
+    $registrationColumnNames = array_column($registrationColumns, 'Field');
+    if (!in_array('assignment_id', $registrationColumnNames, true)) {
+        db()->exec("ALTER TABLE election_training_registrations ADD COLUMN assignment_id INT UNSIGNED NULL AFTER worker_id");
+    }
+    if (!in_array('registered_by_assignment_id', $registrationColumnNames, true)) {
+        db()->exec("ALTER TABLE election_training_registrations ADD COLUMN registered_by_assignment_id INT UNSIGNED NULL AFTER registered_by_user_id");
+    }
+
+    $assignmentColumns = db()->query("SHOW COLUMNS FROM election_worker_assignments")->fetchAll();
+    $assignmentColumnNames = array_column($assignmentColumns, 'Field');
+    if (!in_array('is_extra', $assignmentColumnNames, true)) {
+        db()->exec("ALTER TABLE election_worker_assignments ADD COLUMN is_extra TINYINT(1) NOT NULL DEFAULT 0 AFTER created_by_user_id");
+    }
+
+    db()->exec(
+        "INSERT IGNORE INTO election_worker_assignments (
+            worker_id, election_period_id, precinct_id, position_id, recruited_by_assignment_id,
+            created_by_user_id, is_extra, is_active, notes, created_at, updated_at
+         )
+         SELECT id, election_period_id, precinct_id, position_id, NULL,
+                created_by_user_id, 0, is_active, notes, created_at, updated_at
+         FROM election_workers
+         WHERE election_period_id IS NOT NULL
+           AND precinct_id IS NOT NULL
+           AND position_id IS NOT NULL"
+    );
+
+    db()->exec(
+        "UPDATE election_worker_assignments
+         INNER JOIN (
+             SELECT id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY election_period_id, precinct_id, position_id
+                        ORDER BY is_active DESC, id
+                    ) AS slot_order
+             FROM election_worker_assignments
+         ) ranked_assignments ON ranked_assignments.id = election_worker_assignments.id
+         INNER JOIN election_positions ON election_positions.id = election_worker_assignments.position_id
+            AND election_positions.is_chief_judge = 0
+         SET election_worker_assignments.is_extra = CASE WHEN ranked_assignments.slot_order = 1 THEN 0 ELSE 1 END"
+    );
+
+    db()->exec(
+        "INSERT INTO election_precinct_roles (
+            election_period_id, precinct_id, role_key, assignment_id, created_by_user_id, updated_by_user_id
+         )
+         SELECT assistant_assignments.election_period_id,
+                assistant_assignments.precinct_id,
+                'assistant_chief_judge',
+                MIN(primary_assignments.id),
+                assistant_assignments.created_by_user_id,
+                assistant_assignments.created_by_user_id
+         FROM election_worker_assignments assistant_assignments
+         INNER JOIN election_positions assistant_positions ON assistant_positions.id = assistant_assignments.position_id
+            AND assistant_positions.is_assistant_chief_judge = 1
+         INNER JOIN election_worker_assignments primary_assignments ON primary_assignments.worker_id = assistant_assignments.worker_id
+            AND primary_assignments.election_period_id = assistant_assignments.election_period_id
+            AND primary_assignments.precinct_id = assistant_assignments.precinct_id
+            AND primary_assignments.is_active = 1
+            AND primary_assignments.id <> assistant_assignments.id
+         INNER JOIN election_positions primary_positions ON primary_positions.id = primary_assignments.position_id
+            AND primary_positions.is_chief_judge = 0
+            AND primary_positions.is_assistant_chief_judge = 0
+         WHERE assistant_assignments.is_active = 1
+         GROUP BY assistant_assignments.election_period_id, assistant_assignments.precinct_id, assistant_assignments.worker_id
+         ON DUPLICATE KEY UPDATE
+            assignment_id = VALUES(assignment_id),
+            updated_by_user_id = VALUES(updated_by_user_id)"
+    );
+
+    db()->exec(
+        "UPDATE election_worker_assignments
+         INNER JOIN election_positions ON election_positions.id = election_worker_assignments.position_id
+            AND election_positions.is_assistant_chief_judge = 1
+         SET election_worker_assignments.is_active = 0
+         WHERE EXISTS (
+             SELECT 1
+             FROM election_precinct_roles
+             WHERE election_precinct_roles.assignment_id IS NOT NULL
+               AND election_precinct_roles.election_period_id = election_worker_assignments.election_period_id
+               AND election_precinct_roles.precinct_id = election_worker_assignments.precinct_id
+               AND election_precinct_roles.role_key = 'assistant_chief_judge'
+         )"
+    );
+
+    db()->exec(
+        "UPDATE election_training_registrations
+         INNER JOIN election_workers ON election_workers.id = election_training_registrations.worker_id
+         INNER JOIN election_worker_assignments ON election_worker_assignments.worker_id = election_workers.id
+            AND election_worker_assignments.election_period_id = election_workers.election_period_id
+            AND election_worker_assignments.precinct_id = election_workers.precinct_id
+            AND election_worker_assignments.position_id = election_workers.position_id
+         SET election_training_registrations.assignment_id = election_worker_assignments.id
+         WHERE election_training_registrations.assignment_id IS NULL"
+    );
 
     audit_event('setup', 'election_module', 'schema');
     $ranSetup = true;

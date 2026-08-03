@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $periodId = (int) ($_POST['period_id'] ?? 0);
         election_close_period($periodId);
         audit_event('closed', 'election_period', (string) $periodId);
-        flash('success', 'Election closed and workers were set inactive.');
+        flash('success', 'Election closed and assignments were set inactive.');
         redirect_to('departments/election/setup.php');
     }
 
@@ -160,7 +160,9 @@ if ($editPositionId > 0) {
 
 $actions = [
     ['label' => 'Election Home', 'href' => url('departments/election/index.php'), 'primary' => true],
+    ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')],
     ['label' => 'Workers', 'href' => url('departments/election/workers.php')],
+    ['label' => 'Reuse past workers', 'href' => url('departments/election/reuse-workers.php')],
     ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
 ];
 
@@ -170,7 +172,7 @@ page_header('Election Setup');
     <section class="panel">
         <h1>Election Setup</h1>
         <p>Manage election periods, precincts, and worker positions.</p>
-        <?php page_actions($actions); ?>
+        <?php election_navigation('setup'); ?>
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>
@@ -221,7 +223,7 @@ page_header('Election Setup');
             <h1>Election Periods</h1>
             <span class="button secondary compact-button">View section</span>
         </summary>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table election-period-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -234,21 +236,23 @@ page_header('Election Setup');
                 <?php foreach ($periods as $period): ?>
                     <tr>
                         <td data-label="Name"><?= e($period['name']) ?></td>
-                        <td data-label="Dates"><?= e($period['starts_on']) ?> to <?= e($period['ends_on']) ?></td>
+                        <td data-label="Dates"><?= e(format_display_date($period['starts_on'])) ?> to <?= e(format_display_date($period['ends_on'])) ?></td>
                         <td data-label="Status">
                             <span class="badge <?= (int) $period['is_active'] === 1 ? 'badge-success' : 'badge-muted' ?>">
                                 <?= (int) $period['is_active'] === 1 ? 'Active' : 'Closed' ?>
                             </span>
                         </td>
                         <td data-label="Actions">
-                            <a class="button secondary compact-button" href="<?= e(url('departments/election/setup.php?edit_period=' . $period['id'])) ?>">Edit</a>
-                            <?php if ((int) $period['is_active'] === 1): ?>
-                                <form method="post">
-                                    <input type="hidden" name="action" value="close_period">
-                                    <input type="hidden" name="period_id" value="<?= e((string) $period['id']) ?>">
-                                    <button type="submit" class="secondary compact-button">Close election</button>
-                                </form>
-                            <?php endif; ?>
+                            <div class="table-actions election-period-actions">
+                                <a class="button secondary compact-button" href="<?= e(url('departments/election/setup.php?edit_period=' . $period['id'])) ?>">Edit</a>
+                                <?php if ((int) $period['is_active'] === 1): ?>
+                                    <form method="post">
+                                        <input type="hidden" name="action" value="close_period">
+                                        <input type="hidden" name="period_id" value="<?= e((string) $period['id']) ?>">
+                                        <button type="submit" class="secondary compact-button">Close election</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>

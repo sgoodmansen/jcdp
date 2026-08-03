@@ -37,8 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $statement->execute([
             'id' => $id,
             'department_id' => $departmentId,
-            'first_name' => trim($_POST['first_name'] ?? ''),
-            'last_name' => trim($_POST['last_name'] ?? ''),
+            'first_name' => preserve_name_case($_POST['first_name'] ?? ''),
+            'last_name' => preserve_name_case($_POST['last_name'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
             'role' => $_POST['role'] ?? 'standard_user',
@@ -58,8 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $statement->execute([
             'id' => $id,
             'department_id' => $departmentId,
-            'first_name' => trim($_POST['first_name'] ?? ''),
-            'last_name' => trim($_POST['last_name'] ?? ''),
+            'first_name' => preserve_name_case($_POST['first_name'] ?? ''),
+            'last_name' => preserve_name_case($_POST['last_name'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'role' => $_POST['role'] ?? 'standard_user',
             'is_active' => $isActive,

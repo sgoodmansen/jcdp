@@ -125,6 +125,42 @@ function page_footer(): void
                 });
             })();
         </script>
+        <script>
+            (function () {
+                const menus = Array.from(document.querySelectorAll('.election-nav-menu'));
+                if (!menus.length) {
+                    return;
+                }
+
+                const closeMenus = function (exceptMenu) {
+                    menus.forEach(function (menu) {
+                        if (menu !== exceptMenu) {
+                            menu.open = false;
+                        }
+                    });
+                };
+
+                menus.forEach(function (menu) {
+                    menu.addEventListener('toggle', function () {
+                        if (menu.open) {
+                            closeMenus(menu);
+                        }
+                    });
+                });
+
+                document.addEventListener('click', function (event) {
+                    if (!event.target.closest('.election-nav')) {
+                        closeMenus(null);
+                    }
+                });
+
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        closeMenus(null);
+                    }
+                });
+            })();
+        </script>
     </body>
     </html>
     <?php

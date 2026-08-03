@@ -56,6 +56,34 @@ function flash(string $key, ?string $message = null): ?string
     return $value;
 }
 
+function format_display_date(?string $value): string
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return '';
+    }
+
+    try {
+        return (new DateTime($value))->format('m-d-Y');
+    } catch (Throwable $exception) {
+        return $value;
+    }
+}
+
+function format_display_time(?string $value): string
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return '';
+    }
+
+    try {
+        return (new DateTime($value))->format('g:i A');
+    } catch (Throwable $exception) {
+        return $value;
+    }
+}
+
 function normalize_vin(?string $value): string
 {
     return strtoupper(trim(preg_replace('/\s+/', '', $value ?? '')));
@@ -74,6 +102,11 @@ function title_case_name(?string $value): string
         fn($match) => ucfirst(strtolower($match[0])),
         $value
     );
+}
+
+function preserve_name_case(?string $value): string
+{
+    return trim(preg_replace('/\s+/', ' ', $value ?? ''));
 }
 
 function title_case_company(?string $value): string

@@ -117,7 +117,7 @@ function dare_lesson_progress(int $classId): array
 
 function dare_split_student_name(string $name): array
 {
-    $name = title_case_name($name);
+    $name = preserve_name_case($name);
     $parts = preg_split('/\s+/', trim($name));
 
     if (!$parts || count($parts) === 1) {
