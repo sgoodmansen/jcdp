@@ -324,28 +324,21 @@ if ($isManager) {
 }
 
 $problemFilter = $_GET['problem'] ?? 'all';
-if ($problemFilter !== 'all' && !array_key_exists($problemFilter, $problemCounts)) {
+if ($problemFilter !== 'all' && $problemFilter !== 'review' && !array_key_exists($problemFilter, $problemCounts)) {
     $problemFilter = 'all';
 }
 
-$problemFilterOptions = [
-    'all' => ['label' => 'All', 'count' => $totalAttentionCount],
-    'staffing' => ['label' => 'Staffing gaps', 'count' => $problemCounts['staffing']],
-    'training' => ['label' => 'Training', 'count' => $problemCounts['training']],
-    'contact' => ['label' => 'Contact info', 'count' => $problemCounts['contact']],
-    'status' => ['label' => 'Status', 'count' => $problemCounts['status']],
-    'extra' => ['label' => 'Extra workers', 'count' => $problemCounts['extra']],
-];
-if ($isManager) {
-    $problemFilterOptions['duplicates'] = ['label' => 'Duplicates', 'count' => $problemCounts['duplicates']];
-    $problemFilterOptions['close'] = ['label' => 'Close election', 'count' => $problemCounts['close']];
-}
-
+$reviewFilterKeys = ['extra', 'duplicates', 'close'];
 $problemFilterUrl = fn(string $filter): string => url(
     'departments/election/needs-attention.php?election_period_id=' . $selectedPeriodId . '&problem=' . urlencode($filter)
 );
-$showProblemSection = fn(string $filter): bool => $problemFilter === 'all' || $problemFilter === $filter;
-$openProblemSection = fn(string $filter, int $count): bool => $problemFilter === $filter || ($problemFilter === 'all' && $count > 0);
+$showProblemSection = fn(string $filter): bool => $problemFilter === 'all'
+    || $problemFilter === $filter
+    || ($problemFilter === 'review' && in_array($filter, $reviewFilterKeys, true));
+$openProblemSection = fn(string $filter, int $count): bool => $problemFilter === $filter
+    || ($problemFilter === 'review' && in_array($filter, $reviewFilterKeys, true) && $count > 0)
+    || ($problemFilter === 'all' && $count > 0);
+$isReviewFilterActive = $problemFilter === 'review' || in_array($problemFilter, $reviewFilterKeys, true);
 
 $actions = [
     ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php?election_period_id=' . $selectedPeriodId), 'primary' => true],
@@ -398,78 +391,33 @@ page_header('Needs Attention');
         <div class="dashboard-stat-group summary-stat-group">
             <h2>Attention Summary</h2>
             <div class="grid dashboard-stat-grid attention-stat-grid">
-                <article class="card dashboard-stat-card">
+                <a class="card dashboard-stat-card dashboard-filter-card <?= $problemFilter === 'all' ? 'active' : '' ?>" href="<?= e($problemFilterUrl('all')) ?>">
                     <h3><?= e((string) $totalAttentionCount) ?></h3>
                     <p>Total items</p>
-                </article>
-                <article class="card dashboard-stat-card">
+                </a>
+                <a class="card dashboard-stat-card dashboard-filter-card <?= $problemFilter === 'staffing' ? 'active' : '' ?>" href="<?= e($problemFilterUrl('staffing')) ?>">
                     <h3><?= e((string) count($staffingRows)) ?></h3>
                     <p>Precinct staffing gaps</p>
-                </article>
-                <article class="card dashboard-stat-card">
+                </a>
+                <a class="card dashboard-stat-card dashboard-filter-card <?= $problemFilter === 'training' ? 'active' : '' ?>" href="<?= e($problemFilterUrl('training')) ?>">
                     <h3><?= e((string) count($trainingRows)) ?></h3>
                     <p>Training follow-ups</p>
-                </article>
-                <article class="card dashboard-stat-card">
+                </a>
+                <a class="card dashboard-stat-card dashboard-filter-card <?= $problemFilter === 'contact' ? 'active' : '' ?>" href="<?= e($problemFilterUrl('contact')) ?>">
                     <h3><?= e((string) count($contactRows)) ?></h3>
                     <p>Missing contact info</p>
-                </article>
-                <article class="card dashboard-stat-card">
+                </a>
+                <a class="card dashboard-stat-card dashboard-filter-card <?= $problemFilter === 'status' ? 'active' : '' ?>" href="<?= e($problemFilterUrl('status')) ?>">
                     <h3><?= e((string) count($statusRows)) ?></h3>
                     <p>Status conflicts</p>
-                </article>
-                <article class="card dashboard-stat-card">
+                </a>
+                <a class="card dashboard-stat-card dashboard-filter-card <?= $isReviewFilterActive ? 'active' : '' ?>" href="<?= e($problemFilterUrl('review')) ?>">
                     <h3><?= e((string) (count($extraRows) + count($duplicateRows) + ($closeElectionItem ? 1 : 0))) ?></h3>
                     <p>Review items</p>
-                </article>
+                </a>
             </div>
         </div>
     </section>
-
-    <section class="panel" style="margin-top: 18px;">
-        <h1>Focus View</h1>
-        <div class="filter-button-group">
-            <?php foreach ($problemFilterOptions as $filterKey => $option): ?>
-                <a class="button secondary compact-button <?= $problemFilter === $filterKey ? 'active' : '' ?>" href="<?= e($problemFilterUrl($filterKey)) ?>">
-                    <?= e($option['label']) ?> (<?= e((string) $option['count']) ?>)
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </section>
-
-    <?php if ($showProblemSection('close')): ?>
-        <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('close', $problemCounts['close'] ?? 0) ? 'open' : '' ?>>
-            <summary class="section-heading-row">
-                <h1>Election Period Ready to Close</h1>
-                <span class="badge <?= $closeElectionItem ? 'badge-warning' : 'badge-success' ?>"><?= e((string) ($problemCounts['close'] ?? 0)) ?></span>
-                <span class="button secondary compact-button">View section</span>
-            </summary>
-            <?php if ($closeElectionItem): ?>
-                <table class="table mobile-card-table">
-                    <thead>
-                        <tr>
-                            <th>Election</th>
-                            <th>Ended</th>
-                            <th>Active Assignments</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td data-label="Election"><?= e($closeElectionItem['period']['name']) ?></td>
-                            <td data-label="Ended"><?= e(format_display_date($closeElectionItem['period']['ends_on'])) ?></td>
-                            <td data-label="Active Assignments"><?= e((string) $closeElectionItem['active_assignment_count']) ?></td>
-                            <td data-label="Action">
-                                <a class="button secondary compact-button" href="<?= e(url('departments/election/close-period.php?id=' . (int) $closeElectionItem['period']['id'])) ?>">Review close election</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <p>This election period does not need to be closed yet.</p>
-            <?php endif; ?>
-        </details>
-    <?php endif; ?>
 
     <?php if ($showProblemSection('staffing')): ?>
     <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('staffing', count($staffingRows)) ? 'open' : '' ?>>
@@ -678,6 +626,40 @@ page_header('Needs Attention');
             </tbody>
         </table>
     </details>
+    <?php endif; ?>
+
+    <?php if ($showProblemSection('close')): ?>
+        <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('close', $problemCounts['close'] ?? 0) ? 'open' : '' ?>>
+            <summary class="section-heading-row">
+                <h1>Election Period Ready to Close</h1>
+                <span class="badge <?= $closeElectionItem ? 'badge-warning' : 'badge-success' ?>"><?= e((string) ($problemCounts['close'] ?? 0)) ?></span>
+                <span class="button secondary compact-button">View section</span>
+            </summary>
+            <?php if ($closeElectionItem): ?>
+                <table class="table mobile-card-table">
+                    <thead>
+                        <tr>
+                            <th>Election</th>
+                            <th>Ended</th>
+                            <th>Active Assignments</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td data-label="Election"><?= e($closeElectionItem['period']['name']) ?></td>
+                            <td data-label="Ended"><?= e(format_display_date($closeElectionItem['period']['ends_on'])) ?></td>
+                            <td data-label="Active Assignments"><?= e((string) $closeElectionItem['active_assignment_count']) ?></td>
+                            <td data-label="Action">
+                                <a class="button secondary compact-button" href="<?= e(url('departments/election/close-period.php?id=' . (int) $closeElectionItem['period']['id'])) ?>">Review close election</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p>This election period does not need to be closed yet.</p>
+            <?php endif; ?>
+        </details>
     <?php endif; ?>
 
     <?php if ($isManager && $showProblemSection('duplicates')): ?>

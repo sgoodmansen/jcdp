@@ -299,6 +299,24 @@ a {
     margin-bottom: 0;
 }
 
+.dashboard-filter-card {
+    color: var(--ink);
+    display: block;
+    text-decoration: none;
+}
+
+.dashboard-filter-card:hover,
+.dashboard-filter-card:focus,
+.dashboard-filter-card.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+    outline: none;
+}
+
+.dashboard-filter-card.active {
+    background: var(--secondary-bg);
+}
+
 .dashboard-stat-row {
     display: grid;
     gap: 14px;
