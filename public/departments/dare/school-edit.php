@@ -65,7 +65,7 @@ page_header('Edit School');
     <section class="panel">
         <h1>Edit School</h1>
         <p>Update school contact information or mark the school inactive.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('school-edit'); ?>
     </section>
 
     <section class="panel" style="margin-top: 18px;">

@@ -64,7 +64,7 @@ page_header('DARE Class Roster');
     <section class="panel roster-toolbar">
         <div class="letter-action-row">
             <button type="button" class="button desktop-print-button" onclick="window.print()">Print roster</button>
-            <?php page_actions($actions); ?>
+            <?php dare_navigation('class-roster'); ?>
         </div>
     </section>
 

@@ -57,7 +57,7 @@ page_header('DARE Lessons');
     <section class="panel">
         <h1>DARE Lessons</h1>
         <p>Manage the master lesson list used for future DARE classes.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('lessons'); ?>
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>

@@ -56,7 +56,7 @@ page_header('Edit Lesson');
     <section class="panel">
         <h1>Edit Lesson</h1>
         <p>Update the lesson name, display order, notes, or active status.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('lesson-edit'); ?>
     </section>
 
     <section class="panel" style="margin-top: 18px;">

@@ -76,7 +76,7 @@ page_header('New DARE Class');
     <section class="panel">
         <h1>New DARE Class</h1>
         <p>Create a semester class before adding students.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('class-create'); ?>
 
         <?php if (!$schools): ?>
             <div class="notice error">A department supervisor must add at least one school before classes can be created.</div>

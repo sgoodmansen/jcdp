@@ -228,3 +228,119 @@ function dare_next_lessons_for_user(array $user, int $limit = 10): array
 
     return $statement->fetchAll();
 }
+
+function dare_navigation(string $activeKey = ''): void
+{
+    $isManager = can_manage_department('dare');
+    $isSystemAdmin = is_system_admin();
+
+    $groups = [
+        'classes' => [
+            'label' => 'Classes',
+            'items' => [
+                ['key' => 'class-create', 'label' => 'New Class', 'href' => url('departments/dare/class-create.php')],
+                ['key' => 'classes', 'label' => 'Class List', 'href' => url('departments/dare/classes.php')],
+                ['key' => 'students', 'label' => 'Student Search', 'href' => url('departments/dare/students.php')],
+                ['key' => 'essay-winners', 'label' => 'Essay Winners', 'href' => url('departments/dare/essay-winners.php')],
+            ],
+        ],
+        'reports' => [
+            'label' => 'Reports',
+            'items' => [
+                ['key' => 'report', 'label' => 'Reports', 'href' => url('departments/dare/report.php')],
+            ],
+        ],
+        'people' => [
+            'label' => 'People',
+            'items' => [
+                ['key' => 'teachers', 'label' => 'Teachers', 'href' => url('departments/dare/teachers.php')],
+            ],
+        ],
+    ];
+
+    if ($isManager) {
+        $groups['setup'] = [
+            'label' => 'Setup',
+            'items' => [
+                ['key' => 'lookups', 'label' => 'Schools & Officers', 'href' => url('departments/dare/lookups.php')],
+                ['key' => 'lessons', 'label' => 'Lessons', 'href' => url('departments/dare/lessons.php')],
+            ],
+        ];
+    }
+
+    if ($isSystemAdmin) {
+        $groups['admin'] = [
+            'label' => 'Admin',
+            'items' => [
+                ['key' => 'import-preview', 'label' => 'Import Preview', 'href' => url('departments/dare/import-preview.php')],
+                ['key' => 'import', 'label' => 'Import Data', 'href' => url('departments/dare/import.php')],
+                ['key' => 'cleanup', 'label' => 'Cleanup', 'href' => url('departments/dare/cleanup.php')],
+            ],
+        ];
+    }
+
+    $activeAliases = [
+        'class-detail' => 'classes',
+        'class-edit' => 'classes',
+        'class-roster' => 'classes',
+        'certificate' => 'classes',
+        'certificates-print' => 'classes',
+        'student-note' => 'students',
+        'teacher-edit' => 'teachers',
+        'school-edit' => 'lookups',
+        'officer-edit' => 'lookups',
+        'lesson-edit' => 'lessons',
+    ];
+    $navActiveKey = $activeAliases[$activeKey] ?? $activeKey;
+
+    $breadcrumb = [
+        ['label' => 'DARE Home', 'href' => url('departments/dare/index.php')],
+    ];
+    if ($activeKey !== 'home') {
+        foreach ($groups as $groupKey => $group) {
+            if ($navActiveKey === $groupKey) {
+                $breadcrumb[] = ['label' => $group['label'], 'href' => null];
+                break;
+            }
+
+            foreach ($group['items'] as $item) {
+                if ($item['key'] === $navActiveKey) {
+                    $breadcrumb[] = ['label' => $group['label'], 'href' => null];
+                    $breadcrumb[] = ['label' => $item['label'], 'href' => null];
+                    break 2;
+                }
+            }
+        }
+    }
+
+    ?>
+    <div class="election-nav-block">
+        <nav class="election-nav" aria-label="DARE navigation">
+            <a class="button<?= $activeKey === 'home' ? '' : ' secondary' ?>" href="<?= e(url('departments/dare/index.php')) ?>">DARE Home</a>
+            <?php foreach ($groups as $groupKey => $group): ?>
+                <?php $isActiveGroup = $navActiveKey === $groupKey || (bool) array_filter($group['items'], fn($item) => $item['key'] === $navActiveKey); ?>
+                <details class="election-nav-menu">
+                    <summary class="<?= $isActiveGroup ? 'active' : '' ?>"><?= e($group['label']) ?></summary>
+                    <div class="election-nav-list">
+                        <?php foreach ($group['items'] as $item): ?>
+                            <a class="<?= $navActiveKey === $item['key'] ? 'active' : '' ?>" href="<?= e($item['href']) ?>"><?= e($item['label']) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </details>
+            <?php endforeach; ?>
+        </nav>
+        <div class="election-breadcrumb" aria-label="DARE breadcrumb">
+            <?php foreach ($breadcrumb as $index => $crumb): ?>
+                <?php if ($index > 0): ?>
+                    <span class="election-breadcrumb-separator">/</span>
+                <?php endif; ?>
+                <?php if (!empty($crumb['href']) && $index < count($breadcrumb) - 1): ?>
+                    <a href="<?= e($crumb['href']) ?>"><?= e($crumb['label']) ?></a>
+                <?php else: ?>
+                    <span><?= e($crumb['label']) ?></span>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php
+}

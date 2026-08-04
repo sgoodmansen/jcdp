@@ -338,7 +338,7 @@ page_header('DARE Class Detail');
                         <span class="badge badge-muted"><?= e(dare_class_end_countdown($class['end_date'])) ?></span>
                     </div>
                 </div>
-                <?php page_actions($actions); ?>
+                <?php dare_navigation('class-detail'); ?>
             </div>
             <aside class="class-header-status" aria-label="Class status">
                 <div class="status-panel-header">

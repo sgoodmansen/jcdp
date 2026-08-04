@@ -109,7 +109,7 @@ page_header('DARE Cleanup');
 
         <h1>DARE Cleanup</h1>
         <p>Remove existing DARE test records before importing Access data. This page is temporary and available only to system admins.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('cleanup'); ?>
     </section>
 
     <section class="panel" style="margin-top: 18px;">

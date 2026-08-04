@@ -104,7 +104,7 @@ page_header('Edit DARE Officer');
     <section class="panel">
         <h1>Edit DARE Officer</h1>
         <p>Update the linked portal user or active status.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('officer-edit'); ?>
         <?php if ($message = flash('error')): ?>
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>

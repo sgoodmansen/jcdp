@@ -516,7 +516,7 @@ page_header('Import DARE Access Data');
 
         <h1>Import DARE Access Data</h1>
         <p>Import the reviewed Access export into the DARE module. This uses the cleanup rules from the preview page.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('import'); ?>
         <p class="meta">Source file: <?= e(DARE_IMPORT_FILE) ?></p>
     </section>
 

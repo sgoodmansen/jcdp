@@ -163,7 +163,7 @@ page_header('DARE Setup');
     <section class="panel">
         <h1>Schools & Officers</h1>
         <p>Manage DARE schools and officers. This area is available to department supervisors and IT.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('lookups'); ?>
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>

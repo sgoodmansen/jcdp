@@ -75,7 +75,7 @@ page_header($certificateTitle);
     <section class="panel">
         <div class="letter-action-row">
             <button type="button" class="button desktop-print-button" onclick="window.print()">Print certificate</button>
-            <?php page_actions($actions); ?>
+            <?php dare_navigation('certificate'); ?>
         </div>
     </section>
 

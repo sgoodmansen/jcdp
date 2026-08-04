@@ -57,7 +57,7 @@ page_header('Edit Teacher');
     <section class="panel">
         <h1>Edit Teacher</h1>
         <p>Update the teacher name, school, email, or active status.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('teacher-edit'); ?>
     </section>
 
     <section class="panel" style="margin-top: 18px;">

@@ -60,7 +60,7 @@ page_header('DARE Classes');
 <main class="shell">
     <section class="panel">
         <h1>DARE Classes</h1>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('classes'); ?>
         <p class="filter-description">View classes by status.</p>
 
         <div class="filter-button-group" aria-label="Class status filters">

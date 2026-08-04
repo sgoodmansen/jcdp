@@ -43,7 +43,7 @@ page_header('DARE Home');
     <section class="panel">
         <h1>DARE Home</h1>
         <p>Track DARE classes, students, essay completion, and certificate readiness.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('home'); ?>
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>

@@ -119,7 +119,7 @@ page_header('Edit DARE Class');
     <section class="panel">
         <h1>Edit DARE Class</h1>
         <p>Update class dates, assignments, status, and notes.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('class-edit'); ?>
     </section>
 
     <section class="panel" style="margin-top: 18px;">

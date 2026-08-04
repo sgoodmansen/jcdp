@@ -222,7 +222,7 @@ page_header('DARE Reports');
     <section class="panel">
         <h1>DARE Reports</h1>
         <p>Review class totals, student progress, essay completion, and certificate readiness.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('report'); ?>
 
         <form class="form compact-form" method="get">
             <label>

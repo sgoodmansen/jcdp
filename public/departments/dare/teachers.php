@@ -54,7 +54,7 @@ page_header('DARE Teachers');
     <section class="panel">
         <h1>Teachers</h1>
         <p>Add or update teacher names used for DARE classes.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('teachers'); ?>
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>

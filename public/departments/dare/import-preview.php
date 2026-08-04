@@ -547,7 +547,7 @@ page_header('DARE Import Preview');
     <section class="panel">
         <h1>DARE Import Preview</h1>
         <p>Review the Access export before importing. This page does not write records to the database.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('import-preview'); ?>
         <p class="meta">Source file: <?= e($sourcePath) ?></p>
     </section>
 

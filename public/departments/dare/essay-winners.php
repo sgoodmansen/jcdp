@@ -82,7 +82,7 @@ page_header('DARE Essay Winners');
         <p>Print or review students marked as essay winners by class.</p>
         <div class="letter-action-row">
             <button type="button" class="button desktop-print-button" onclick="window.print()">Print essay winners</button>
-            <?php page_actions($actions); ?>
+            <?php dare_navigation('essay-winners'); ?>
         </div>
 
         <form class="form compact-form" method="get" style="margin-top: 18px;">

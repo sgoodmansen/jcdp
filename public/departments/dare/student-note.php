@@ -78,7 +78,7 @@ page_header('DARE Student Note');
                 <br><span class="meta"><?= e(implode(' - ', $classMeta)) ?><?= $teacherName ? ' - ' . e($teacherName) : '' ?></span>
             <?php endif; ?>
         </p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('student-note'); ?>
     </section>
 
     <section class="panel" style="margin-top: 18px;">

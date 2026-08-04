@@ -52,7 +52,7 @@ page_header('DARE Student Search');
     <section class="panel">
         <h1>Student Search</h1>
         <p>Search for student names across DARE classes.</p>
-        <?php page_actions($actions); ?>
+        <?php dare_navigation('students'); ?>
 
         <form class="form" method="get">
             <label>

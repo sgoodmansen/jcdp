@@ -143,7 +143,7 @@ page_header($typeLabel);
     <section class="panel">
         <div class="letter-action-row">
             <button type="button" class="button desktop-print-button" onclick="window.print()">Print certificates</button>
-            <?php page_actions($actions); ?>
+            <?php dare_navigation('certificates-print'); ?>
         </div>
         <p><?= e($typeLabel) ?> for <?= e($class['school_name']) ?>, <?= e(dare_class_label($class)) ?>.</p>
         <?php if (!$class['graduation_date']): ?>
