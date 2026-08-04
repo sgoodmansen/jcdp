@@ -76,7 +76,7 @@ function election_import_contact_from_row(array $row, array $headerMap): array
         'first_name' => preserve_name_case($firstName),
         'last_name' => preserve_name_case($lastName),
         'email' => trim(election_import_value($row, $headerMap, ['email', 'emailaddress', 'eemail', 'mail'])),
-        'phone' => trim(election_import_value($row, $headerMap, ['phone', 'phonenumber', 'mobile', 'cell', 'cellphone', 'telephone'])),
+        'phone' => election_normalize_phone(election_import_value($row, $headerMap, ['phone', 'phonenumber', 'mobile', 'cell', 'cellphone', 'telephone'])),
         'mailing_address' => title_case_address(election_import_value($row, $headerMap, ['mailingaddress', 'address', 'streetaddress', 'street'])),
         'city' => title_case_name(election_import_value($row, $headerMap, ['city'])),
         'state' => $state,

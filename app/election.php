@@ -638,6 +638,29 @@ function election_phone_digits(?string $value): ?string
     return $value === '' ? null : $value;
 }
 
+function election_normalize_phone(?string $value): string
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return '';
+    }
+
+    $digits = election_phone_digits($value);
+    if ($digits === null) {
+        return $value;
+    }
+
+    if (strlen($digits) === 11 && str_starts_with($digits, '1')) {
+        $digits = substr($digits, 1);
+    }
+
+    if (strlen($digits) === 10) {
+        return '(' . substr($digits, 0, 3) . ') ' . substr($digits, 3, 3) . '-' . substr($digits, 6);
+    }
+
+    return $value;
+}
+
 function election_worker_name_key(?string $firstName, ?string $lastName): ?string
 {
     $firstName = strtolower(preg_replace('/\s+/', '', trim((string) $firstName)));

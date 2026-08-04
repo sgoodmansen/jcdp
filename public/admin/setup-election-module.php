@@ -277,6 +277,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         "UPDATE election_workers
          SET email_normalized = NULLIF(LOWER(TRIM(email)), ''),
              phone_digits = NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''),
+             phone = CASE
+                 WHEN LENGTH(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), '')) = 10
+                     THEN CONCAT('(', SUBSTRING(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''), 1, 3), ') ', SUBSTRING(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''), 4, 3), '-', SUBSTRING(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''), 7, 4))
+                 WHEN LENGTH(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), '')) = 11
+                      AND LEFT(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''), 1) = '1'
+                     THEN CONCAT('(', SUBSTRING(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''), 2, 3), ') ', SUBSTRING(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''), 5, 3), '-', SUBSTRING(NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', ''), '+', ''), ''), 8, 4))
+                 ELSE phone
+             END,
              name_key = NULLIF(CONCAT(LOWER(REPLACE(TRIM(first_name), ' ', '')), '|', LOWER(REPLACE(TRIM(last_name), ' ', ''))), '|'),
              availability_status = CASE
                  WHEN availability_status IN ('unavailable', 'inactive') THEN availability_status

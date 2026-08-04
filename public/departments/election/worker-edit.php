@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'last_name' => preserve_name_case($_POST['last_name'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'email_normalized' => election_normalized_email($_POST['email'] ?? ''),
-            'phone' => trim($_POST['phone'] ?? ''),
+            'phone' => election_normalize_phone($_POST['phone'] ?? ''),
             'phone_digits' => election_phone_digits($_POST['phone'] ?? ''),
             'name_key' => election_worker_name_key($_POST['first_name'] ?? '', $_POST['last_name'] ?? ''),
             'mailing_address' => title_case_address($_POST['mailing_address'] ?? ''),
