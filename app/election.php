@@ -421,6 +421,7 @@ function election_navigation(string $activeKey = ''): void
             'items' => [
                 ['key' => 'staffing', 'label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')],
                 ['key' => 'staffing-sheet', 'label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php')],
+                ['key' => 'precinct-contact-sheet', 'label' => 'Precinct Contact Sheet', 'href' => url('departments/election/precinct-contact-sheet.php')],
                 ['key' => 'reuse-workers', 'label' => 'Reuse Past Workers', 'href' => url('departments/election/reuse-workers.php')],
             ],
         ];

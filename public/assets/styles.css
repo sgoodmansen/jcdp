@@ -1008,6 +1008,86 @@ textarea {
     width: 24%;
 }
 
+.contact-sheet-precinct {
+    break-inside: avoid;
+    margin-top: 22px;
+    page-break-inside: avoid;
+}
+
+.contact-sheet-heading {
+    align-items: start;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+}
+
+.contact-sheet-heading h2 {
+    font-size: 22px;
+    margin: 0 0 5px;
+}
+
+.contact-sheet-heading p {
+    margin-bottom: 0;
+}
+
+.contact-sheet-count {
+    background: var(--secondary-bg);
+    border: 1px solid var(--secondary-border);
+    border-radius: 8px;
+    min-width: 96px;
+    padding: 10px 12px;
+    text-align: center;
+}
+
+.contact-sheet-count strong {
+    display: block;
+    font-size: 26px;
+    line-height: 1;
+}
+
+.contact-sheet-count span {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.contact-sheet-table {
+    table-layout: fixed;
+}
+
+.contact-sheet-table th:nth-child(1),
+.contact-sheet-table td:nth-child(1) {
+    width: 24%;
+}
+
+.contact-sheet-table th:nth-child(2),
+.contact-sheet-table td:nth-child(2) {
+    width: 22%;
+}
+
+.contact-sheet-table th:nth-child(3),
+.contact-sheet-table td:nth-child(3) {
+    white-space: nowrap;
+    width: 18%;
+}
+
+.contact-sheet-table th:nth-child(4),
+.contact-sheet-table td:nth-child(4) {
+    width: 24%;
+}
+
+.contact-sheet-table th:nth-child(5),
+.contact-sheet-table td:nth-child(5) {
+    width: 12%;
+}
+
+.contact-sheet-lead-row td {
+    font-weight: 700;
+}
+
 .email-template-preview pre {
     background: var(--secondary-bg);
     border: 1px solid var(--border);
@@ -2152,6 +2232,45 @@ textarea {
         font-size: 9pt;
         line-height: 1.15;
         padding: 3px 4px;
+    }
+
+    .contact-sheet-print {
+        font-size: 11pt;
+    }
+
+    .contact-sheet-precinct {
+        break-after: page;
+        margin-top: 0;
+        page-break-after: always;
+    }
+
+    .contact-sheet-precinct:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
+    .contact-sheet-heading {
+        border-bottom: 1px solid #9ca3af;
+    }
+
+    .contact-sheet-heading h2 {
+        color: #111827;
+        font-size: 18pt;
+    }
+
+    .contact-sheet-count {
+        border-color: #9ca3af;
+    }
+
+    .contact-sheet-table th,
+    .contact-sheet-table td {
+        font-size: 10pt;
+        line-height: 1.2;
+        padding: 5px 6px;
+    }
+
+    .contact-sheet-table td:nth-child(5) {
+        height: 0.42in;
     }
 
     .certificate-shell {

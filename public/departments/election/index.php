@@ -37,6 +37,7 @@ if ($isManager || $isChief) {
         'links' => [
             ['label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php')],
             ['label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php')],
+            ['label' => 'Precinct Contact Sheet', 'href' => url('departments/election/precinct-contact-sheet.php')],
             ['label' => 'Reuse past workers', 'href' => url('departments/election/reuse-workers.php')],
         ],
     ];
