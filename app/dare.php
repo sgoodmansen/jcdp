@@ -240,7 +240,6 @@ function dare_navigation(string $activeKey = ''): void
             'items' => [
                 ['key' => 'class-create', 'label' => 'New Class', 'href' => url('departments/dare/class-create.php')],
                 ['key' => 'classes', 'label' => 'Class List', 'href' => url('departments/dare/classes.php')],
-                ['key' => 'students', 'label' => 'Student Search', 'href' => url('departments/dare/students.php')],
                 ['key' => 'essay-winners', 'label' => 'Essay Winners', 'href' => url('departments/dare/essay-winners.php')],
             ],
         ],
@@ -253,6 +252,7 @@ function dare_navigation(string $activeKey = ''): void
         'people' => [
             'label' => 'People',
             'items' => [
+                ['key' => 'students', 'label' => 'Student Search', 'href' => url('departments/dare/students.php')],
                 ['key' => 'teachers', 'label' => 'Teachers', 'href' => url('departments/dare/teachers.php')],
             ],
         ],
