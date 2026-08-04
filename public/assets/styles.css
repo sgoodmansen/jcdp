@@ -407,6 +407,41 @@ a {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.how-to-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.how-to-card {
+    align-content: start;
+    display: grid;
+    gap: 12px;
+}
+
+.how-to-card h2 {
+    margin-bottom: 0;
+}
+
+.how-to-card p {
+    margin: 0;
+}
+
+.how-to-steps,
+.how-to-checklist {
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 0 0 18px;
+    padding-left: 24px;
+}
+
+.how-to-steps li,
+.how-to-checklist li {
+    margin-bottom: 10px;
+}
+
+.how-to-steps strong {
+    color: var(--text);
+}
+
 .status-card p {
     margin-bottom: 0;
 }
@@ -2543,7 +2578,8 @@ textarea {
     }
 
     .election-home-stat-row .election-home-stat-grid,
-    .staffing-progress-stat-row .staffing-progress-stat-grid {
+    .staffing-progress-stat-row .staffing-progress-stat-grid,
+    .how-to-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -2574,6 +2610,10 @@ textarea {
     }
 
     .election-tool-groups {
+        grid-template-columns: 1fr;
+    }
+
+    .how-to-grid {
         grid-template-columns: 1fr;
     }
 

@@ -66,6 +66,19 @@ if ($isManager) {
     ];
 }
 
+if ($isManager || $isChief) {
+    $guideLinks = [];
+    if ($isManager) {
+        $guideLinks[] = ['label' => 'Supervisor How To', 'href' => url('departments/election/how-to-supervisor.php')];
+    }
+    $guideLinks[] = ['label' => 'Chief Judge How To', 'href' => url('departments/election/how-to-chief-judge.php')];
+
+    $toolGroups[] = [
+        'title' => 'Guides',
+        'links' => $guideLinks,
+    ];
+}
+
 if (!$primaryActions) {
     $primaryActions = [
         ['label' => 'Training classes', 'href' => url('departments/election/classes.php'), 'primary' => true],

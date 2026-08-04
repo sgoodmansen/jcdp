@@ -477,6 +477,19 @@ function election_navigation(string $activeKey = ''): void
         ];
     }
 
+    if ($isManager || $canManageWorkers) {
+        $groups['guides'] = [
+            'label' => 'Guides',
+            'items' => [],
+        ];
+
+        if ($isManager) {
+            $groups['guides']['items'][] = ['key' => 'how-to-supervisor', 'label' => 'Supervisor How To', 'href' => url('departments/election/how-to-supervisor.php')];
+        }
+
+        $groups['guides']['items'][] = ['key' => 'how-to-chief-judge', 'label' => 'Chief Judge How To', 'href' => url('departments/election/how-to-chief-judge.php')];
+    }
+
     if ($worker) {
         $groups['account'] = [
             'label' => 'My Account',
