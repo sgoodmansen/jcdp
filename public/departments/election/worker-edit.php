@@ -167,11 +167,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         if ($id === 0 && $action === 'use_existing_worker') {
-            if (!$shouldManageAssignment) {
-                flash('error', 'Select an election, precinct, and position before adding an assignment to an existing worker.');
-                redirect_to('departments/election/worker-edit.php');
-            }
-
             $existingWorkerId = (int) ($_POST['existing_worker_id'] ?? 0);
             $statement = db()->prepare('SELECT id, availability_status, is_active FROM election_workers WHERE id = :id');
             $statement->execute(['id' => $existingWorkerId]);
@@ -180,6 +175,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$existingWorker) {
                 flash('error', 'Select an existing worker before adding the assignment.');
                 redirect_to('departments/election/worker-edit.php');
+            }
+
+            if (!$shouldManageAssignment) {
+                flash('success', 'Existing worker opened. Review the contact record before making changes.');
+                redirect_to('departments/election/worker-edit.php?id=' . $existingWorkerId);
             }
 
             if (election_worker_status($existingWorker) !== ELECTION_WORKER_STATUS_ACTIVE) {
@@ -283,6 +283,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $possibleMatches = election_find_possible_worker_matches($params);
             if ($possibleMatches) {
                 $worker = $params;
+                $workerStatus = $params['availability_status'];
                 $assignment = $assignmentParams;
             }
         }
@@ -455,80 +456,94 @@ page_header($pageTitle);
     </section>
 
     <?php if ($possibleMatches): ?>
-        <section class="panel" style="margin-top: 18px;">
-            <h1>Possible Existing Worker</h1>
-            <p>One or more people already look similar to this worker. Use an existing worker to add a new assignment, or create a separate person if this is someone else.</p>
-            <table class="table mobile-card-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Contact</th>
-                        <th>Assignments</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($possibleMatches as $match): ?>
+        <div class="modal-backdrop duplicate-worker-modal" role="presentation">
+            <section class="panel modal-panel" role="dialog" aria-modal="true" aria-labelledby="duplicate-worker-title">
+                <div class="section-heading-row">
+                    <div>
+                        <h1 id="duplicate-worker-title">Possible Duplicate Worker Found</h1>
+                        <p>Review the existing contacts before creating a new person.</p>
+                    </div>
+                    <button type="button" class="secondary compact-button" data-close-modal>Cancel</button>
+                </div>
+
+                <div class="notice warning">
+                    You entered <?= e(trim(($worker['first_name'] ?? '') . ' ' . ($worker['last_name'] ?? ''))) ?>.
+                    If this is the same person, use the existing worker record.
+                </div>
+
+                <table class="table mobile-card-table">
+                    <thead>
                         <tr>
-                            <td data-label="Name"><?= e(election_person_name($match)) ?></td>
-                            <td data-label="Contact">
-                                <?= e($match['email'] ?: 'No email') ?><br>
-                                <span class="meta"><?= e($match['phone'] ?: 'No phone') ?></span>
-                            </td>
-                            <td data-label="Assignments">
-                                <?php foreach (array_filter(explode("\n", (string) ($match['assignment_summary'] ?? ''))) as $summary): ?>
-                                    <?= e($summary) ?><br>
-                                <?php endforeach; ?>
-                                <?php if (empty($match['assignment_summary'])): ?>
-                                    <span class="meta">No assignments yet</span>
-                                <?php endif; ?>
-                            </td>
-                            <td data-label="Action">
-                                <form method="post">
-                                    <input type="hidden" name="action" value="use_existing_worker">
-                                    <input type="hidden" name="existing_worker_id" value="<?= e((string) $match['id']) ?>">
-                                    <input type="hidden" name="election_period_id" value="<?= e((string) ($assignment['election_period_id'] ?? 0)) ?>">
-                                    <input type="hidden" name="precinct_id" value="<?= e((string) ($assignment['precinct_id'] ?? 0)) ?>">
-                                    <input type="hidden" name="position_id" value="<?= e((string) ($assignment['position_id'] ?? 0)) ?>">
-                                    <?php if ((int) ($assignment['is_active'] ?? 1) === 1): ?>
-                                        <input type="hidden" name="is_active" value="1">
-                                    <?php endif; ?>
-                                    <input type="hidden" name="notes" value="<?= e($assignment['notes'] ?? '') ?>">
-                                    <button type="submit" class="secondary compact-button">Use existing</button>
-                                </form>
-                            </td>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Assignments</th>
+                            <th>Action</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            <form method="post" style="margin-top: 18px;">
-                <input type="hidden" name="create_anyway" value="1">
-                <input type="hidden" name="election_period_id" value="<?= e((string) ($assignment['election_period_id'] ?? 0)) ?>">
-                <input type="hidden" name="precinct_id" value="<?= e((string) ($assignment['precinct_id'] ?? 0)) ?>">
-                <input type="hidden" name="position_id" value="<?= e((string) ($assignment['position_id'] ?? 0)) ?>">
-                <input type="hidden" name="first_name" value="<?= e($worker['first_name'] ?? '') ?>">
-                <input type="hidden" name="last_name" value="<?= e($worker['last_name'] ?? '') ?>">
-                <input type="hidden" name="email" value="<?= e($worker['email'] ?? '') ?>">
-                <input type="hidden" name="phone" value="<?= e($worker['phone'] ?? '') ?>">
-                <input type="hidden" name="mailing_address" value="<?= e($worker['mailing_address'] ?? '') ?>">
-                <input type="hidden" name="city" value="<?= e($worker['city'] ?? '') ?>">
-                <input type="hidden" name="state" value="<?= e($worker['state'] ?? '') ?>">
-                <input type="hidden" name="zip_code" value="<?= e($worker['zip_code'] ?? '') ?>">
-                <?php if ((int) ($worker['wants_email_reminders'] ?? 0) === 1): ?>
-                    <input type="hidden" name="wants_email_reminders" value="1">
-                <?php endif; ?>
-                <?php if ((int) ($worker['wants_text_reminders'] ?? 0) === 1): ?>
-                    <input type="hidden" name="wants_text_reminders" value="1">
-                <?php endif; ?>
-                <input type="hidden" name="availability_status" value="<?= e($workerStatus) ?>">
-                <input type="hidden" name="unavailable_reason" value="<?= e($worker['unavailable_reason'] ?? '') ?>">
-                <?php if ((int) ($assignment['is_active'] ?? 1) === 1): ?>
-                    <input type="hidden" name="is_active" value="1">
-                <?php endif; ?>
-                <input type="hidden" name="notes" value="<?= e($assignment['notes'] ?? '') ?>">
-                <button type="submit">Create new person anyway</button>
-            </form>
-        </section>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($possibleMatches as $match): ?>
+                            <tr>
+                                <td data-label="Name"><?= e(election_person_name($match)) ?></td>
+                                <td data-label="Contact">
+                                    <?= e($match['email'] ?: 'No email') ?><br>
+                                    <span class="meta"><?= e($match['phone'] ?: 'No phone') ?></span>
+                                </td>
+                                <td data-label="Assignments">
+                                    <?php foreach (array_filter(explode("\n", (string) ($match['assignment_summary'] ?? ''))) as $summary): ?>
+                                        <?= e($summary) ?><br>
+                                    <?php endforeach; ?>
+                                    <?php if (empty($match['assignment_summary'])): ?>
+                                        <span class="meta">No assignments yet</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td data-label="Action">
+                                    <form method="post">
+                                        <input type="hidden" name="action" value="use_existing_worker">
+                                        <input type="hidden" name="existing_worker_id" value="<?= e((string) $match['id']) ?>">
+                                        <input type="hidden" name="election_period_id" value="<?= e((string) ($assignment['election_period_id'] ?? 0)) ?>">
+                                        <input type="hidden" name="precinct_id" value="<?= e((string) ($assignment['precinct_id'] ?? 0)) ?>">
+                                        <input type="hidden" name="position_id" value="<?= e((string) ($assignment['position_id'] ?? 0)) ?>">
+                                        <?php if ((int) ($assignment['is_active'] ?? 1) === 1): ?>
+                                            <input type="hidden" name="is_active" value="1">
+                                        <?php endif; ?>
+                                        <input type="hidden" name="notes" value="<?= e($assignment['notes'] ?? '') ?>">
+                                        <button type="submit" class="compact-button"><?= ((int) ($assignment['election_period_id'] ?? 0) > 0 && (int) ($assignment['precinct_id'] ?? 0) > 0 && (int) ($assignment['position_id'] ?? 0) > 0) ? 'Use existing' : 'Open existing' ?></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <form method="post" class="actions" style="margin-top: 18px;">
+                    <input type="hidden" name="create_anyway" value="1">
+                    <input type="hidden" name="election_period_id" value="<?= e((string) ($assignment['election_period_id'] ?? 0)) ?>">
+                    <input type="hidden" name="precinct_id" value="<?= e((string) ($assignment['precinct_id'] ?? 0)) ?>">
+                    <input type="hidden" name="position_id" value="<?= e((string) ($assignment['position_id'] ?? 0)) ?>">
+                    <input type="hidden" name="first_name" value="<?= e($worker['first_name'] ?? '') ?>">
+                    <input type="hidden" name="last_name" value="<?= e($worker['last_name'] ?? '') ?>">
+                    <input type="hidden" name="email" value="<?= e($worker['email'] ?? '') ?>">
+                    <input type="hidden" name="phone" value="<?= e($worker['phone'] ?? '') ?>">
+                    <input type="hidden" name="mailing_address" value="<?= e($worker['mailing_address'] ?? '') ?>">
+                    <input type="hidden" name="city" value="<?= e($worker['city'] ?? '') ?>">
+                    <input type="hidden" name="state" value="<?= e($worker['state'] ?? '') ?>">
+                    <input type="hidden" name="zip_code" value="<?= e($worker['zip_code'] ?? '') ?>">
+                    <?php if ((int) ($worker['wants_email_reminders'] ?? 0) === 1): ?>
+                        <input type="hidden" name="wants_email_reminders" value="1">
+                    <?php endif; ?>
+                    <?php if ((int) ($worker['wants_text_reminders'] ?? 0) === 1): ?>
+                        <input type="hidden" name="wants_text_reminders" value="1">
+                    <?php endif; ?>
+                    <input type="hidden" name="availability_status" value="<?= e($workerStatus) ?>">
+                    <input type="hidden" name="unavailable_reason" value="<?= e($worker['unavailable_reason'] ?? '') ?>">
+                    <?php if ((int) ($assignment['is_active'] ?? 1) === 1): ?>
+                        <input type="hidden" name="is_active" value="1">
+                    <?php endif; ?>
+                    <input type="hidden" name="notes" value="<?= e($assignment['notes'] ?? '') ?>">
+                    <button type="submit" class="secondary">Create new person anyway</button>
+                    <button type="button" class="secondary" data-close-modal>Cancel</button>
+                </form>
+            </section>
+        </div>
     <?php endif; ?>
 
     <section class="panel" style="margin-top: 18px;">
@@ -738,6 +753,31 @@ page_header($pageTitle);
 </main>
 <script src="<?= e(url('assets/forms.js?v=20260730c')) ?>"></script>
 <script>
+    const duplicateWorkerModal = document.querySelector('.duplicate-worker-modal');
+    const closeDuplicateWorkerModal = () => {
+        if (duplicateWorkerModal) {
+            duplicateWorkerModal.hidden = true;
+        }
+    };
+
+    document.querySelectorAll('[data-close-modal]').forEach((button) => {
+        button.addEventListener('click', closeDuplicateWorkerModal);
+    });
+
+    if (duplicateWorkerModal) {
+        duplicateWorkerModal.addEventListener('click', (event) => {
+            if (event.target === duplicateWorkerModal) {
+                closeDuplicateWorkerModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeDuplicateWorkerModal();
+            }
+        });
+    }
+
     const workerUnavailableStatus = '<?= e(ELECTION_WORKER_STATUS_UNAVAILABLE) ?>';
     const workerStatus = document.getElementById('worker-availability-status');
     const workerUnavailablePanel = document.getElementById('worker-unavailable-panel');
