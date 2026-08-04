@@ -628,7 +628,7 @@ page_header('Needs Attention');
     </details>
     <?php endif; ?>
 
-    <?php if ($showProblemSection('close')): ?>
+    <?php if ($isManager && $showProblemSection('close')): ?>
         <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('close', $problemCounts['close'] ?? 0) ? 'open' : '' ?>>
             <summary class="section-heading-row">
                 <h1>Election Period Ready to Close</h1>
