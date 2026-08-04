@@ -2474,6 +2474,41 @@ textarea {
     text-align: left;
 }
 
+.audit-log-table {
+    table-layout: fixed;
+}
+
+.audit-log-table th,
+.audit-log-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.audit-log-table th:nth-child(1),
+.audit-log-table td:nth-child(1) {
+    width: 9%;
+}
+
+.audit-log-table th:nth-child(2),
+.audit-log-table td:nth-child(2) {
+    width: 18%;
+}
+
+.audit-log-table th:nth-child(3),
+.audit-log-table td:nth-child(3) {
+    width: 15%;
+}
+
+.audit-log-table th:nth-child(4),
+.audit-log-table td:nth-child(4) {
+    width: 16%;
+}
+
+.audit-log-table th:nth-child(5),
+.audit-log-table td:nth-child(5) {
+    width: 9%;
+}
+
 .table-header-control {
     align-items: center;
     display: flex;

@@ -62,7 +62,7 @@ page_header('Audit Log');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
-        <table class="table">
+        <table class="table mobile-card-table audit-log-table">
             <thead>
                 <tr>
                     <th>Date/Time</th>
@@ -86,17 +86,17 @@ page_header('Audit Log');
                         : '';
                     ?>
                     <tr>
-                        <td><?= e($event['created_at']) ?></td>
-                        <td>
+                        <td data-label="Date/Time"><?= e($event['created_at']) ?></td>
+                        <td data-label="User">
                             <?= e(trim(($event['first_name'] ?? '') . ' ' . ($event['last_name'] ?? '')) ?: 'System') ?>
                             <?php if (!empty($event['email'])): ?>
                                 <br><span class="meta"><?= e($event['email']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td><?= e($event['action']) ?></td>
-                        <td><?= e($event['entity_type']) ?></td>
-                        <td><?= e($event['entity_id']) ?></td>
-                        <td><?= e($detailText) ?></td>
+                        <td data-label="Action"><?= e($event['action']) ?></td>
+                        <td data-label="Record Type"><?= e($event['entity_type']) ?></td>
+                        <td data-label="Record ID"><?= e($event['entity_id']) ?></td>
+                        <td data-label="Details"><?= e($detailText) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$events): ?>
