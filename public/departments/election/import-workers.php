@@ -4,6 +4,7 @@ require_election_worker_manager();
 election_require_assignment_setup();
 
 const ELECTION_WORKER_IMPORT_SESSION_KEY = 'election_worker_import_preview';
+const ELECTION_WORKER_IMPORT_RESULT_SESSION_KEY = 'election_worker_import_result';
 const ELECTION_WORKER_IMPORT_LIMIT = 500;
 
 function election_import_column_index(string $cellReference): int
@@ -93,7 +94,7 @@ function election_import_preview_row(array $contact, int $rowNumber): array
         'row_number' => $rowNumber,
         'contact' => $contact,
         'status' => 'new',
-        'status_label' => 'New contact',
+        'status_label' => 'Create new worker',
         'match_worker_id' => null,
         'match_name' => '',
         'message' => '',
@@ -125,7 +126,7 @@ function election_import_preview_row(array $contact, int $rowNumber): array
 
     if (count($exactMatches) === 1) {
         $preview['status'] = 'update';
-        $preview['status_label'] = 'Update existing';
+        $preview['status_label'] = 'Matched existing worker';
         $preview['match_worker_id'] = (int) $exactMatches[0]['id'];
         $preview['match_name'] = election_person_name($exactMatches[0]);
         $preview['message'] = 'Matched by email or phone.';
@@ -448,6 +449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'preview') {
             $previewRows = election_import_parse_uploaded_file($_FILES['csv_file'] ?? []);
             $_SESSION[ELECTION_WORKER_IMPORT_SESSION_KEY] = $previewRows;
+            unset($_SESSION[ELECTION_WORKER_IMPORT_RESULT_SESSION_KEY]);
             flash('success', 'Import preview is ready. Review the rows below, then import when ready.');
             redirect_to('departments/election/import-workers.php');
         } elseif ($action === 'import') {
@@ -457,15 +459,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $importCounts = election_import_save_rows($previewRows);
             unset($_SESSION[ELECTION_WORKER_IMPORT_SESSION_KEY]);
+            $_SESSION[ELECTION_WORKER_IMPORT_RESULT_SESSION_KEY] = $importCounts;
             flash(
                 'success',
-                'Import complete. Added ' . $importCounts['created']
-                . ', updated ' . $importCounts['updated']
-                . ', skipped ' . ($importCounts['skipped'] + $importCounts['review']) . '.'
+                'Import complete. Created ' . $importCounts['created']
+                . ' new worker contact' . ($importCounts['created'] === 1 ? '' : 's')
+                . ', matched ' . $importCounts['updated']
+                . ' existing worker contact' . ($importCounts['updated'] === 1 ? '' : 's')
+                . ', left ' . $importCounts['review']
+                . ' possible duplicate' . ($importCounts['review'] === 1 ? '' : 's') . ' for review'
+                . ', and skipped ' . $importCounts['skipped']
+                . ' row' . ($importCounts['skipped'] === 1 ? '' : 's') . '.'
             );
-            redirect_to('departments/election/workers.php');
+            redirect_to('departments/election/import-workers.php');
         } elseif ($action === 'clear') {
             unset($_SESSION[ELECTION_WORKER_IMPORT_SESSION_KEY]);
+            unset($_SESSION[ELECTION_WORKER_IMPORT_RESULT_SESSION_KEY]);
             flash('success', 'Import preview cleared.');
             redirect_to('departments/election/import-workers.php');
         }
@@ -480,6 +489,9 @@ foreach ($previewRows as $preview) {
         $counts[$preview['status']]++;
     }
 }
+
+$lastImportResult = $_SESSION[ELECTION_WORKER_IMPORT_RESULT_SESSION_KEY] ?? null;
+unset($_SESSION[ELECTION_WORKER_IMPORT_RESULT_SESSION_KEY]);
 
 $actions = [
     ['label' => 'Worker list', 'href' => url('departments/election/workers.php'), 'primary' => true],
@@ -504,6 +516,32 @@ page_header('Import Election Workers');
         <?php endif; ?>
     </section>
 
+    <?php if (is_array($lastImportResult)): ?>
+        <section class="dashboard-stat-row election-home-stat-row" style="margin-top: 18px;">
+            <div class="dashboard-stat-group summary-stat-group">
+                <h2>Last Import Result</h2>
+                <div class="grid dashboard-stat-grid election-home-stat-grid">
+                    <article class="card dashboard-stat-card">
+                        <h3><?= e((string) (int) ($lastImportResult['created'] ?? 0)) ?></h3>
+                        <p>New workers created</p>
+                    </article>
+                    <article class="card dashboard-stat-card">
+                        <h3><?= e((string) (int) ($lastImportResult['updated'] ?? 0)) ?></h3>
+                        <p>Existing workers matched</p>
+                    </article>
+                    <article class="card dashboard-stat-card">
+                        <h3><?= e((string) (int) ($lastImportResult['review'] ?? 0)) ?></h3>
+                        <p>Possible duplicates not imported</p>
+                    </article>
+                    <article class="card dashboard-stat-card">
+                        <h3><?= e((string) (int) ($lastImportResult['skipped'] ?? 0)) ?></h3>
+                        <p>Rows skipped</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+    <?php endif; ?>
+
     <section class="panel" style="margin-top: 18px;">
         <h1>Upload File</h1>
         <p>Accepted columns: First Name, Last Name, Name, Email, Phone, Mailing Address, City, State, Zip.</p>
@@ -524,9 +562,9 @@ page_header('Import Election Workers');
             <div class="section-heading-row">
                 <h1>Preview</h1>
                 <div class="badge-group">
-                    <span class="badge badge-success"><?= e((string) $counts['new']) ?> new</span>
-                    <span class="badge"><?= e((string) $counts['update']) ?> updates</span>
-                    <span class="badge badge-warning"><?= e((string) $counts['review']) ?> review</span>
+                    <span class="badge badge-success"><?= e((string) $counts['new']) ?> create new</span>
+                    <span class="badge"><?= e((string) $counts['update']) ?> matched existing</span>
+                    <span class="badge badge-warning"><?= e((string) $counts['review']) ?> possible duplicates</span>
                     <span class="badge badge-muted"><?= e((string) $counts['skip']) ?> skipped</span>
                 </div>
             </div>
