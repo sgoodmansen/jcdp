@@ -48,10 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'close_period') {
         $periodId = (int) ($_POST['period_id'] ?? 0);
-        election_close_period($periodId);
-        audit_event('closed', 'election_period', (string) $periodId);
-        flash('success', 'Election closed and assignments were set inactive.');
-        redirect_to('departments/election/setup.php');
+        redirect_to('departments/election/close-period.php?id=' . $periodId);
     }
 
     if ($action === 'save_precinct') {
@@ -246,11 +243,7 @@ page_header('Election Setup');
                             <div class="table-actions election-period-actions">
                                 <a class="button secondary compact-button" href="<?= e(url('departments/election/setup.php?edit_period=' . $period['id'])) ?>">Edit</a>
                                 <?php if ((int) $period['is_active'] === 1): ?>
-                                    <form method="post">
-                                        <input type="hidden" name="action" value="close_period">
-                                        <input type="hidden" name="period_id" value="<?= e((string) $period['id']) ?>">
-                                        <button type="submit" class="secondary compact-button">Close election</button>
-                                    </form>
+                                    <a class="button secondary compact-button" href="<?= e(url('departments/election/close-period.php?id=' . (int) $period['id'])) ?>">Close election</a>
                                 <?php endif; ?>
                             </div>
                         </td>

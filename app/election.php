@@ -886,17 +886,21 @@ function election_worker_scope_sql(string $workerAlias = 'election_workers'): ar
     return [" AND {$workerAlias}.worker_id = :scope_worker_id", ['scope_worker_id' => (int) $assignment['worker_id']]];
 }
 
-function election_close_period(int $periodId): void
+function election_close_period(int $periodId): int
 {
     db()->beginTransaction();
 
+    $closedAssignmentCount = 0;
     if (election_assignments_table_exists()) {
         $statement = db()->prepare('UPDATE election_worker_assignments SET is_active = 0 WHERE election_period_id = :period_id');
         $statement->execute(['period_id' => $periodId]);
+        $closedAssignmentCount = $statement->rowCount();
     }
 
     $statement = db()->prepare('UPDATE election_periods SET is_active = 0 WHERE id = :id');
     $statement->execute(['id' => $periodId]);
 
     db()->commit();
+
+    return $closedAssignmentCount;
 }

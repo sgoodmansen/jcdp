@@ -33,6 +33,14 @@ if ($selectedPeriodId > 0 && !in_array($selectedPeriodId, $allowedPeriodIds, tru
     $selectedPeriodId = (int) ($allowedPeriodIds[0] ?? 0);
 }
 
+$selectedPeriod = null;
+foreach ($periods as $period) {
+    if ((int) $period['id'] === $selectedPeriodId) {
+        $selectedPeriod = $period;
+        break;
+    }
+}
+
 $precincts = $isManager ? election_precincts() : [];
 if (!$isManager && $currentAssignment) {
     $statement = db()->prepare('SELECT * FROM election_precincts WHERE id = :id');
@@ -277,7 +285,31 @@ if ($isManager) {
     $duplicateRows = $statement->fetchAll();
 }
 
-$totalAttentionCount = count($staffingRows) + count($trainingRows) + count($contactRows) + count($statusRows) + count($extraRows) + count($duplicateRows);
+$closeElectionItem = null;
+if ($isManager && $selectedPeriod) {
+    $periodEndDate = trim((string) ($selectedPeriod['ends_on'] ?? ''));
+    if ((int) $selectedPeriod['is_active'] === 1 && $periodEndDate !== '' && $periodEndDate < date('Y-m-d')) {
+        $statement = db()->prepare(
+            'SELECT COUNT(*)
+             FROM election_worker_assignments
+             WHERE election_period_id = :election_period_id
+               AND is_active = 1'
+        );
+        $statement->execute(['election_period_id' => $selectedPeriodId]);
+        $closeElectionItem = [
+            'period' => $selectedPeriod,
+            'active_assignment_count' => (int) $statement->fetchColumn(),
+        ];
+    }
+}
+
+$totalAttentionCount = count($staffingRows)
+    + count($trainingRows)
+    + count($contactRows)
+    + count($statusRows)
+    + count($extraRows)
+    + count($duplicateRows)
+    + ($closeElectionItem ? 1 : 0);
 
 $actions = [
     ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php?election_period_id=' . $selectedPeriodId), 'primary' => true],
@@ -351,12 +383,41 @@ page_header('Needs Attention');
                     <p>Status conflicts</p>
                 </article>
                 <article class="card dashboard-stat-card">
-                    <h3><?= e((string) (count($extraRows) + count($duplicateRows))) ?></h3>
+                    <h3><?= e((string) (count($extraRows) + count($duplicateRows) + ($closeElectionItem ? 1 : 0))) ?></h3>
                     <p>Review items</p>
                 </article>
             </div>
         </div>
     </section>
+
+    <?php if ($closeElectionItem): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <div class="section-heading-row">
+                <h1>Election Period Ready to Close</h1>
+                <span class="badge badge-warning">1</span>
+            </div>
+            <table class="table mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Election</th>
+                        <th>Ended</th>
+                        <th>Active Assignments</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-label="Election"><?= e($closeElectionItem['period']['name']) ?></td>
+                        <td data-label="Ended"><?= e(format_display_date($closeElectionItem['period']['ends_on'])) ?></td>
+                        <td data-label="Active Assignments"><?= e((string) $closeElectionItem['active_assignment_count']) ?></td>
+                        <td data-label="Action">
+                            <a class="button secondary compact-button" href="<?= e(url('departments/election/close-period.php?id=' . (int) $closeElectionItem['period']['id'])) ?>">Review close election</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    <?php endif; ?>
 
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
