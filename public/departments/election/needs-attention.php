@@ -344,7 +344,7 @@ $actions = [
     ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php?election_period_id=' . $selectedPeriodId), 'primary' => true],
     ['label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php?election_period_id=' . $selectedPeriodId)],
     ['label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php?election_period_id=' . $selectedPeriodId)],
-    ['label' => 'Worker list', 'href' => url('departments/election/workers.php')],
+    ['label' => 'Address Book', 'href' => url('departments/election/workers.php')],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
 ];
 if ($isManager) {

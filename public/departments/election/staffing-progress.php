@@ -149,7 +149,7 @@ $actions = [
     ['label' => 'Needs Attention', 'href' => url('departments/election/needs-attention.php?election_period_id=' . $selectedPeriodId)],
     ['label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php?election_period_id=' . $selectedPeriodId)],
     ['label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php?election_period_id=' . $selectedPeriodId)],
-    ['label' => 'Worker list', 'href' => url('departments/election/workers.php')],
+    ['label' => 'Address Book', 'href' => url('departments/election/workers.php')],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
     ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
 ];

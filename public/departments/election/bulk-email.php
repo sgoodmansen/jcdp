@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_
 }
 
 $actions = [
-    ['label' => 'Workers', 'href' => url('departments/election/workers.php'), 'primary' => true],
+    ['label' => 'Contacts', 'href' => url('departments/election/workers.php'), 'primary' => true],
     ['label' => 'Email Template', 'href' => url('departments/election/email-template.php')],
     ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php?election_period_id=' . $selectedPeriodId)],
     ['label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php?election_period_id=' . $selectedPeriodId)],

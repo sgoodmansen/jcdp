@@ -661,8 +661,8 @@ $actions = [
     ['label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php?election_period_id=' . $selectedPeriodId), 'primary' => true],
     ['label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $selectedPrecinctId)],
     ['label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $selectedPrecinctId)],
-    ['label' => 'Add worker', 'href' => url('departments/election/worker-edit.php')],
-    ['label' => 'Worker list', 'href' => url('departments/election/workers.php')],
+    ['label' => 'Add contact', 'href' => url('departments/election/worker-edit.php')],
+    ['label' => 'Address Book', 'href' => url('departments/election/workers.php')],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
     ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
 ];

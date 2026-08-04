@@ -494,18 +494,18 @@ $lastImportResult = $_SESSION[ELECTION_WORKER_IMPORT_RESULT_SESSION_KEY] ?? null
 unset($_SESSION[ELECTION_WORKER_IMPORT_RESULT_SESSION_KEY]);
 
 $actions = [
-    ['label' => 'Worker list', 'href' => url('departments/election/workers.php'), 'primary' => true],
-    ['label' => 'Add worker', 'href' => url('departments/election/worker-edit.php')],
+    ['label' => 'Address Book', 'href' => url('departments/election/workers.php'), 'primary' => true],
+    ['label' => 'Add contact', 'href' => url('departments/election/worker-edit.php')],
     ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
 ];
 
-page_header('Import Election Workers');
+page_header('Import Election Contacts');
 ?>
 <main class="shell">
     <section class="panel">
-        <h1>Import Election Workers</h1>
-        <p>Upload an Excel or CSV file to add names to the worker address book. Assignments are handled separately on Precinct Staffing.</p>
+        <h1>Import Election Contacts</h1>
+        <p>Upload an Excel or CSV file to add names to the contact address book. Assignments are handled separately on Precinct Staffing.</p>
         <?php election_navigation('import-workers'); ?>
 
         <?php if ($message = flash('success')): ?>
@@ -523,11 +523,11 @@ page_header('Import Election Workers');
                 <div class="grid dashboard-stat-grid election-home-stat-grid">
                     <article class="card dashboard-stat-card">
                         <h3><?= e((string) (int) ($lastImportResult['created'] ?? 0)) ?></h3>
-                        <p>New workers created</p>
+                        <p>New contacts created</p>
                     </article>
                     <article class="card dashboard-stat-card">
                         <h3><?= e((string) (int) ($lastImportResult['updated'] ?? 0)) ?></h3>
-                        <p>Existing workers matched</p>
+                        <p>Existing contacts matched</p>
                     </article>
                     <article class="card dashboard-stat-card">
                         <h3><?= e((string) (int) ($lastImportResult['review'] ?? 0)) ?></h3>

@@ -28,7 +28,7 @@ if ($isManager || $isChief) {
     $primaryActions = [
         ['label' => 'Needs Attention', 'href' => url('departments/election/needs-attention.php'), 'primary' => true],
         ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')],
-        ['label' => 'Workers', 'href' => url('departments/election/workers.php')],
+        ['label' => 'Contacts', 'href' => url('departments/election/workers.php')],
         ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
     ];
 

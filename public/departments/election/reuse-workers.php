@@ -187,7 +187,7 @@ if ($sourcePeriodId > 0 && $targetPeriodId > 0 && $sourcePeriodId !== $targetPer
 }
 
 $actions = [
-    ['label' => 'Workers', 'href' => url('departments/election/workers.php'), 'primary' => true],
+    ['label' => 'Contacts', 'href' => url('departments/election/workers.php'), 'primary' => true],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
 ];
 if ($isModuleManager) {

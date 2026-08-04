@@ -40,7 +40,7 @@ $sampleBody = strtr($body, $sampleReplacements);
 $actions = [
     ['label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php'), 'primary' => true],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
-    ['label' => 'Workers', 'href' => url('departments/election/workers.php')],
+    ['label' => 'Contacts', 'href' => url('departments/election/workers.php')],
 ];
 
 page_header('Email Template');

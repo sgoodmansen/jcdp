@@ -108,7 +108,7 @@ if ($isManager) {
 }
 if (current_election_actor_can_manage_workers()) {
     $actions[] = ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')];
-    $actions[] = ['label' => 'Workers', 'href' => url('departments/election/workers.php')];
+    $actions[] = ['label' => 'Contacts', 'href' => url('departments/election/workers.php')];
 }
 
 page_header('Election Training Classes');

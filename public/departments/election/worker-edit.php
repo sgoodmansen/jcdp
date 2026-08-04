@@ -465,11 +465,11 @@ if ($savedWorkerId > 0 && !$isSelfEdit && $canManageWorkers) {
 }
 
 $actions = [
-    ['label' => 'Workers', 'href' => url('departments/election/workers.php'), 'primary' => true],
+    ['label' => 'Address Book', 'href' => url('departments/election/workers.php'), 'primary' => true],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
 ];
 
-$pageTitle = $isNewAssignment ? 'Add Worker Assignment' : ($id > 0 ? 'Edit Election Worker' : 'Add Election Worker');
+$pageTitle = $isNewAssignment ? 'Add Worker Assignment' : ($id > 0 ? 'Edit Election Contact' : 'Add Election Contact');
 page_header($pageTitle);
 ?>
 <main class="shell">

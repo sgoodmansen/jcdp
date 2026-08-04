@@ -379,9 +379,9 @@ $keepAssignments = $keepWorker ? election_merge_worker_assignments((int) $keepWo
 $mergeAssignments = $mergeWorker ? election_merge_worker_assignments((int) $mergeWorker['id']) : [];
 
 $actions = [
-    ['label' => 'Worker list', 'href' => url('departments/election/workers.php'), 'primary' => true],
-    ['label' => 'Add worker', 'href' => url('departments/election/worker-edit.php')],
-    ['label' => 'Import CSV', 'href' => url('departments/election/import-workers.php')],
+    ['label' => 'Address Book', 'href' => url('departments/election/workers.php'), 'primary' => true],
+    ['label' => 'Add contact', 'href' => url('departments/election/worker-edit.php')],
+    ['label' => 'Import Contacts', 'href' => url('departments/election/import-workers.php')],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
 ];
 

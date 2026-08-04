@@ -125,25 +125,25 @@ $actions = [
     ['label' => 'Needs Attention', 'href' => url('departments/election/needs-attention.php')],
     ['label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php')],
     ['label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php')],
-    ['label' => 'Add worker', 'href' => url('departments/election/worker-edit.php')],
+    ['label' => 'Add contact', 'href' => url('departments/election/worker-edit.php')],
     ['label' => 'Reuse past workers', 'href' => url('departments/election/reuse-workers.php')],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
     ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
 ];
 if ($isModuleManager) {
     array_splice($actions, 4, 0, [
-        ['label' => 'Import CSV', 'href' => url('departments/election/import-workers.php')],
+        ['label' => 'Import Contacts', 'href' => url('departments/election/import-workers.php')],
         ['label' => 'Merge contacts', 'href' => url('departments/election/merge-workers.php')],
         ['label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php')],
     ]);
 }
 
-page_header('Election Workers');
+page_header('Election Contacts');
 ?>
 <main class="shell">
     <section class="panel">
-        <h1>Election Workers</h1>
-        <p>Search the worker address book and manage contact records.</p>
+        <h1>Election Contacts</h1>
+        <p>Search the address book and manage election contact records.</p>
         <?php election_navigation('workers'); ?>
 
         <?php if ($message = flash('success')): ?>
@@ -206,7 +206,7 @@ page_header('Election Workers');
                 <p class="muted">Sorted by <?= $sortBy === 'first' ? 'first name' : 'last name' ?>.</p>
             </div>
             <div class="address-book-tools">
-                <a class="button compact-button" href="<?= e(url('departments/election/worker-edit.php')) ?>">Add worker</a>
+                <a class="button compact-button" href="<?= e(url('departments/election/worker-edit.php')) ?>">Add contact</a>
                 <div class="segmented-actions" aria-label="Sort address book">
                     <a class="button secondary compact-button <?= $sortBy === 'last' ? 'active' : '' ?>" href="<?= e($sortByLastUrl) ?>">Last name</a>
                     <a class="button secondary compact-button <?= $sortBy === 'first' ? 'active' : '' ?>" href="<?= e($sortByFirstUrl) ?>">First name</a>
@@ -256,7 +256,7 @@ page_header('Election Workers');
                         </td>
                         <td data-label="Actions">
                             <div class="table-actions">
-                                <a class="icon-link" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'])) ?>" title="Edit worker" aria-label="Edit worker">&#9998;</a>
+                                <a class="icon-link" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'])) ?>" title="Edit contact" aria-label="Edit contact">&#9998;</a>
                                 <a class="button secondary compact-button" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'] . '&new_assignment=1')) ?>">Add assignment</a>
                             </div>
                         </td>

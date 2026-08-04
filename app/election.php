@@ -446,15 +446,15 @@ function election_navigation(string $activeKey = ''): void
             ],
         ];
         $groups['workers'] = [
-            'label' => 'Workers',
+            'label' => 'Contacts',
             'items' => [
-                ['key' => 'workers', 'label' => 'Worker List', 'href' => url('departments/election/workers.php')],
+                ['key' => 'workers', 'label' => 'Address Book', 'href' => url('departments/election/workers.php')],
             ],
         ];
     }
 
     if ($isManager) {
-        $groups['workers']['items'][] = ['key' => 'import-workers', 'label' => 'Import CSV', 'href' => url('departments/election/import-workers.php')];
+        $groups['workers']['items'][] = ['key' => 'import-workers', 'label' => 'Import Contacts', 'href' => url('departments/election/import-workers.php')];
         $groups['workers']['items'][] = ['key' => 'merge-workers', 'label' => 'Merge Contacts', 'href' => url('departments/election/merge-workers.php')];
         $groups['workers']['items'][] = ['key' => 'bulk-email', 'label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php')];
     }

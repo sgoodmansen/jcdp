@@ -158,7 +158,7 @@ if ($editPositionId > 0) {
 $actions = [
     ['label' => 'Election Home', 'href' => url('departments/election/index.php'), 'primary' => true],
     ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')],
-    ['label' => 'Workers', 'href' => url('departments/election/workers.php')],
+    ['label' => 'Contacts', 'href' => url('departments/election/workers.php')],
     ['label' => 'Reuse past workers', 'href' => url('departments/election/reuse-workers.php')],
     ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
 ];
