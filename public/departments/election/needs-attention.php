@@ -483,6 +483,15 @@ page_header('Needs Attention');
         <?php if ($classCount === 0): ?>
             <p>No active training classes exist for this election yet.</p>
         <?php else: ?>
+            <p class="muted">
+                This section lists assigned workers whose position has required training available, but who either have not signed up yet or have signed up and still need attendance marked complete. Chief Judge and Assistant Chief Judge training is optional, so those positions are not counted here unless they are serving another required position.
+            </p>
+            <p class="muted">
+                To fix an item, open the worker to review their contact record, or open Training Classes and sign them up from the class detail page.
+            </p>
+            <div class="actions" style="margin-bottom: 18px;">
+                <a class="button secondary compact-button" href="<?= e(url('departments/election/classes.php?election_period_id=' . $selectedPeriodId)) ?>">Open Training Classes</a>
+            </div>
             <table class="table mobile-card-table">
                 <thead>
                     <tr>
