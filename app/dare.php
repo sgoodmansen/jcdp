@@ -240,13 +240,13 @@ function dare_navigation(string $activeKey = ''): void
             'items' => [
                 ['key' => 'class-create', 'label' => 'New Class', 'href' => url('departments/dare/class-create.php')],
                 ['key' => 'classes', 'label' => 'Class List', 'href' => url('departments/dare/classes.php')],
-                ['key' => 'essay-winners', 'label' => 'Essay Winners', 'href' => url('departments/dare/essay-winners.php')],
             ],
         ],
         'reports' => [
             'label' => 'Reports',
             'items' => [
                 ['key' => 'report', 'label' => 'Reports', 'href' => url('departments/dare/report.php')],
+                ['key' => 'essay-winners', 'label' => 'Essay Winners', 'href' => url('departments/dare/essay-winners.php')],
             ],
         ],
         'people' => [

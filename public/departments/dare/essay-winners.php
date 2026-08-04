@@ -80,12 +80,9 @@ page_header('DARE Essay Winners');
     <section class="panel roster-toolbar">
         <h1>Essay Winners</h1>
         <p>Print or review students marked as essay winners by class.</p>
-        <div class="letter-action-row">
-            <button type="button" class="button desktop-print-button" onclick="window.print()">Print essay winners</button>
-            <?php dare_navigation('essay-winners'); ?>
-        </div>
+        <?php dare_navigation('essay-winners'); ?>
 
-        <form class="form compact-form" method="get" style="margin-top: 18px;">
+        <form class="form compact-form essay-winners-filter-form" method="get" style="margin-top: 18px;">
             <label>
                 School year
                 <select name="school_year">
@@ -104,9 +101,10 @@ page_header('DARE Essay Winners');
                     <?php endforeach; ?>
                 </select>
             </label>
-            <div class="actions">
+            <div class="actions essay-winners-filter-actions">
                 <button type="submit">Filter</button>
                 <a class="button secondary" href="<?= e(url('departments/dare/essay-winners.php')) ?>">Clear</a>
+                <button type="button" class="button secondary desktop-print-button" onclick="window.print()">Print essay winners</button>
             </div>
         </form>
     </section>

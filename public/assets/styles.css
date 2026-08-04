@@ -442,6 +442,15 @@ a {
     color: var(--text);
 }
 
+.essay-winners-filter-form {
+    max-width: 1080px;
+}
+
+.essay-winners-filter-actions {
+    grid-column: 2;
+    justify-content: flex-end;
+}
+
 .status-card p {
     margin-bottom: 0;
 }
@@ -2585,6 +2594,11 @@ textarea {
 
     .compact-form {
         grid-template-columns: 1fr;
+    }
+
+    .essay-winners-filter-actions {
+        grid-column: auto;
+        justify-content: flex-start;
     }
 
     .worker-status-panel {
