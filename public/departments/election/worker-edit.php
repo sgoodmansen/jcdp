@@ -595,18 +595,27 @@ page_header($pageTitle);
                 Text reminders
             </label>
             <?php if (!$isSelfEdit): ?>
-                <label>
-                    Worker status
-                    <select name="availability_status">
-                        <?php foreach (election_worker_status_options() as $statusValue => $statusLabel): ?>
-                            <option value="<?= e($statusValue) ?>" <?= $workerStatus === $statusValue ? 'selected' : '' ?>><?= e($statusLabel) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <label>
-                    Unavailable reason
-                    <input name="unavailable_reason" value="<?= e($worker['unavailable_reason'] ?? '') ?>" placeholder="Moved, deceased, health, do not contact">
-                </label>
+                <div class="worker-status-panel span-2">
+                    <label>
+                        Worker status
+                        <select name="availability_status" id="worker-availability-status">
+                            <?php foreach (election_worker_status_options() as $statusValue => $statusLabel): ?>
+                                <option value="<?= e($statusValue) ?>" <?= $workerStatus === $statusValue ? 'selected' : '' ?>><?= e($statusLabel) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label class="worker-unavailable-panel" id="worker-unavailable-panel">
+                        Unavailable reason
+                        <input name="unavailable_reason" id="worker-unavailable-reason" value="<?= e($worker['unavailable_reason'] ?? '') ?>" placeholder="Moved, deceased, health, do not contact">
+                        <span class="quick-reason-buttons" aria-label="Unavailable quick reasons">
+                            <button type="button" class="secondary compact-button" data-unavailable-reason="Moved">Moved</button>
+                            <button type="button" class="secondary compact-button" data-unavailable-reason="Deceased">Deceased</button>
+                            <button type="button" class="secondary compact-button" data-unavailable-reason="Health">Health</button>
+                            <button type="button" class="secondary compact-button" data-unavailable-reason="Do not contact">Do not contact</button>
+                            <button type="button" class="secondary compact-button" data-unavailable-reason="">Other</button>
+                        </span>
+                    </label>
+                </div>
                 <label class="check-label">
                     <input type="checkbox" name="is_active" <?= (int) ($assignment['is_active'] ?? 1) === 1 ? 'checked' : '' ?>>
                     Active assignment
@@ -711,4 +720,35 @@ page_header($pageTitle);
     <?php endif; ?>
 </main>
 <script src="<?= e(url('assets/forms.js?v=20260730c')) ?>"></script>
+<script>
+    const workerUnavailableStatus = '<?= e(ELECTION_WORKER_STATUS_UNAVAILABLE) ?>';
+    const workerStatus = document.getElementById('worker-availability-status');
+    const workerUnavailablePanel = document.getElementById('worker-unavailable-panel');
+    const updateUnavailableReasonVisibility = () => {
+        if (!workerStatus || !workerUnavailablePanel) {
+            return;
+        }
+
+        workerUnavailablePanel.hidden = workerStatus.value !== workerUnavailableStatus;
+    };
+
+    if (workerStatus) {
+        workerStatus.addEventListener('change', updateUnavailableReasonVisibility);
+        updateUnavailableReasonVisibility();
+    }
+
+    document.querySelectorAll('[data-unavailable-reason]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const reason = document.getElementById('worker-unavailable-reason');
+            if (!workerStatus || !reason) {
+                return;
+            }
+
+            workerStatus.value = workerUnavailableStatus;
+            reason.value = button.dataset.unavailableReason || '';
+            updateUnavailableReasonVisibility();
+            reason.focus();
+        });
+    });
+</script>
 <?php page_footer(); ?>

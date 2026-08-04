@@ -624,6 +624,26 @@ button:focus {
     display: block;
 }
 
+.quick-reason-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.worker-status-panel {
+    align-items: start;
+    display: grid;
+    gap: 14px 18px;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(320px, 1.2fr);
+}
+
+.worker-status-panel label {
+    display: grid;
+    font-weight: 700;
+    gap: 6px;
+}
+
 .span-2 {
     grid-column: span 2;
 }
@@ -2359,6 +2379,10 @@ textarea {
     }
 
     .compact-form {
+        grid-template-columns: 1fr;
+    }
+
+    .worker-status-panel {
         grid-template-columns: 1fr;
     }
 
