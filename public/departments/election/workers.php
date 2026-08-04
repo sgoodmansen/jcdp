@@ -206,6 +206,7 @@ page_header('Election Workers');
                 <p class="muted">Sorted by <?= $sortBy === 'first' ? 'first name' : 'last name' ?>.</p>
             </div>
             <div class="address-book-tools">
+                <a class="button compact-button" href="<?= e(url('departments/election/worker-edit.php')) ?>">Add worker</a>
                 <div class="segmented-actions" aria-label="Sort address book">
                     <a class="button secondary compact-button <?= $sortBy === 'last' ? 'active' : '' ?>" href="<?= e($sortByLastUrl) ?>">Last name</a>
                     <a class="button secondary compact-button <?= $sortBy === 'first' ? 'active' : '' ?>" href="<?= e($sortByFirstUrl) ?>">First name</a>
