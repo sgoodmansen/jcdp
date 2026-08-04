@@ -987,33 +987,14 @@ textarea {
     margin-bottom: 4px;
 }
 
-.staffing-extra-workers {
-    display: grid;
-    gap: 6px;
-    margin-top: 12px;
-}
-
-.staffing-extra-worker-row,
-.staffing-add-extra-form {
-    align-items: center;
-    display: flex;
-    gap: 8px;
-}
-
-.staffing-extra-worker-row {
-    color: var(--muted);
-    font-size: 13px;
-    justify-content: space-between;
-}
-
 .staffing-worker-contact {
     color: var(--muted);
     font-size: 13px;
     margin-top: 6px;
 }
 
-.staffing-add-extra {
-    margin-top: 8px;
+.staffing-extra-worker-table-row td {
+    background: color-mix(in srgb, var(--secondary-bg) 35%, transparent);
 }
 
 .staffing-status-stack {
@@ -1023,22 +1004,18 @@ textarea {
     gap: 6px;
 }
 
-.staffing-add-extra summary {
-    cursor: pointer;
-    display: inline-flex;
-    list-style: none;
+.staffing-add-extra-panel {
+    border-top: 1px solid var(--border);
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.6fr);
+    margin-top: 18px;
+    padding-top: 18px;
 }
 
-.staffing-add-extra summary::-webkit-details-marker {
-    display: none;
-}
-
-.staffing-add-extra-form {
-    margin-top: 8px;
-}
-
-.staffing-add-extra-form select {
-    min-width: 190px;
+.staffing-add-extra-panel h2 {
+    font-size: 20px;
+    margin-bottom: 4px;
 }
 
 .staffing-sheet-precinct {
@@ -2771,15 +2748,8 @@ textarea {
         justify-content: flex-start;
     }
 
-    .staffing-add-extra-form,
-    .staffing-extra-worker-row {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .staffing-add-extra-form select {
-        min-width: 0;
-        width: 100%;
+    .staffing-add-extra-panel {
+        grid-template-columns: 1fr;
     }
 
     .election-period-table {

@@ -778,7 +778,6 @@ page_header('Precinct Staffing');
                     $currentSlotAssignment = $slotAssignments[$positionId] ?? null;
                     $currentWorkerId = (int) ($currentSlotAssignment['worker_id'] ?? 0);
                     $extraAssignments = $extraSlotAssignments[$positionId] ?? [];
-                    $canAddExtraWorker = !isset($chiefPositionLookup[$positionId]);
                     $currentTrainingStatus = $currentSlotAssignment ? ($trainingStatusByAssignmentId[(int) $currentSlotAssignment['id']] ?? null) : null;
                     ?>
                     <tr>
@@ -810,47 +809,6 @@ page_header('Precinct Staffing');
                             <?php else: ?>
                                 <div class="staffing-worker-contact">No worker selected</div>
                             <?php endif; ?>
-                            <?php if ($extraAssignments): ?>
-                                <div class="staffing-extra-workers">
-                                    <span class="meta">Additional workers</span>
-                                    <?php foreach ($extraAssignments as $extraAssignment): ?>
-                                        <?php $extraTrainingStatus = $trainingStatusByAssignmentId[(int) $extraAssignment['id']] ?? null; ?>
-                                        <div class="staffing-extra-worker-row">
-                                            <span>
-                                                <?= e(election_person_name($extraAssignment)) ?><br>
-                                                <span class="meta"><?= e($extraAssignment['email'] ?: 'No email') ?> - <?= e($extraAssignment['phone'] ?: 'No phone') ?></span>
-                                            </span>
-                                            <form method="post">
-                                                <input type="hidden" name="action" value="remove_extra_slot">
-                                                <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
-                                                <input type="hidden" name="precinct_id" value="<?= e((string) $selectedPrecinctId) ?>">
-                                                <input type="hidden" name="assignment_id" value="<?= e((string) $extraAssignment['id']) ?>">
-                                                <button type="submit" class="secondary compact-button">Remove</button>
-                                            </form>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-                            <?php if ($canAddExtraWorker): ?>
-                                <details class="staffing-add-extra">
-                                    <summary class="button secondary compact-button">Add extra worker</summary>
-                                    <form method="post" class="staffing-add-extra-form">
-                                        <input type="hidden" name="action" value="add_extra_slot">
-                                        <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
-                                        <input type="hidden" name="precinct_id" value="<?= e((string) $selectedPrecinctId) ?>">
-                                        <input type="hidden" name="position_id" value="<?= e((string) $positionId) ?>">
-                                        <select name="extra_worker_id">
-                                            <option value="">Select extra worker</option>
-                                            <?php foreach ($availableWorkers as $availableWorker): ?>
-                                                <option value="<?= e((string) $availableWorker['id']) ?>">
-                                                    <?= e(election_person_name($availableWorker)) ?><?= (int) $availableWorker['is_active'] === 1 ? '' : ' (inactive)' ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <button type="submit" class="secondary compact-button">Add</button>
-                                    </form>
-                                </details>
-                            <?php endif; ?>
                         </td>
                         <td data-label="Status">
                             <div class="staffing-status-stack">
@@ -867,16 +825,6 @@ page_header('Precinct Staffing');
                                 <?php endif; ?>
                                 <?php if ($extraAssignments): ?>
                                     <span class="badge badge-muted"><?= e((string) count($extraAssignments)) ?> extra</span>
-                                    <?php foreach ($extraAssignments as $extraAssignment): ?>
-                                        <?php $extraTrainingStatus = $trainingStatusByAssignmentId[(int) $extraAssignment['id']] ?? null; ?>
-                                        <?php if ($extraTrainingStatus): ?>
-                                            <span class="meta"><?= e(election_person_name($extraAssignment)) ?></span>
-                                            <span class="badge <?= e($extraTrainingStatus['class']) ?>"><?= e($extraTrainingStatus['label']) ?></span>
-                                            <?php if ($extraTrainingStatus['detail'] !== ''): ?>
-                                                <span class="meta"><?= e($extraTrainingStatus['detail']) ?></span>
-                                            <?php endif; ?>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -896,9 +844,81 @@ page_header('Precinct Staffing');
                             </div>
                         </td>
                     </tr>
+                    <?php foreach ($extraAssignments as $extraAssignment): ?>
+                        <?php $extraTrainingStatus = $trainingStatusByAssignmentId[(int) $extraAssignment['id']] ?? null; ?>
+                        <tr class="staffing-extra-worker-table-row">
+                            <td data-label="Position">
+                                <?= e($position['name']) ?><br>
+                                <span class="badge badge-muted">Extra</span>
+                            </td>
+                            <td data-label="Assigned worker">
+                                <?= e(election_person_name($extraAssignment)) ?>
+                                <div class="staffing-worker-contact">
+                                    <?= e($extraAssignment['email'] ?: 'No email') ?> - <?= e($extraAssignment['phone'] ?: 'No phone') ?>
+                                </div>
+                            </td>
+                            <td data-label="Status">
+                                <div class="staffing-status-stack">
+                                    <span class="badge badge-success">Filled</span>
+                                    <?php if ($extraTrainingStatus): ?>
+                                        <span class="badge <?= e($extraTrainingStatus['class']) ?>"><?= e($extraTrainingStatus['label']) ?></span>
+                                        <?php if ($extraTrainingStatus['detail'] !== ''): ?>
+                                            <span class="meta"><?= e($extraTrainingStatus['detail']) ?></span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td data-label="Action">
+                                <form method="post">
+                                    <input type="hidden" name="action" value="remove_extra_slot">
+                                    <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
+                                    <input type="hidden" name="precinct_id" value="<?= e((string) $selectedPrecinctId) ?>">
+                                    <input type="hidden" name="assignment_id" value="<?= e((string) $extraAssignment['id']) ?>">
+                                    <button type="submit" class="secondary compact-button">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
                 <?php endforeach; ?>
             </tbody>
         </table>
+
+        <section class="staffing-add-extra-panel">
+            <div>
+                <h2>Add Extra Worker</h2>
+                <p class="muted">Use this only when a precinct needs more than one person for the same non-Chief Judge position.</p>
+            </div>
+            <form method="post" class="form compact-form">
+                <input type="hidden" name="action" value="add_extra_slot">
+                <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
+                <input type="hidden" name="precinct_id" value="<?= e((string) $selectedPrecinctId) ?>">
+                <label>
+                    Position
+                    <select name="position_id" required>
+                        <option value="">Select position</option>
+                        <?php foreach ($positions as $extraPosition): ?>
+                            <?php if (!isset($chiefPositionLookup[(int) $extraPosition['id']])): ?>
+                                <option value="<?= e((string) $extraPosition['id']) ?>"><?= e($extraPosition['name']) ?></option>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label>
+                    Worker
+                    <select name="extra_worker_id" required>
+                        <option value="">Select worker</option>
+                        <?php foreach ($availableWorkers as $availableWorker): ?>
+                            <option value="<?= e((string) $availableWorker['id']) ?>">
+                                <?= e(election_person_name($availableWorker)) ?><?= (int) $availableWorker['is_active'] === 1 ? '' : ' (inactive)' ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <div class="actions span-2">
+                    <button type="submit" class="secondary">Add extra worker</button>
+                </div>
+            </form>
+        </section>
     </section>
 </main>
 <?php page_footer(); ?>
