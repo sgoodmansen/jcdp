@@ -518,6 +518,10 @@ button:focus {
     color: var(--primary-dark);
 }
 
+.print-only {
+    display: none;
+}
+
 .form {
     display: grid;
     gap: 16px;
@@ -2197,6 +2201,7 @@ textarea {
 @media print {
     .topbar,
     .footer,
+    .print-hidden,
     .panel:first-child {
         display: none;
     }
@@ -2228,6 +2233,57 @@ textarea {
     .printable-roster {
         border: 0;
         padding: 0;
+    }
+
+    .election-class-detail-shell > .panel:not(.election-attendance-print) {
+        display: none;
+    }
+
+    .election-attendance-print {
+        border: 0;
+        padding: 0;
+    }
+
+    .election-attendance-print .section-heading-row {
+        display: none;
+    }
+
+    .print-only {
+        display: block;
+    }
+
+    .election-attendance-print-header {
+        display: grid;
+        gap: 0.25in;
+        grid-template-columns: minmax(0, 1fr) 2.9in;
+        margin-bottom: 0.2in;
+    }
+
+    .election-attendance-print-header h1 {
+        color: #111827;
+        font-size: 22pt;
+        margin-bottom: 0.08in;
+    }
+
+    .election-attendance-print-header p,
+    .election-attendance-print-header .meta,
+    .election-attendance-print-header dt,
+    .election-attendance-print-header dd {
+        color: #111827;
+    }
+
+    .election-attendance-table th,
+    .election-attendance-table td {
+        border: 1px solid #9ca3af;
+        color: #111827;
+        font-size: 10pt;
+        padding: 6px 7px;
+    }
+
+    .election-attendance-table th:nth-child(1),
+    .election-attendance-table td:nth-child(1) {
+        text-align: center;
+        width: 0.8in;
     }
 
     .roster-header {

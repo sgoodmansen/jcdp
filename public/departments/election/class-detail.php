@@ -184,7 +184,7 @@ if ($isManager) {
 
 page_header('Training Class');
 ?>
-<main class="shell">
+<main class="shell election-class-detail-shell">
     <section class="panel">
         <h1><?= e($class['class_title']) ?></h1>
         <p><?= e(format_display_date($class['class_date'])) ?> at <?= e(format_display_time($class['start_time'])) ?> - <?= e($class['duration_minutes']) ?> minutes</p>
@@ -243,7 +243,7 @@ page_header('Training Class');
         </section>
     <?php endif; ?>
 
-    <section class="panel" style="margin-top: 18px;">
+    <section class="panel election-attendance-print" style="margin-top: 18px;">
         <div class="section-heading-row">
             <div>
                 <h1>Attendance Roster</h1>
@@ -254,9 +254,25 @@ page_header('Training Class');
             <?php endif; ?>
         </div>
 
+        <div class="print-only roster-header election-attendance-print-header">
+            <div>
+                <p class="meta"><?= e($class['election_name']) ?></p>
+                <h1><?= e($class['class_title']) ?></h1>
+                <p><?= e(format_display_date($class['class_date'])) ?> at <?= e(format_display_time($class['start_time'])) ?> - <?= e($class['building_address']) ?><?= $class['room_location'] ? ', ' . e($class['room_location']) : '' ?></p>
+            </div>
+            <dl class="roster-summary">
+                <dt>Registered</dt>
+                <dd><?= e((string) count($registrations)) ?></dd>
+                <dt>Instructor</dt>
+                <dd><?= e($class['instructor_name']) ?></dd>
+                <dt>Positions</dt>
+                <dd><?= e(implode(', ', $positions) ?: 'No positions selected') ?></dd>
+            </dl>
+        </div>
+
         <form method="post">
             <input type="hidden" name="action" value="save_attendance">
-            <table class="table mobile-card-table">
+            <table class="table mobile-card-table election-attendance-table">
                 <thead>
                     <tr>
                         <th>Attended</th>
@@ -291,7 +307,7 @@ page_header('Training Class');
                 </tbody>
             </table>
             <?php if ($isManager && $registrations): ?>
-                <div class="actions" style="margin-top: 18px;">
+                <div class="actions print-hidden" style="margin-top: 18px;">
                     <button type="submit">Save attendance</button>
                 </div>
             <?php endif; ?>
