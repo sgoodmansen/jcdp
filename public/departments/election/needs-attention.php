@@ -586,7 +586,7 @@ page_header('Needs Attention');
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$statusRows): ?>
-                    <tr><td colspan="5">No assigned workers have unavailable or inactive contact status.</td></tr>
+                    <tr><td colspan="5">No assigned workers have unavailable or archived worker status.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

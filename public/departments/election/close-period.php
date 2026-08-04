@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'worker_contacts_remain_active' => true,
     ]);
 
-    flash('success', 'Election closed. ' . $closedAssignmentCount . ' assignment' . ($closedAssignmentCount === 1 ? '' : 's') . ' closed. Worker contacts remain Active for future elections.');
+    flash('success', 'Election closed. ' . $closedAssignmentCount . ' assignment' . ($closedAssignmentCount === 1 ? '' : 's') . ' closed. Worker contacts remain Available for future elections.');
     redirect_to('departments/election/setup.php');
 }
 
@@ -107,7 +107,7 @@ page_header('Close Election Period');
             </div>
 
             <div class="notice warning" style="margin-top: 18px;">
-                Closing this election will mark only this election's assignments inactive. Worker contacts will stay Active unless someone intentionally marks them Unavailable or Inactive.
+                Closing this election will mark only this election's assignments inactive. Worker contacts will stay Available unless someone intentionally marks them Unavailable or Archived.
             </div>
 
             <form method="post" class="actions" style="margin-top: 18px;">

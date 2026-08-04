@@ -184,11 +184,11 @@ page_header('Election Workers');
             <label>
                 Status
                 <select name="status">
-                    <option value="active" <?= $statusFilter === ELECTION_WORKER_STATUS_ACTIVE ? 'selected' : '' ?>>Active contacts</option>
+                    <option value="active" <?= $statusFilter === ELECTION_WORKER_STATUS_ACTIVE ? 'selected' : '' ?>>Available workers</option>
                     <?php if ($isModuleManager): ?>
-                        <option value="unavailable" <?= $statusFilter === ELECTION_WORKER_STATUS_UNAVAILABLE ? 'selected' : '' ?>>Unavailable contacts</option>
-                        <option value="inactive" <?= $statusFilter === ELECTION_WORKER_STATUS_INACTIVE ? 'selected' : '' ?>>Inactive contacts</option>
-                        <option value="all" <?= $statusFilter === 'all' ? 'selected' : '' ?>>All contacts</option>
+                        <option value="unavailable" <?= $statusFilter === ELECTION_WORKER_STATUS_UNAVAILABLE ? 'selected' : '' ?>>Unavailable workers</option>
+                        <option value="inactive" <?= $statusFilter === ELECTION_WORKER_STATUS_INACTIVE ? 'selected' : '' ?>>Archived workers</option>
+                        <option value="all" <?= $statusFilter === 'all' ? 'selected' : '' ?>>All workers</option>
                     <?php endif; ?>
                 </select>
             </label>

@@ -279,9 +279,9 @@ function election_worker_status_columns_exist(): bool
 function election_worker_status_options(): array
 {
     return [
-        ELECTION_WORKER_STATUS_ACTIVE => 'Active',
+        ELECTION_WORKER_STATUS_ACTIVE => 'Available',
         ELECTION_WORKER_STATUS_UNAVAILABLE => 'Unavailable',
-        ELECTION_WORKER_STATUS_INACTIVE => 'Inactive',
+        ELECTION_WORKER_STATUS_INACTIVE => 'Archived',
     ];
 }
 
@@ -299,7 +299,7 @@ function election_worker_status(array $worker): string
 
 function election_worker_status_label(array $worker): string
 {
-    return election_worker_status_options()[election_worker_status($worker)] ?? 'Active';
+    return election_worker_status_options()[election_worker_status($worker)] ?? 'Available';
 }
 
 function election_worker_status_badge_class(array $worker): string

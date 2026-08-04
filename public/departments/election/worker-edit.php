@@ -173,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (election_worker_status($existingWorker) !== ELECTION_WORKER_STATUS_ACTIVE) {
-                flash('error', 'That worker is marked unavailable or inactive. Change the worker status before adding an assignment.');
+                flash('error', 'That worker is marked unavailable or archived. Change the worker status before adding an assignment.');
                 redirect_to('departments/election/worker-edit.php');
             }
 

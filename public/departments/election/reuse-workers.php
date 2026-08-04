@@ -324,7 +324,7 @@ page_header('Reuse Past Workers');
                                     </td>
                                     <td data-label="Status">
                                         <span class="badge <?= (int) $assignment['worker_is_active'] === 1 ? 'badge-success' : 'badge-muted' ?>">
-                                            <?= (int) $assignment['worker_is_active'] === 1 ? 'Worker active' : 'Worker inactive' ?>
+                                            <?= (int) $assignment['worker_is_active'] === 1 ? 'Worker available' : 'Worker archived' ?>
                                         </span>
                                     </td>
                                 </tr>
