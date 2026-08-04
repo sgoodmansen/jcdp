@@ -88,6 +88,20 @@ page_header('Supervisor How To');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
+        <h1>How to Sign Someone Up for Training</h1>
+        <ol class="how-to-steps">
+            <li><strong>Open Training Classes.</strong> Find the class the worker should attend.</li>
+            <li><strong>Open the class.</strong> Use the view button on the class row to open the class detail page.</li>
+            <li><strong>Use Sign Up Worker.</strong> Choose the worker from the dropdown and select Sign up worker.</li>
+            <li><strong>Check the roster.</strong> The worker should appear on the Attendance Roster for that class.</li>
+        </ol>
+        <p class="muted">The dropdown only shows eligible active workers for that election who are not already signed up for another class in the same election period. Chief Judge and Assistant Chief Judge may join any class as optional training.</p>
+        <div class="actions">
+            <a class="button" href="<?= e(url('departments/election/classes.php')) ?>">Training Classes</a>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
         <h1>Daily Review</h1>
         <p>Use Needs Attention as the main checklist. The goal is not always to make every number zero, but every item should either be fixed or intentionally understood.</p>
         <ul class="how-to-checklist">

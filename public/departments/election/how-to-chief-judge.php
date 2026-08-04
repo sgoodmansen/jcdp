@@ -75,6 +75,20 @@ page_header('Chief Judge How To');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
+        <h1>How to Sign Someone Up for Training</h1>
+        <ol class="how-to-steps">
+            <li><strong>Open Training Classes.</strong> Choose the class that fits the worker's position or learning need.</li>
+            <li><strong>Open the class.</strong> Use the view button to open the class detail page.</li>
+            <li><strong>Use Sign Up Worker.</strong> Select a worker from your precinct and choose Sign up worker.</li>
+            <li><strong>Confirm the roster.</strong> The worker should be listed on the class Attendance Roster.</li>
+        </ol>
+        <p class="muted">Chief Judges can sign up workers from their precinct. The dropdown will not show workers who are unavailable, archived, already signed up for another class in the election period, or outside your precinct.</p>
+        <div class="actions">
+            <a class="button" href="<?= e(url('departments/election/classes.php')) ?>">Training Classes</a>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
         <h1>When Something Looks Wrong</h1>
         <ul class="how-to-checklist">
             <li>If the wrong person is assigned, clear that position and save the change.</li>
