@@ -372,7 +372,8 @@ if ($selectedPeriodId === 0 && count($periods) === 1 && ($isNewAssignment || $as
 }
 
 $assignmentHistory = [];
-if ($worker) {
+$savedWorkerId = (int) ($worker['id'] ?? 0);
+if ($savedWorkerId > 0) {
     $historySql = 'SELECT election_worker_assignments.*,
                           election_periods.name AS election_name,
                           election_periods.starts_on,
@@ -405,7 +406,7 @@ if ($worker) {
                    WHERE election_worker_assignments.worker_id = :worker_id';
     $historyParams = [
         'assistant_role_key' => ELECTION_ROLE_ASSISTANT_CHIEF_JUDGE,
-        'worker_id' => (int) $worker['id'],
+        'worker_id' => $savedWorkerId,
     ];
 
     if (!$isManager && $currentAssignment && !$isSelfEdit) {
@@ -652,12 +653,12 @@ page_header($pageTitle);
         </form>
     </section>
 
-    <?php if ($worker): ?>
+    <?php if ($savedWorkerId > 0): ?>
         <section class="panel" style="margin-top: 18px;">
             <div class="section-heading-row">
                 <h1>Assignment History</h1>
                 <?php if (!$isSelfEdit && $canManageWorkers): ?>
-                    <a class="button secondary compact-button" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'] . '&new_assignment=1')) ?>">Add assignment</a>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/election/worker-edit.php?id=' . $savedWorkerId . '&new_assignment=1')) ?>">Add assignment</a>
                 <?php endif; ?>
             </div>
             <table class="table mobile-card-table">
@@ -707,7 +708,7 @@ page_header($pageTitle);
                             </td>
                             <td data-label="Actions">
                                 <?php if (!$isSelfEdit && $canManageWorkers): ?>
-                                    <a class="button secondary compact-button" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'] . '&assignment_id=' . (int) $history['id'])) ?>">Edit assignment</a>
+                                    <a class="button secondary compact-button" href="<?= e(url('departments/election/worker-edit.php?id=' . $savedWorkerId . '&assignment_id=' . (int) $history['id'])) ?>">Edit assignment</a>
                                 <?php else: ?>
                                     <span class="meta">View only</span>
                                 <?php endif; ?>
@@ -722,12 +723,12 @@ page_header($pageTitle);
         </section>
     <?php endif; ?>
 
-    <?php if ($worker && !$isSelfEdit && $canManageWorkers): ?>
+    <?php if ($savedWorkerId > 0 && !$isSelfEdit && $canManageWorkers): ?>
         <section class="panel" style="margin-top: 18px;">
             <h1>Welcome Email</h1>
             <p>Send the worker a welcome letter with instructions and a fresh access link.</p>
             <form method="post">
-                <input type="hidden" name="id" value="<?= e((string) $worker['id']) ?>">
+                <input type="hidden" name="id" value="<?= e((string) $savedWorkerId) ?>">
                 <input type="hidden" name="assignment_id" value="<?= e((string) $assignmentId) ?>">
                 <input type="hidden" name="action" value="send_welcome_email">
                 <button type="submit" class="secondary">Send welcome email</button>
