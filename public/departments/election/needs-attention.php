@@ -311,6 +311,42 @@ $totalAttentionCount = count($staffingRows)
     + count($duplicateRows)
     + ($closeElectionItem ? 1 : 0);
 
+$problemCounts = [
+    'staffing' => count($staffingRows),
+    'training' => count($trainingRows),
+    'contact' => count($contactRows),
+    'status' => count($statusRows),
+    'extra' => count($extraRows),
+];
+if ($isManager) {
+    $problemCounts['duplicates'] = count($duplicateRows);
+    $problemCounts['close'] = $closeElectionItem ? 1 : 0;
+}
+
+$problemFilter = $_GET['problem'] ?? 'all';
+if ($problemFilter !== 'all' && !array_key_exists($problemFilter, $problemCounts)) {
+    $problemFilter = 'all';
+}
+
+$problemFilterOptions = [
+    'all' => ['label' => 'All', 'count' => $totalAttentionCount],
+    'staffing' => ['label' => 'Staffing gaps', 'count' => $problemCounts['staffing']],
+    'training' => ['label' => 'Training', 'count' => $problemCounts['training']],
+    'contact' => ['label' => 'Contact info', 'count' => $problemCounts['contact']],
+    'status' => ['label' => 'Status', 'count' => $problemCounts['status']],
+    'extra' => ['label' => 'Extra workers', 'count' => $problemCounts['extra']],
+];
+if ($isManager) {
+    $problemFilterOptions['duplicates'] = ['label' => 'Duplicates', 'count' => $problemCounts['duplicates']];
+    $problemFilterOptions['close'] = ['label' => 'Close election', 'count' => $problemCounts['close']];
+}
+
+$problemFilterUrl = fn(string $filter): string => url(
+    'departments/election/needs-attention.php?election_period_id=' . $selectedPeriodId . '&problem=' . urlencode($filter)
+);
+$showProblemSection = fn(string $filter): bool => $problemFilter === 'all' || $problemFilter === $filter;
+$openProblemSection = fn(string $filter, int $count): bool => $problemFilter === $filter || ($problemFilter === 'all' && $count > 0);
+
 $actions = [
     ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php?election_period_id=' . $selectedPeriodId), 'primary' => true],
     ['label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php?election_period_id=' . $selectedPeriodId)],
@@ -390,40 +426,58 @@ page_header('Needs Attention');
         </div>
     </section>
 
-    <?php if ($closeElectionItem): ?>
-        <section class="panel" style="margin-top: 18px;">
-            <div class="section-heading-row">
+    <section class="panel" style="margin-top: 18px;">
+        <h1>Focus View</h1>
+        <div class="filter-button-group">
+            <?php foreach ($problemFilterOptions as $filterKey => $option): ?>
+                <a class="button secondary compact-button <?= $problemFilter === $filterKey ? 'active' : '' ?>" href="<?= e($problemFilterUrl($filterKey)) ?>">
+                    <?= e($option['label']) ?> (<?= e((string) $option['count']) ?>)
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+
+    <?php if ($showProblemSection('close')): ?>
+        <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('close', $problemCounts['close'] ?? 0) ? 'open' : '' ?>>
+            <summary class="section-heading-row">
                 <h1>Election Period Ready to Close</h1>
-                <span class="badge badge-warning">1</span>
-            </div>
-            <table class="table mobile-card-table">
-                <thead>
-                    <tr>
-                        <th>Election</th>
-                        <th>Ended</th>
-                        <th>Active Assignments</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td data-label="Election"><?= e($closeElectionItem['period']['name']) ?></td>
-                        <td data-label="Ended"><?= e(format_display_date($closeElectionItem['period']['ends_on'])) ?></td>
-                        <td data-label="Active Assignments"><?= e((string) $closeElectionItem['active_assignment_count']) ?></td>
-                        <td data-label="Action">
-                            <a class="button secondary compact-button" href="<?= e(url('departments/election/close-period.php?id=' . (int) $closeElectionItem['period']['id'])) ?>">Review close election</a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+                <span class="badge <?= $closeElectionItem ? 'badge-warning' : 'badge-success' ?>"><?= e((string) ($problemCounts['close'] ?? 0)) ?></span>
+                <span class="button secondary compact-button">View section</span>
+            </summary>
+            <?php if ($closeElectionItem): ?>
+                <table class="table mobile-card-table">
+                    <thead>
+                        <tr>
+                            <th>Election</th>
+                            <th>Ended</th>
+                            <th>Active Assignments</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td data-label="Election"><?= e($closeElectionItem['period']['name']) ?></td>
+                            <td data-label="Ended"><?= e(format_display_date($closeElectionItem['period']['ends_on'])) ?></td>
+                            <td data-label="Active Assignments"><?= e((string) $closeElectionItem['active_assignment_count']) ?></td>
+                            <td data-label="Action">
+                                <a class="button secondary compact-button" href="<?= e(url('departments/election/close-period.php?id=' . (int) $closeElectionItem['period']['id'])) ?>">Review close election</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p>This election period does not need to be closed yet.</p>
+            <?php endif; ?>
+        </details>
     <?php endif; ?>
 
-    <section class="panel" style="margin-top: 18px;">
-        <div class="section-heading-row">
+    <?php if ($showProblemSection('staffing')): ?>
+    <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('staffing', count($staffingRows)) ? 'open' : '' ?>>
+        <summary class="section-heading-row">
             <h1>Precinct Staffing Gaps</h1>
             <span class="badge <?= $staffingRows ? 'badge-warning' : 'badge-success' ?>"><?= e((string) count($staffingRows)) ?></span>
-        </div>
+            <span class="button secondary compact-button">View section</span>
+        </summary>
         <table class="table mobile-card-table">
             <thead>
                 <tr>
@@ -458,13 +512,16 @@ page_header('Needs Attention');
                 <?php endif; ?>
             </tbody>
         </table>
-    </section>
+    </details>
+    <?php endif; ?>
 
-    <section class="panel" style="margin-top: 18px;">
-        <div class="section-heading-row">
+    <?php if ($showProblemSection('training')): ?>
+    <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('training', count($trainingRows)) ? 'open' : '' ?>>
+        <summary class="section-heading-row">
             <h1>Training Follow-Up</h1>
             <span class="badge <?= $trainingRows ? 'badge-warning' : 'badge-success' ?>"><?= e((string) count($trainingRows)) ?></span>
-        </div>
+            <span class="button secondary compact-button">View section</span>
+        </summary>
         <?php if ($classCount === 0): ?>
             <p>No active training classes exist for this election yet.</p>
         <?php else: ?>
@@ -497,13 +554,16 @@ page_header('Needs Attention');
                 </tbody>
             </table>
         <?php endif; ?>
-    </section>
+    </details>
+    <?php endif; ?>
 
-    <section class="panel" style="margin-top: 18px;">
-        <div class="section-heading-row">
+    <?php if ($showProblemSection('contact')): ?>
+    <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('contact', count($contactRows)) ? 'open' : '' ?>>
+        <summary class="section-heading-row">
             <h1>Missing Contact Info</h1>
             <span class="badge <?= $contactRows ? 'badge-warning' : 'badge-success' ?>"><?= e((string) count($contactRows)) ?></span>
-        </div>
+            <span class="button secondary compact-button">View section</span>
+        </summary>
         <table class="table mobile-card-table">
             <thead>
                 <tr>
@@ -540,13 +600,16 @@ page_header('Needs Attention');
                 <?php endif; ?>
             </tbody>
         </table>
-    </section>
+    </details>
+    <?php endif; ?>
 
-    <section class="panel" style="margin-top: 18px;">
-        <div class="section-heading-row">
+    <?php if ($showProblemSection('status')): ?>
+    <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('status', count($statusRows)) ? 'open' : '' ?>>
+        <summary class="section-heading-row">
             <h1>Status Conflicts</h1>
             <span class="badge <?= $statusRows ? 'badge-warning' : 'badge-success' ?>"><?= e((string) count($statusRows)) ?></span>
-        </div>
+            <span class="button secondary compact-button">View section</span>
+        </summary>
         <table class="table mobile-card-table">
             <thead>
                 <tr>
@@ -579,13 +642,16 @@ page_header('Needs Attention');
                 <?php endif; ?>
             </tbody>
         </table>
-    </section>
+    </details>
+    <?php endif; ?>
 
-    <section class="panel" style="margin-top: 18px;">
-        <div class="section-heading-row">
+    <?php if ($showProblemSection('extra')): ?>
+    <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('extra', count($extraRows)) ? 'open' : '' ?>>
+        <summary class="section-heading-row">
             <h1>Extra Workers</h1>
             <span class="badge badge-muted"><?= e((string) count($extraRows)) ?></span>
-        </div>
+            <span class="button secondary compact-button">View section</span>
+        </summary>
         <table class="table mobile-card-table">
             <thead>
                 <tr>
@@ -611,14 +677,16 @@ page_header('Needs Attention');
                 <?php endif; ?>
             </tbody>
         </table>
-    </section>
+    </details>
+    <?php endif; ?>
 
-    <?php if ($isManager): ?>
-        <section class="panel" style="margin-top: 18px;">
-            <div class="section-heading-row">
+    <?php if ($isManager && $showProblemSection('duplicates')): ?>
+        <details class="panel setup-section attention-section" style="margin-top: 18px;" <?= $openProblemSection('duplicates', count($duplicateRows)) ? 'open' : '' ?>>
+            <summary class="section-heading-row">
                 <h1>Possible Duplicate Contacts</h1>
                 <span class="badge <?= $duplicateRows ? 'badge-warning' : 'badge-success' ?>"><?= e((string) count($duplicateRows)) ?></span>
-            </div>
+                <span class="button secondary compact-button">View section</span>
+            </summary>
             <table class="table mobile-card-table">
                 <thead>
                     <tr>
@@ -646,7 +714,7 @@ page_header('Needs Attention');
                     <?php endif; ?>
                 </tbody>
             </table>
-        </section>
+        </details>
     <?php endif; ?>
 </main>
 <?php page_footer(); ?>

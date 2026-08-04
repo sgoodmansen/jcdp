@@ -745,6 +745,12 @@ textarea {
     margin-top: 18px;
 }
 
+.filter-button-group .button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
+}
+
 .filter-description {
     margin-top: 18px !important;
 }
@@ -805,6 +811,10 @@ textarea {
 .setup-section[open] summary .button::after {
     content: "Hide section";
     font-size: 14px;
+}
+
+.attention-section summary .badge {
+    margin-left: auto;
 }
 
 .precinct-worker-section {
