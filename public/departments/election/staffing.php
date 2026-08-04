@@ -550,8 +550,11 @@ if ($selectedPeriodId > 0 && $allDisplayedAssignments) {
                 election_training_classes.start_time
          FROM election_training_classes
          INNER JOIN election_training_class_positions ON election_training_class_positions.class_id = election_training_classes.id
+         INNER JOIN election_positions ON election_positions.id = election_training_class_positions.position_id
          WHERE election_training_classes.election_period_id = :election_period_id
            AND election_training_classes.is_cancelled = 0
+           AND election_positions.is_chief_judge = 0
+           AND election_positions.is_assistant_chief_judge = 0
          ORDER BY election_training_classes.class_date, election_training_classes.start_time'
     );
     $statement->execute(['election_period_id' => $selectedPeriodId]);

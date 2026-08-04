@@ -56,19 +56,22 @@ if ($isManager && $periodFilter > 0) {
 }
 
 if ($assignment) {
-    $trainingPositionIds = election_assignment_training_position_ids($assignment);
-    $trainingPositionPlaceholders = [];
-    foreach ($trainingPositionIds as $index => $trainingPositionId) {
-        $placeholder = 'training_position_id_' . $index;
-        $trainingPositionPlaceholders[] = ':' . $placeholder;
-        $params[$placeholder] = $trainingPositionId;
+    if (!election_assignment_has_chief_permissions($assignment)) {
+        $trainingPositionIds = election_assignment_training_position_ids($assignment);
+        $trainingPositionPlaceholders = [];
+        foreach ($trainingPositionIds as $index => $trainingPositionId) {
+            $placeholder = 'training_position_id_' . $index;
+            $trainingPositionPlaceholders[] = ':' . $placeholder;
+            $params[$placeholder] = $trainingPositionId;
+        }
+        $sql .= ' AND EXISTS (
+                      SELECT 1 FROM election_training_class_positions
+                      WHERE election_training_class_positions.class_id = election_training_classes.id
+                        AND election_training_class_positions.position_id IN (' . implode(',', $trainingPositionPlaceholders) . ')
+                  )';
     }
     $sql .= ' AND election_training_classes.election_period_id = :period_id
-              AND EXISTS (
-                  SELECT 1 FROM election_training_class_positions
-                  WHERE election_training_class_positions.class_id = election_training_classes.id
-                    AND election_training_class_positions.position_id IN (' . implode(',', $trainingPositionPlaceholders) . ')
-              )';
+              ';
     $params['period_id'] = (int) $assignment['election_period_id'];
 }
 

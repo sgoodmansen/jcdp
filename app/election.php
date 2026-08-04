@@ -600,6 +600,18 @@ function election_assistant_chief_position_ids(): array
     return array_map('intval', array_column($statement->fetchAll(), 'id'));
 }
 
+function election_optional_training_position_ids(): array
+{
+    $statement = db()->query(
+        'SELECT id
+         FROM election_positions
+         WHERE is_chief_judge = 1
+            OR is_assistant_chief_judge = 1'
+    );
+
+    return array_map('intval', array_column($statement->fetchAll(), 'id'));
+}
+
 function election_assignment_training_position_ids(array $assignment): array
 {
     $positionIds = [(int) ($assignment['position_id'] ?? 0)];
@@ -751,7 +763,18 @@ function election_class_allowed_position_ids(int $classId): array
     $statement = db()->prepare('SELECT position_id FROM election_training_class_positions WHERE class_id = :class_id');
     $statement->execute(['class_id' => $classId]);
 
-    return array_map('intval', array_column($statement->fetchAll(), 'position_id'));
+    $positionIds = array_map('intval', array_column($statement->fetchAll(), 'position_id'));
+    $positionIds = array_merge($positionIds, election_optional_training_position_ids());
+
+    return array_values(array_unique(array_filter($positionIds)));
+}
+
+function election_class_required_position_ids(int $classId): array
+{
+    $allowedPositionIds = election_class_allowed_position_ids($classId);
+    $optionalPositionIds = election_optional_training_position_ids();
+
+    return array_values(array_diff($allowedPositionIds, $optionalPositionIds));
 }
 
 function election_generate_worker_token(int $workerId): string
@@ -876,6 +899,7 @@ function election_find_worker_by_token(int $workerId, string $token): ?array
 function election_sync_class_positions(int $classId, array $positionIds): void
 {
     $positionIds = array_values(array_unique(array_filter(array_map('intval', $positionIds))));
+    $positionIds = array_values(array_unique(array_merge($positionIds, election_optional_training_position_ids())));
 
     $statement = db()->prepare('DELETE FROM election_training_class_positions WHERE class_id = :class_id');
     $statement->execute(['class_id' => $classId]);

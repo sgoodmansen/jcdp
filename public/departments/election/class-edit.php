@@ -165,11 +165,13 @@ page_header($pageTitle);
             </label>
             <fieldset class="form-fieldset span-2">
                 <legend>Positions allowed to attend</legend>
+                <p class="meta">Chief Judge and Assistant Chief Judge may join any class as optional training.</p>
                 <div class="checkbox-grid">
                     <?php foreach ($positions as $position): ?>
+                        <?php $isOptionalTrainingPosition = (int) $position['is_chief_judge'] === 1 || (int) $position['is_assistant_chief_judge'] === 1; ?>
                         <label class="check-option">
-                            <input type="checkbox" name="position_ids[]" value="<?= e((string) $position['id']) ?>" <?= in_array((int) $position['id'], $allowedPositionIds, true) ? 'checked' : '' ?>>
-                            <?= e($position['name']) ?>
+                            <input type="checkbox" name="position_ids[]" value="<?= e((string) $position['id']) ?>" <?= in_array((int) $position['id'], $allowedPositionIds, true) || $isOptionalTrainingPosition ? 'checked' : '' ?> <?= $isOptionalTrainingPosition ? 'disabled' : '' ?>>
+                            <?= e($position['name']) ?><?= $isOptionalTrainingPosition ? ' (optional)' : '' ?>
                         </label>
                     <?php endforeach; ?>
                 </div>

@@ -163,9 +163,19 @@ if ($selectedPeriodId > 0 && $allowedPrecinctIds && $classCount > 0) {
          LEFT JOIN election_training_registrations ON election_training_registrations.assignment_id = election_worker_assignments.id
          LEFT JOIN election_training_classes ON election_training_classes.id = election_training_registrations.class_id
             AND election_training_classes.election_period_id = election_worker_assignments.election_period_id
-            AND election_training_classes.is_cancelled = 0
+           AND election_training_classes.is_cancelled = 0
          WHERE election_worker_assignments.election_period_id = :election_period_id
-           AND election_worker_assignments.is_active = 1' . $precinctScopeSql . '
+           AND election_worker_assignments.is_active = 1
+           AND election_positions.is_chief_judge = 0
+           AND election_positions.is_assistant_chief_judge = 0
+           AND EXISTS (
+                SELECT 1
+                FROM election_training_classes required_classes
+                INNER JOIN election_training_class_positions ON election_training_class_positions.class_id = required_classes.id
+                WHERE required_classes.election_period_id = election_worker_assignments.election_period_id
+                  AND required_classes.is_cancelled = 0
+                  AND election_training_class_positions.position_id = election_worker_assignments.position_id
+           )' . $precinctScopeSql . '
          GROUP BY election_worker_assignments.id
          HAVING registration_count = 0 OR attended_count = 0
          ORDER BY election_precincts.name, election_workers.last_name, election_workers.first_name'

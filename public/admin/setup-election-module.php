@@ -400,6 +400,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          WHERE election_training_registrations.assignment_id IS NULL"
     );
 
+    db()->exec(
+        "INSERT IGNORE INTO election_training_class_positions (class_id, position_id)
+         SELECT election_training_classes.id, election_positions.id
+         FROM election_training_classes
+         CROSS JOIN election_positions
+         WHERE election_positions.is_chief_judge = 1
+            OR election_positions.is_assistant_chief_judge = 1"
+    );
+
     audit_event('setup', 'election_module', 'schema');
     $ranSetup = true;
 }
