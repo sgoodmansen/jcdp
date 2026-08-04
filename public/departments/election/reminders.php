@@ -31,6 +31,7 @@ page_header('Reminder Preferences');
     <section class="panel">
         <h1>Reminder Preferences</h1>
         <p>Choose how you want to receive election training reminders.</p>
+        <?php election_navigation('reminders'); ?>
 
         <form class="form compact-form" method="post">
             <label class="check-label">

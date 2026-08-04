@@ -424,9 +424,7 @@ page_header($pageTitle);
     <section class="panel">
         <h1><?= e($pageTitle) ?></h1>
         <p><?= $isSelfEdit ? 'Update your contact information and reminder preferences.' : 'Assign the worker to an election, precinct, and position.' ?></p>
-        <?php if (!$isSelfEdit): ?>
-            <?php election_navigation('workers'); ?>
-        <?php endif; ?>
+        <?php election_navigation($isSelfEdit ? 'my-information' : 'workers'); ?>
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>

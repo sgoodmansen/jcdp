@@ -35,6 +35,7 @@ page_header('Select Election Assignment');
     <section class="panel">
         <h1>Select Election Assignment</h1>
         <p>Choose the role you want to use right now.</p>
+        <?php election_navigation('select-assignment'); ?>
 
         <?php if ($message = flash('error')): ?>
             <div class="notice error"><?= e($message) ?></div>

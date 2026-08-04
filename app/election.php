@@ -460,7 +460,9 @@ function election_navigation(string $activeKey = ''): void
         $groups['account'] = [
             'label' => 'My Account',
             'items' => [
+                ['key' => 'select-assignment', 'label' => 'Switch Assignment', 'href' => url('departments/election/select-assignment.php')],
                 ['key' => 'my-information', 'label' => 'My Information', 'href' => url('departments/election/worker-edit.php?id=' . (int) $worker['id'])],
+                ['key' => 'reminders', 'label' => 'Reminder Preferences', 'href' => url('departments/election/reminders.php')],
                 ['key' => 'sign-out', 'label' => 'Sign Out', 'href' => url('departments/election/sign-out.php')],
             ],
         ];
