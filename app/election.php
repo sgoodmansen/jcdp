@@ -133,7 +133,8 @@ function election_require_assignment_setup(): void
         && election_assignment_extra_column_exists()
         && election_precinct_roles_table_exists()
         && election_worker_matching_columns_exist()
-        && election_worker_status_columns_exist()) {
+        && election_worker_status_columns_exist()
+        && election_worker_notes_table_exists()) {
         return;
     }
 
@@ -206,6 +207,25 @@ function election_settings_table_exists(): bool
     try {
         $statement = db()->prepare('SHOW TABLES LIKE :table_name');
         $statement->execute(['table_name' => 'election_settings']);
+        $exists = (bool) $statement->fetchColumn();
+    } catch (Throwable $exception) {
+        $exists = false;
+    }
+
+    return $exists;
+}
+
+function election_worker_notes_table_exists(): bool
+{
+    static $exists = null;
+
+    if ($exists !== null) {
+        return $exists;
+    }
+
+    try {
+        $statement = db()->prepare('SHOW TABLES LIKE :table_name');
+        $statement->execute(['table_name' => 'election_worker_notes']);
         $exists = (bool) $statement->fetchColumn();
     } catch (Throwable $exception) {
         $exists = false;

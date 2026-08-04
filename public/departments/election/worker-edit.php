@@ -99,6 +99,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         flash('error', 'The welcome email could not be sent. The access link was generated but mail delivery failed.');
+    } elseif ($action === 'add_worker_note' && $worker && !$isSelfEdit && $canManageWorkers) {
+        $noteText = trim($_POST['note_text'] ?? '');
+        if ($noteText === '') {
+            flash('error', 'Enter a follow-up note before saving.');
+            redirect_to('departments/election/worker-edit.php?id=' . (int) $worker['id']);
+        }
+
+        $statement = db()->prepare(
+            'INSERT INTO election_worker_notes (worker_id, created_by_user_id, note_text)
+             VALUES (:worker_id, :created_by_user_id, :note_text)'
+        );
+        $statement->execute([
+            'worker_id' => (int) $worker['id'],
+            'created_by_user_id' => current_user()['id'] ?? null,
+            'note_text' => $noteText,
+        ]);
+
+        audit_event('created_note', 'election_worker', (string) $worker['id'], []);
+        flash('success', 'Follow-up note added.');
+        redirect_to('departments/election/worker-edit.php?id=' . (int) $worker['id']);
     } else {
         $periodId = (int) ($_POST['election_period_id'] ?? ($assignment['election_period_id'] ?? 0));
         $precinctId = (int) ($_POST['precinct_id'] ?? ($assignment['precinct_id'] ?? 0));
@@ -428,6 +448,22 @@ if ($savedWorkerId > 0) {
     $assignmentHistory = $statement->fetchAll();
 }
 
+$workerNotes = [];
+if ($savedWorkerId > 0 && !$isSelfEdit && $canManageWorkers) {
+    $statement = db()->prepare(
+        'SELECT election_worker_notes.*,
+                users.first_name AS author_first_name,
+                users.last_name AS author_last_name
+         FROM election_worker_notes
+         LEFT JOIN users ON users.id = election_worker_notes.created_by_user_id
+         WHERE election_worker_notes.worker_id = :worker_id
+         ORDER BY election_worker_notes.created_at DESC, election_worker_notes.id DESC
+         LIMIT 50'
+    );
+    $statement->execute(['worker_id' => $savedWorkerId]);
+    $workerNotes = $statement->fetchAll();
+}
+
 $actions = [
     ['label' => 'Workers', 'href' => url('departments/election/workers.php'), 'primary' => true],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
@@ -667,6 +703,50 @@ page_header($pageTitle);
             </div>
         </form>
     </section>
+
+    <?php if ($savedWorkerId > 0 && !$isSelfEdit && $canManageWorkers): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <div class="section-heading-row">
+                <div>
+                    <h1>Follow-Up Log</h1>
+                    <p class="muted">Track calls, messages, availability details, and other supervisor notes.</p>
+                </div>
+                <span class="badge badge-muted"><?= e((string) count($workerNotes)) ?> note<?= count($workerNotes) === 1 ? '' : 's' ?></span>
+            </div>
+
+            <form class="form wide-form worker-note-form" method="post">
+                <input type="hidden" name="id" value="<?= e((string) $savedWorkerId) ?>">
+                <input type="hidden" name="assignment_id" value="<?= e((string) $assignmentId) ?>">
+                <input type="hidden" name="action" value="add_worker_note">
+                <label>
+                    New note
+                    <textarea name="note_text" placeholder="Called and left voicemail, prefers morning shifts, needs follow-up, etc." required></textarea>
+                </label>
+                <div class="actions">
+                    <button type="submit" class="secondary">Add note</button>
+                </div>
+            </form>
+
+            <div class="worker-note-list">
+                <?php foreach ($workerNotes as $note): ?>
+                    <?php
+                    $authorName = trim((string) ($note['author_first_name'] ?? '') . ' ' . (string) ($note['author_last_name'] ?? ''));
+                    $createdAt = (string) ($note['created_at'] ?? '');
+                    ?>
+                    <article class="worker-note-entry">
+                        <p><?= nl2br(e($note['note_text'])) ?></p>
+                        <span class="meta">
+                            <?= e(format_display_date($createdAt)) ?> <?= e(format_display_time($createdAt)) ?>
+                            <?= $authorName !== '' ? ' by ' . e($authorName) : '' ?>
+                        </span>
+                    </article>
+                <?php endforeach; ?>
+                <?php if (!$workerNotes): ?>
+                    <p>No follow-up notes have been added yet.</p>
+                <?php endif; ?>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <?php if ($savedWorkerId > 0): ?>
         <section class="panel" style="margin-top: 18px;">

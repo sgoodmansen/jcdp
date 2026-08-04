@@ -143,6 +143,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             CONSTRAINT fk_election_assignments_created_by FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
         )",
 
+        "CREATE TABLE IF NOT EXISTS election_worker_notes (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            worker_id INT UNSIGNED NOT NULL,
+            created_by_user_id INT UNSIGNED NULL,
+            note_text TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_election_worker_notes_worker_date (worker_id, created_at),
+            CONSTRAINT fk_election_worker_notes_worker FOREIGN KEY (worker_id) REFERENCES election_workers(id) ON DELETE CASCADE,
+            CONSTRAINT fk_election_worker_notes_created_by FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+        )",
+
         "CREATE TABLE IF NOT EXISTS election_precinct_roles (
             election_period_id INT UNSIGNED NOT NULL,
             precinct_id INT UNSIGNED NOT NULL,

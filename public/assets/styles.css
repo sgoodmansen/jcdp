@@ -644,6 +644,33 @@ button:focus {
     gap: 6px;
 }
 
+.worker-note-form {
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+}
+
+.worker-note-form textarea {
+    min-height: 80px;
+}
+
+.worker-note-list {
+    display: grid;
+    gap: 10px;
+}
+
+.worker-note-entry {
+    background: var(--status-panel-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.worker-note-entry p {
+    margin-bottom: 8px;
+    max-width: none;
+}
+
 .span-2 {
     grid-column: span 2;
 }
