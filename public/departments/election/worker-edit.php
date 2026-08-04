@@ -119,7 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fn($position) => (int) $position['id'],
             array_filter(election_positions(), fn($position) => (int) $position['is_assistant_chief_judge'] !== 1)
         );
-        $shouldManageAssignment = !$isSelfEdit && ($id === 0 || $assignmentId > 0 || $isNewAssignment);
+        $hasAssignmentSelection = $periodId > 0 || $precinctId > 0 || $positionId > 0;
+        $shouldManageAssignment = !$isSelfEdit && ($assignmentId > 0 || $isNewAssignment || ($id === 0 && $hasAssignmentSelection));
+        if ($shouldManageAssignment && ($periodId === 0 || $precinctId === 0 || $positionId === 0)) {
+            flash('error', 'Choose an election, precinct, and position to add an assignment, or leave all three blank to save only the worker contact.');
+            redirect_to('departments/election/worker-edit.php' . ($id > 0 ? '?id=' . $id : ''));
+        }
         if ($shouldManageAssignment && !in_array($positionId, $regularPositionIds, true)) {
             flash('error', 'Assistant Chief Judge is assigned as an extra responsibility on Precinct Staffing.');
             redirect_to('departments/election/worker-edit.php' . ($id > 0 ? '?id=' . $id : ''));
@@ -162,6 +167,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         if ($id === 0 && $action === 'use_existing_worker') {
+            if (!$shouldManageAssignment) {
+                flash('error', 'Select an election, precinct, and position before adding an assignment to an existing worker.');
+                redirect_to('departments/election/worker-edit.php');
+            }
+
             $existingWorkerId = (int) ($_POST['existing_worker_id'] ?? 0);
             $statement = db()->prepare('SELECT id, availability_status, is_active FROM election_workers WHERE id = :id');
             $statement->execute(['id' => $existingWorkerId]);
@@ -292,9 +302,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              )'
         );
         $legacyParams = [
-            'election_period_id' => $assignmentParams['election_period_id'],
-            'precinct_id' => $assignmentParams['precinct_id'],
-            'position_id' => $assignmentParams['position_id'],
+            'election_period_id' => $shouldManageAssignment ? $assignmentParams['election_period_id'] : null,
+            'precinct_id' => $shouldManageAssignment ? $assignmentParams['precinct_id'] : null,
+            'position_id' => $shouldManageAssignment ? $assignmentParams['position_id'] : null,
             'created_by_user_id' => $params['created_by_user_id'],
             'first_name' => $params['first_name'],
             'last_name' => $params['last_name'],
@@ -309,35 +319,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'zip_code' => $params['zip_code'],
             'wants_email_reminders' => $params['wants_email_reminders'],
             'wants_text_reminders' => $params['wants_text_reminders'],
-            'availability_status' => ELECTION_WORKER_STATUS_ACTIVE,
-            'unavailable_reason' => '',
-            'contact_is_active' => 1,
+            'availability_status' => $params['availability_status'],
+            'unavailable_reason' => $params['unavailable_reason'],
+            'contact_is_active' => $params['contact_is_active'],
         ];
         $statement->execute($legacyParams);
         $id = (int) db()->lastInsertId();
 
-        $assignmentParams['worker_id'] = $id;
-        $assignmentParams['created_by_user_id'] = current_user()['id'] ?? null;
-        $assignmentParams['recruited_by_assignment_id'] = $currentAssignment['id'] ?? null;
-        $statement = db()->prepare(
-            'INSERT INTO election_worker_assignments (
-                worker_id, election_period_id, precinct_id, position_id, recruited_by_assignment_id,
-                created_by_user_id, is_active, notes
-             )
-             VALUES (
-                :worker_id, :election_period_id, :precinct_id, :position_id, :recruited_by_assignment_id,
-                :created_by_user_id, 1, :notes
-             )'
-        );
-        unset($assignmentParams['is_active']);
-        $statement->execute($assignmentParams);
+        if ($shouldManageAssignment) {
+            $assignmentParams['worker_id'] = $id;
+            $assignmentParams['created_by_user_id'] = current_user()['id'] ?? null;
+            $assignmentParams['recruited_by_assignment_id'] = $currentAssignment['id'] ?? null;
+            $statement = db()->prepare(
+                'INSERT INTO election_worker_assignments (
+                    worker_id, election_period_id, precinct_id, position_id, recruited_by_assignment_id,
+                    created_by_user_id, is_active, notes
+                 )
+                 VALUES (
+                    :worker_id, :election_period_id, :precinct_id, :position_id, :recruited_by_assignment_id,
+                    :created_by_user_id, 1, :notes
+                 )'
+            );
+            unset($assignmentParams['is_active']);
+            $statement->execute($assignmentParams);
+        }
 
         audit_event('created', 'election_worker', (string) $id, ['name' => $params['first_name'] . ' ' . $params['last_name']]);
 
         $statement = db()->prepare('SELECT * FROM election_workers WHERE id = :id');
         $statement->execute(['id' => $id]);
         $worker = $statement->fetch();
-        flash('success', 'Worker added. Send the welcome email when you are ready to share the access link.');
+        flash('success', $shouldManageAssignment
+            ? 'Worker added with assignment. Send the welcome email when you are ready to share the access link.'
+            : 'Worker contact added to the address book.');
         redirect_to('departments/election/workers.php');
         }
     }
@@ -353,7 +367,7 @@ if ($currentAssignment && !$isManager) {
 }
 
 $selectedPeriodId = (int) ($assignment['election_period_id'] ?? 0);
-if ($selectedPeriodId === 0 && count($periods) === 1) {
+if ($selectedPeriodId === 0 && count($periods) === 1 && ($isNewAssignment || $assignmentId > 0)) {
     $selectedPeriodId = (int) $periods[0]['id'];
 }
 
@@ -522,10 +536,14 @@ page_header($pageTitle);
             <input type="hidden" name="assignment_id" value="<?= e((string) $assignmentId) ?>">
             <input type="hidden" name="new_assignment" value="<?= $isNewAssignment ? '1' : '0' ?>">
             <?php if (!$isSelfEdit): ?>
+                <?php $assignmentFieldsRequired = $isNewAssignment || $assignmentId > 0; ?>
+                <?php if (!$assignmentFieldsRequired): ?>
+                    <p class="span-2">Leave the assignment fields blank to save this person as an address book contact only.</p>
+                <?php endif; ?>
                 <label class="span-2">
-                    Election
-                    <select name="election_period_id" required>
-                        <option value="">Select election</option>
+                    Election<?= $assignmentFieldsRequired ? '' : ' assignment' ?>
+                    <select name="election_period_id" <?= $assignmentFieldsRequired ? 'required' : '' ?>>
+                        <option value=""><?= $assignmentFieldsRequired ? 'Select election' : 'No assignment yet' ?></option>
                         <?php foreach ($periods as $period): ?>
                             <option value="<?= e((string) $period['id']) ?>" <?= $selectedPeriodId === (int) $period['id'] ? 'selected' : '' ?>><?= e($period['name']) ?></option>
                         <?php endforeach; ?>
@@ -533,8 +551,8 @@ page_header($pageTitle);
                 </label>
                 <label>
                     Precinct
-                    <select name="precinct_id" required>
-                        <option value="">Select precinct</option>
+                    <select name="precinct_id" <?= $assignmentFieldsRequired ? 'required' : '' ?>>
+                        <option value=""><?= $assignmentFieldsRequired ? 'Select precinct' : 'No assignment yet' ?></option>
                         <?php foreach ($precincts as $precinct): ?>
                             <option value="<?= e((string) $precinct['id']) ?>" <?= (int) ($assignment['precinct_id'] ?? 0) === (int) $precinct['id'] ? 'selected' : '' ?>><?= e($precinct['name']) ?></option>
                         <?php endforeach; ?>
@@ -542,8 +560,8 @@ page_header($pageTitle);
                 </label>
                 <label>
                     Position
-                    <select name="position_id" required>
-                        <option value="">Select position</option>
+                    <select name="position_id" <?= $assignmentFieldsRequired ? 'required' : '' ?>>
+                        <option value=""><?= $assignmentFieldsRequired ? 'Select position' : 'No assignment yet' ?></option>
                         <?php foreach ($positions as $position): ?>
                             <option value="<?= e((string) $position['id']) ?>" <?= (int) ($assignment['position_id'] ?? 0) === (int) $position['id'] ? 'selected' : '' ?>><?= e($position['name']) ?></option>
                         <?php endforeach; ?>
