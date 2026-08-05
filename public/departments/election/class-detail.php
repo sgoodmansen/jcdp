@@ -280,6 +280,7 @@ page_header('Training Class');
                         <th>Precinct</th>
                         <th>Position</th>
                         <th>Contact</th>
+                        <th class="print-hidden">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -299,10 +300,22 @@ page_header('Training Class');
                                 <?= e($registration['email'] ?: 'No email') ?><br>
                                 <span class="meta"><?= e($registration['phone'] ?: 'No phone') ?></span>
                             </td>
+                            <td data-label="Action" class="print-hidden">
+                                <?php if ((int) $registration['attended'] !== 1 && ($isManager || ($assignment && election_assignment_has_chief_permissions($assignment)))): ?>
+                                    <form method="post" action="<?= e(url('departments/election/leave-class.php')) ?>">
+                                        <input type="hidden" name="class_id" value="<?= e((string) $id) ?>">
+                                        <input type="hidden" name="worker_id" value="<?= e((string) $registration['worker_id']) ?>">
+                                        <input type="hidden" name="assignment_id" value="<?= e((string) $registration['assignment_id']) ?>">
+                                        <button type="submit" class="secondary compact-button">Remove</button>
+                                    </form>
+                                <?php else: ?>
+                                    <span class="meta"><?= (int) $registration['attended'] === 1 ? 'Complete' : 'No action' ?></span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                     <?php if (!$registrations): ?>
-                        <tr><td colspan="5">No workers are signed up yet.</td></tr>
+                        <tr><td colspan="6">No workers are signed up yet.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
