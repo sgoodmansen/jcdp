@@ -442,6 +442,36 @@ a {
     color: var(--text);
 }
 
+.training-signup-list {
+    display: grid;
+    gap: 8px;
+}
+
+.training-signups-table {
+    table-layout: fixed;
+}
+
+.training-signups-table th:nth-child(1),
+.training-signups-table td:nth-child(1) {
+    width: 22%;
+}
+
+.training-signups-table th:nth-child(2),
+.training-signups-table td:nth-child(2) {
+    width: 14%;
+}
+
+.training-signups-table th:nth-child(3),
+.training-signups-table td:nth-child(3) {
+    width: 17%;
+}
+
+.training-signups-table th,
+.training-signups-table td {
+    overflow-wrap: anywhere;
+    vertical-align: top;
+}
+
 .essay-winners-filter-form {
     max-width: 1080px;
 }

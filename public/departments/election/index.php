@@ -43,6 +43,15 @@ if ($isManager || $isChief) {
     ];
 }
 
+if ($isManager || $isChief) {
+    $toolGroups[] = [
+        'title' => 'Training Review',
+        'links' => [
+            ['label' => 'Training Signups', 'href' => url('departments/election/training-signups.php')],
+        ],
+    ];
+}
+
 if ($isManager) {
     $toolGroups[] = [
         'title' => 'Worker Tools',

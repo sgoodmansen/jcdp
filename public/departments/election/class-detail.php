@@ -111,11 +111,7 @@ $registrationSql = 'SELECT election_training_registrations.*,
                     WHERE election_training_registrations.class_id = :class_id';
 $registrationParams = ['class_id' => $id];
 if ($assignment && !$canManageClassGlobally) {
-    if (election_assignment_has_chief_permissions($assignment)) {
-        $registrationSql .= ' AND election_worker_assignments.precinct_id = :precinct_id AND election_worker_assignments.election_period_id = :period_id';
-        $registrationParams['precinct_id'] = (int) $assignment['precinct_id'];
-        $registrationParams['period_id'] = (int) $assignment['election_period_id'];
-    } else {
+    if (!election_assignment_has_chief_permissions($assignment)) {
         $registrationSql .= ' AND election_worker_assignments.id = :assignment_id';
         $registrationParams['assignment_id'] = (int) $assignment['id'];
     }
@@ -133,7 +129,7 @@ $totalRegistrationStatement = db()->prepare(
 $totalRegistrationStatement->execute(['class_id' => $id]);
 $totalRegistrations = (int) $totalRegistrationStatement->fetchColumn();
 $remainingSeats = max(0, (int) $class['seats_total'] - $totalRegistrations);
-$isRosterFilteredToPrecinct = $assignment && !$canManageClassGlobally && election_assignment_has_chief_permissions($assignment);
+$isChiefRosterView = $assignment && !$canManageClassGlobally && election_assignment_has_chief_permissions($assignment);
 
 $eligibleWorkers = [];
 if ($canManageWorkers) {
@@ -232,9 +228,9 @@ page_header('Training Class');
             </dd>
             <dt>Positions</dt>
             <dd><?= e(implode(', ', $positions) ?: 'No positions selected') ?></dd>
-            <?php if ($isRosterFilteredToPrecinct): ?>
-                <dt>Your precinct roster</dt>
-                <dd><?= e((string) count($registrations)) ?> worker<?= count($registrations) === 1 ? '' : 's' ?> shown for <?= e($assignment['precinct_name']) ?></dd>
+            <?php if ($isChiefRosterView): ?>
+                <dt>Your precinct</dt>
+                <dd><?= e($assignment['precinct_name']) ?> workers can be removed by you before completion.</dd>
             <?php endif; ?>
         </dl>
     </section>
@@ -267,8 +263,8 @@ page_header('Training Class');
             <div>
                 <h1>Attendance Roster</h1>
                 <p class="muted">
-                    <?php if ($isRosterFilteredToPrecinct): ?>
-                        This roster shows only workers from <?= e($assignment['precinct_name']) ?>. Class seats are counted across all precincts.
+                    <?php if ($isChiefRosterView): ?>
+                        This roster shows everyone signed up for the class. You can only remove workers from <?= e($assignment['precinct_name']) ?> before training is complete.
                     <?php else: ?>
                         Print this page for manual attendance, then record completion here.
                     <?php endif; ?>

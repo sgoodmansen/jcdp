@@ -463,6 +463,7 @@ function election_navigation(string $activeKey = ''): void
         'label' => 'Training',
         'items' => [
             ['key' => 'classes', 'label' => 'Training Classes', 'href' => url('departments/election/classes.php')],
+            ['key' => 'training-signups', 'label' => 'Training Signups', 'href' => url('departments/election/training-signups.php')],
         ],
     ];
 
