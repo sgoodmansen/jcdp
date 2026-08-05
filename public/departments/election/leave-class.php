@@ -9,6 +9,7 @@ $assignmentId = (int) ($_POST['assignment_id'] ?? 0);
 $currentWorker = current_election_worker();
 $currentAssignment = current_election_assignment();
 $isManager = can_manage_election_module();
+$canRemoveAsSupervisor = $isManager && !$currentWorker;
 
 $statement = db()->prepare(
     'SELECT election_training_registrations.attended,
@@ -44,7 +45,7 @@ $isChiefRemoval = $currentAssignment
     && (int) $currentAssignment['election_period_id'] === (int) $registration['election_period_id']
     && (int) $currentAssignment['precinct_id'] === (int) $registration['precinct_id'];
 
-if (!$isSelfRemoval && !$isManager && !$isChiefRemoval) {
+if (!$isSelfRemoval && !$canRemoveAsSupervisor && !$isChiefRemoval) {
     flash('error', 'You do not have permission to remove that class signup.');
     redirect_to('departments/election/classes.php');
 }

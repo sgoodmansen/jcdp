@@ -8,6 +8,7 @@ $worker = current_election_worker();
 $assignment = current_election_assignment();
 $isManager = can_manage_election_module();
 $canManageWorkers = current_election_actor_can_manage_workers();
+$canManageClassGlobally = $isManager && !$worker;
 
 $statement = db()->prepare(
     'SELECT election_training_classes.*, election_periods.name AS election_name
@@ -31,7 +32,7 @@ if ($worker && !$assignment) {
     redirect_to('departments/election/select-assignment.php');
 }
 
-if ($assignment && (int) $assignment['election_period_id'] !== (int) $class['election_period_id'] && !$isManager) {
+if ($assignment && (int) $assignment['election_period_id'] !== (int) $class['election_period_id'] && !$canManageClassGlobally) {
     http_response_code(403);
     page_header('Access denied');
     echo '<main class="shell"><section class="panel"><h1>Access denied</h1><p>This class is not available for your selected election assignment.</p></section></main>';
@@ -48,7 +49,7 @@ if ($assignment && !array_intersect(election_assignment_training_position_ids($a
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_attendance') {
-    if (!$isManager) {
+    if (!$canManageClassGlobally) {
         http_response_code(403);
         page_header('Access denied');
         echo '<main class="shell"><section class="panel"><h1>Access denied</h1><p>You do not have permission to record attendance.</p></section></main>';
@@ -100,6 +101,7 @@ $registrationSql = 'SELECT election_training_registrations.*,
                            election_workers.email,
                            election_workers.phone,
                            election_positions.name AS position_name,
+                           election_worker_assignments.precinct_id,
                            election_precincts.name AS precinct_name
                     FROM election_training_registrations
                     INNER JOIN election_workers ON election_workers.id = election_training_registrations.worker_id
@@ -108,7 +110,7 @@ $registrationSql = 'SELECT election_training_registrations.*,
                     INNER JOIN election_precincts ON election_precincts.id = election_worker_assignments.precinct_id
                     WHERE election_training_registrations.class_id = :class_id';
 $registrationParams = ['class_id' => $id];
-if ($assignment && !$isManager) {
+if ($assignment && !$canManageClassGlobally) {
     if (election_assignment_has_chief_permissions($assignment)) {
         $registrationSql .= ' AND election_worker_assignments.precinct_id = :precinct_id AND election_worker_assignments.election_period_id = :period_id';
         $registrationParams['precinct_id'] = (int) $assignment['precinct_id'];
@@ -163,7 +165,7 @@ if ($canManageWorkers) {
     } else {
         $eligibleSql .= ' AND 1 = 0';
     }
-    if ($assignment && !$isManager) {
+    if ($assignment && !$canManageClassGlobally) {
         $eligibleSql .= ' AND election_worker_assignments.precinct_id = :precinct_id';
         $eligibleParams['precinct_id'] = (int) $assignment['precinct_id'];
     }
@@ -177,7 +179,7 @@ $actions = [
     ['label' => 'Training classes', 'href' => url('departments/election/classes.php'), 'primary' => true],
     ['label' => 'Election Home', 'href' => url('departments/election/index.php')],
 ];
-if ($isManager) {
+if ($canManageClassGlobally) {
     $actions[] = ['label' => 'Edit class', 'href' => url('departments/election/class-edit.php?id=' . $id)];
     $actions[] = ['label' => 'Copy class', 'href' => url('departments/election/class-edit.php?copy_id=' . $id)];
 }
@@ -189,7 +191,7 @@ page_header('Training Class');
         <h1><?= e($class['class_title']) ?></h1>
         <p><?= e(format_display_date($class['class_date'])) ?> at <?= e(format_display_time($class['start_time'])) ?> - <?= e($class['duration_minutes']) ?> minutes</p>
         <?php election_navigation('classes'); ?>
-        <?php if ($isManager): ?>
+        <?php if ($canManageClassGlobally): ?>
             <div class="actions" style="margin-bottom: 18px;">
                 <a class="button secondary" href="<?= e(url('departments/election/class-edit.php?id=' . $id)) ?>">Edit class</a>
                 <a class="button secondary" href="<?= e(url('departments/election/class-edit.php?copy_id=' . $id)) ?>">Copy class</a>
@@ -249,7 +251,7 @@ page_header('Training Class');
                 <h1>Attendance Roster</h1>
                 <p class="muted">Print this page for manual attendance, then record completion here.</p>
             </div>
-            <?php if ($isManager): ?>
+            <?php if ($canManageClassGlobally): ?>
                 <button type="button" class="secondary compact-button" onclick="window.print()">Print</button>
             <?php endif; ?>
         </div>
@@ -287,7 +289,7 @@ page_header('Training Class');
                     <?php foreach ($registrations as $registration): ?>
                         <tr>
                             <td data-label="Attended">
-                                <?php if ($isManager): ?>
+                                <?php if ($canManageClassGlobally): ?>
                                     <input type="checkbox" name="attended_assignment_ids[]" value="<?= e((string) $registration['assignment_id']) ?>" <?= (int) $registration['attended'] === 1 ? 'checked' : '' ?>>
                                 <?php else: ?>
                                     <?= (int) $registration['attended'] === 1 ? 'Yes' : 'No' ?>
@@ -301,7 +303,19 @@ page_header('Training Class');
                                 <span class="meta"><?= e($registration['phone'] ?: 'No phone') ?></span>
                             </td>
                             <td data-label="Action" class="print-hidden">
-                                <?php if ((int) $registration['attended'] !== 1 && ($isManager || ($assignment && election_assignment_has_chief_permissions($assignment)))): ?>
+                                <?php
+                                $canRemoveRegistration = (int) $registration['attended'] !== 1
+                                    && (
+                                        $canManageClassGlobally
+                                        || (
+                                            $assignment
+                                            && election_assignment_has_chief_permissions($assignment)
+                                            && (int) $assignment['election_period_id'] === (int) $class['election_period_id']
+                                            && (int) $assignment['precinct_id'] === (int) $registration['precinct_id']
+                                        )
+                                    );
+                                ?>
+                                <?php if ($canRemoveRegistration): ?>
                                     <form method="post" action="<?= e(url('departments/election/leave-class.php')) ?>">
                                         <input type="hidden" name="class_id" value="<?= e((string) $id) ?>">
                                         <input type="hidden" name="worker_id" value="<?= e((string) $registration['worker_id']) ?>">
@@ -319,7 +333,7 @@ page_header('Training Class');
                     <?php endif; ?>
                 </tbody>
             </table>
-            <?php if ($isManager && $registrations): ?>
+            <?php if ($canManageClassGlobally && $registrations): ?>
                 <div class="actions print-hidden" style="margin-top: 18px;">
                     <button type="submit">Save attendance</button>
                 </div>
