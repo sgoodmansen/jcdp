@@ -448,10 +448,20 @@ a {
 }
 
 .training-signup-item {
-    align-items: flex-start;
+    min-height: 44px;
+}
+
+.training-status-list {
     display: grid;
-    gap: 14px;
-    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 10px;
+}
+
+.training-status-item {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 44px;
 }
 
 .training-role-tags {
@@ -474,7 +484,7 @@ a {
 
 .training-signups-table th:nth-child(1),
 .training-signups-table td:nth-child(1) {
-    width: 20%;
+    width: 19%;
 }
 
 .training-signups-table th:nth-child(2),
@@ -485,6 +495,11 @@ a {
 .training-signups-table th:nth-child(3),
 .training-signups-table td:nth-child(3) {
     width: 13%;
+}
+
+.training-signups-table th:nth-child(5),
+.training-signups-table td:nth-child(5) {
+    width: 15%;
 }
 
 .training-signups-table th,
