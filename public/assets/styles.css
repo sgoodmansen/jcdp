@@ -1060,6 +1060,19 @@ textarea {
     font-size: 14px;
 }
 
+.setup-link-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.setup-link-card {
+    display: grid;
+    gap: 12px;
+}
+
+.setup-link-card p {
+    margin-bottom: 0;
+}
+
 .attention-section summary .badge {
     margin-left: auto;
 }

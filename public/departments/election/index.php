@@ -77,7 +77,11 @@ if ($isManager) {
     $toolGroups[] = [
         'title' => 'Admin',
         'links' => [
-            ['label' => 'Setup', 'href' => url('departments/election/setup.php')],
+            ['label' => 'Setup Home', 'href' => url('departments/election/setup.php')],
+            ['label' => 'Election Periods', 'href' => url('departments/election/election-periods.php')],
+            ['label' => 'Precincts', 'href' => url('departments/election/precincts.php')],
+            ['label' => 'Positions', 'href' => url('departments/election/positions.php')],
+            ['label' => 'Election Day Setup', 'href' => url('departments/election/election-day-setup.php')],
         ],
     ];
 }

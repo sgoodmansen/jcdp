@@ -55,7 +55,7 @@ $trainingSummary = $trainingStatement->fetch() ?: [
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ((int) $period['is_active'] !== 1) {
         flash('error', 'That election is already closed.');
-        redirect_to('departments/election/setup.php');
+        redirect_to('departments/election/election-periods.php');
     }
 
     $closedAssignmentCount = election_close_period($periodId);
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
 
     flash('success', 'Election closed. ' . $closedAssignmentCount . ' assignment' . ($closedAssignmentCount === 1 ? '' : 's') . ' closed. Worker contacts remain Available for future elections.');
-    redirect_to('departments/election/setup.php');
+    redirect_to('departments/election/election-periods.php');
 }
 
 page_header('Close Election Period');
@@ -88,7 +88,7 @@ page_header('Close Election Period');
         <?php if ((int) $period['is_active'] !== 1): ?>
             <div class="notice success">This election is already closed.</div>
             <div class="actions">
-                <a class="button" href="<?= e(url('departments/election/setup.php')) ?>">Return to setup</a>
+                <a class="button" href="<?= e(url('departments/election/election-periods.php')) ?>">Return to election periods</a>
             </div>
         <?php else: ?>
             <div class="grid dashboard-stat-grid election-home-stat-grid">
@@ -113,7 +113,7 @@ page_header('Close Election Period');
             <form method="post" class="actions" style="margin-top: 18px;">
                 <input type="hidden" name="id" value="<?= e((string) $periodId) ?>">
                 <button type="submit">Close election</button>
-                <a class="button secondary" href="<?= e(url('departments/election/setup.php')) ?>">Cancel</a>
+                <a class="button secondary" href="<?= e(url('departments/election/election-periods.php')) ?>">Cancel</a>
             </form>
         <?php endif; ?>
     </section>

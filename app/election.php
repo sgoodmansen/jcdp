@@ -532,7 +532,11 @@ function election_navigation(string $activeKey = ''): void
         $groups['admin'] = [
             'label' => 'Admin',
             'items' => [
-                ['key' => 'setup', 'label' => 'Setup', 'href' => url('departments/election/setup.php')],
+                ['key' => 'setup', 'label' => 'Setup Home', 'href' => url('departments/election/setup.php')],
+                ['key' => 'election-periods', 'label' => 'Election Periods', 'href' => url('departments/election/election-periods.php')],
+                ['key' => 'precincts', 'label' => 'Precincts', 'href' => url('departments/election/precincts.php')],
+                ['key' => 'positions', 'label' => 'Positions', 'href' => url('departments/election/positions.php')],
+                ['key' => 'election-day-setup', 'label' => 'Election Day Setup', 'href' => url('departments/election/election-day-setup.php')],
             ],
         ];
     }
