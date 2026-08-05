@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_election_manager();
+election_require_assignment_setup();
+election_require_day_checklist_setup();
 
 $editPeriodId = (int) ($_GET['edit_period'] ?? 0);
 $editPrecinctId = (int) ($_GET['edit_precinct'] ?? 0);
@@ -8,6 +10,7 @@ $editPositionId = (int) ($_GET['edit_position'] ?? 0);
 $editPeriod = null;
 $editPrecinct = null;
 $editPosition = null;
+$portalUser = current_user();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -131,11 +134,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Position saved.');
         redirect_to('departments/election/setup.php');
     }
+
+    if ($action === 'save_checklist_task') {
+        $taskId = (int) ($_POST['task_id'] ?? 0);
+        $templatePeriodId = (int) ($_POST['checklist_period_id'] ?? 0);
+        $params = [
+            'election_period_id' => $templatePeriodId,
+            'task_title' => trim($_POST['task_title'] ?? ''),
+            'instructions' => trim($_POST['instructions'] ?? ''),
+            'sort_order' => (int) ($_POST['sort_order'] ?? 0),
+            'chief_can_complete' => isset($_POST['chief_can_complete']) ? 1 : 0,
+            'is_active' => isset($_POST['is_active']) ? 1 : 0,
+            'created_by_user_id' => $portalUser['id'] ?? null,
+        ];
+
+        if ($params['task_title'] === '' || $templatePeriodId <= 0) {
+            flash('error', 'Enter a task name and select an election before saving.');
+            redirect_to('departments/election/setup.php?checklist_period_id=' . $templatePeriodId);
+        }
+
+        if ($taskId > 0) {
+            $params['id'] = $taskId;
+            unset($params['created_by_user_id']);
+            $statement = db()->prepare(
+                'UPDATE election_day_checklist_tasks
+                 SET task_title = :task_title,
+                     instructions = :instructions,
+                     sort_order = :sort_order,
+                     chief_can_complete = :chief_can_complete,
+                     is_active = :is_active
+                 WHERE id = :id
+                   AND election_period_id = :election_period_id'
+            );
+            $statement->execute($params);
+            audit_event('updated', 'election_day_checklist_task', (string) $taskId, ['title' => $params['task_title']]);
+        } else {
+            $statement = db()->prepare(
+                'INSERT INTO election_day_checklist_tasks (
+                    election_period_id, task_title, instructions, sort_order, chief_can_complete, is_active, created_by_user_id
+                 ) VALUES (
+                    :election_period_id, :task_title, :instructions, :sort_order, :chief_can_complete, 1, :created_by_user_id
+                 )'
+            );
+            unset($params['is_active']);
+            $statement->execute($params);
+            $taskId = (int) db()->lastInsertId();
+            audit_event('created', 'election_day_checklist_task', (string) $taskId, ['title' => $params['task_title']]);
+        }
+
+        flash('success', 'Checklist task saved.');
+        redirect_to('departments/election/setup.php?checklist_period_id=' . $templatePeriodId);
+    }
 }
 
 $periods = db()->query('SELECT * FROM election_periods ORDER BY starts_on DESC, name')->fetchAll();
 $precincts = election_precincts(false);
 $positions = election_positions(false);
+
+$checklistPeriodId = (int) ($_GET['checklist_period_id'] ?? 0);
+if ($checklistPeriodId === 0) {
+    foreach ($periods as $period) {
+        if ((int) $period['is_active'] === 1) {
+            $checklistPeriodId = (int) $period['id'];
+            break;
+        }
+    }
+}
+if ($checklistPeriodId === 0 && $periods) {
+    $checklistPeriodId = (int) $periods[0]['id'];
+}
+
+$checklistTasks = [];
+if ($checklistPeriodId > 0) {
+    $statement = db()->prepare(
+        'SELECT *
+         FROM election_day_checklist_tasks
+         WHERE election_period_id = :election_period_id
+         ORDER BY sort_order, task_title'
+    );
+    $statement->execute(['election_period_id' => $checklistPeriodId]);
+    $checklistTasks = $statement->fetchAll();
+}
 
 if ($editPeriodId > 0) {
     $statement = db()->prepare('SELECT * FROM election_periods WHERE id = :id');
@@ -173,6 +252,9 @@ page_header('Election Setup');
 
         <?php if ($message = flash('success')): ?>
             <div class="notice success"><?= e($message) ?></div>
+        <?php endif; ?>
+        <?php if ($message = flash('error')): ?>
+            <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
     </section>
 
@@ -251,6 +333,100 @@ page_header('Election Setup');
                 <?php endforeach; ?>
                 <?php if (!$periods): ?>
                     <tr><td colspan="4">No election periods have been added yet.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </details>
+
+    <details class="panel setup-section" style="margin-top: 18px;" <?= isset($_GET['checklist_period_id']) ? 'open' : '' ?>>
+        <summary class="section-heading-row">
+            <h1>Election Day Checklist Template</h1>
+            <span class="button secondary compact-button">View section</span>
+        </summary>
+
+        <form class="form compact-form" method="get" style="margin-bottom: 18px;">
+            <label>
+                Election
+                <select name="checklist_period_id" required>
+                    <?php foreach ($periods as $period): ?>
+                        <option value="<?= e((string) $period['id']) ?>" <?= $checklistPeriodId === (int) $period['id'] ? 'selected' : '' ?>>
+                            <?= e($period['name']) ?><?= (int) $period['is_active'] === 1 ? ' (open)' : '' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <div class="actions">
+                <button type="submit">View template</button>
+            </div>
+        </form>
+
+        <h2>Add checklist task</h2>
+        <form class="form compact-form" method="post" style="margin-bottom: 22px;">
+            <input type="hidden" name="action" value="save_checklist_task">
+            <input type="hidden" name="checklist_period_id" value="<?= e((string) $checklistPeriodId) ?>">
+            <label>
+                Task name
+                <input name="task_title" required>
+            </label>
+            <label>
+                Sort order
+                <input type="number" name="sort_order" value="<?= e((string) ((count($checklistTasks) + 1) * 10)) ?>">
+            </label>
+            <label class="check-label">
+                <input type="checkbox" name="chief_can_complete" checked>
+                Chief Judge can check off
+            </label>
+            <label class="span-2">
+                Instructions
+                <textarea name="instructions"></textarea>
+            </label>
+            <div class="actions span-2">
+                <button type="submit">Add task</button>
+            </div>
+        </form>
+
+        <h2>Template tasks</h2>
+        <table class="table mobile-card-table election-day-task-table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Options</th>
+                    <th>Save</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($checklistTasks as $task): ?>
+                    <tr>
+                        <td data-label="Task">
+                            <form id="task-form-<?= e((string) $task['id']) ?>" method="post" class="form inline-edit-form">
+                                <input type="hidden" name="action" value="save_checklist_task">
+                                <input type="hidden" name="checklist_period_id" value="<?= e((string) $checklistPeriodId) ?>">
+                                <input type="hidden" name="task_id" value="<?= e((string) $task['id']) ?>">
+                                <input name="task_title" value="<?= e($task['task_title']) ?>" required>
+                                <textarea name="instructions"><?= e($task['instructions']) ?></textarea>
+                            </form>
+                        </td>
+                        <td data-label="Options">
+                            <label>
+                                Sort
+                                <input form="task-form-<?= e((string) $task['id']) ?>" type="number" name="sort_order" value="<?= e((string) $task['sort_order']) ?>">
+                            </label>
+                            <label class="check-label">
+                                <input form="task-form-<?= e((string) $task['id']) ?>" type="checkbox" name="chief_can_complete" <?= (int) $task['chief_can_complete'] === 1 ? 'checked' : '' ?>>
+                                Chief Judge can check off
+                            </label>
+                            <label class="check-label">
+                                <input form="task-form-<?= e((string) $task['id']) ?>" type="checkbox" name="is_active" <?= (int) $task['is_active'] === 1 ? 'checked' : '' ?>>
+                                Active
+                            </label>
+                        </td>
+                        <td data-label="Save">
+                            <button form="task-form-<?= e((string) $task['id']) ?>" type="submit" class="secondary compact-button">Save</button>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$checklistTasks): ?>
+                    <tr><td colspan="3">No tasks have been created for this election.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
