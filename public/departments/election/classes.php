@@ -88,10 +88,13 @@ $classes = $statement->fetchAll();
 
 $registeredClassIds = [];
 $registeredClassByPeriod = [];
+$registeredClassTitlesByPeriod = [];
 $assignmentCanJoinMultipleClasses = $assignment ? election_assignment_has_optional_training_role($assignment) : false;
 if ($assignment) {
     $statement = db()->prepare(
-        'SELECT election_training_classes.id, election_training_classes.election_period_id
+        'SELECT election_training_classes.id,
+                election_training_classes.election_period_id,
+                election_training_classes.class_title
          FROM election_training_registrations
          INNER JOIN election_training_classes ON election_training_classes.id = election_training_registrations.class_id
          WHERE election_training_registrations.assignment_id = :assignment_id'
@@ -100,6 +103,7 @@ if ($assignment) {
     foreach ($statement->fetchAll() as $registration) {
         $registeredClassIds[] = (int) $registration['id'];
         $registeredClassByPeriod[(int) $registration['election_period_id']] = (int) $registration['id'];
+        $registeredClassTitlesByPeriod[(int) $registration['election_period_id']][strtolower(trim((string) $registration['class_title']))] = true;
     }
 }
 
@@ -191,6 +195,9 @@ page_header('Election Training Classes');
                         && !$assignmentCanJoinMultipleClasses
                         && $registeredForPeriodClassId
                         && $registeredForPeriodClassId !== (int) $class['id'];
+                    $isRegisteredSameTitleElsewhere = $assignment
+                        && !$isRegistered
+                        && isset($registeredClassTitlesByPeriod[(int) $class['election_period_id']][strtolower(trim((string) $class['class_title']))]);
                     $isCancelled = (int) $class['is_cancelled'] === 1;
                     $classStatus = $isCancelled ? 'Cancelled' : ($remainingSeats > 0 ? 'Open' : 'Full');
                     ?>
@@ -211,7 +218,7 @@ page_header('Election Training Classes');
                                     <a class="icon-link" href="<?= e(url('departments/election/class-edit.php?id=' . $class['id'])) ?>" title="Edit class" aria-label="Edit class">&#9998;</a>
                                     <a class="icon-link" href="<?= e(url('departments/election/class-edit.php?copy_id=' . $class['id'])) ?>" title="Copy class" aria-label="Copy class">&#10064;</a>
                                 <?php endif; ?>
-                                <?php if ($assignment && !$isCancelled && !$isRegistered && !$isRegisteredElsewhere && $remainingSeats > 0): ?>
+                                <?php if ($assignment && !$isCancelled && !$isRegistered && !$isRegisteredElsewhere && !$isRegisteredSameTitleElsewhere && $remainingSeats > 0): ?>
                                     <form method="post" action="<?= e(url('departments/election/signup.php')) ?>">
                                         <input type="hidden" name="class_id" value="<?= e((string) $class['id']) ?>">
                                         <input type="hidden" name="worker_id" value="<?= e((string) $worker['id']) ?>">
@@ -228,6 +235,8 @@ page_header('Election Training Classes');
                                     </form>
                                 <?php elseif ($assignment && $isRegisteredElsewhere): ?>
                                     <span class="badge badge-muted">Already signed up</span>
+                                <?php elseif ($assignment && $isRegisteredSameTitleElsewhere): ?>
+                                    <span class="badge badge-muted">Same class name</span>
                                 <?php endif; ?>
                             </div>
                         </td>

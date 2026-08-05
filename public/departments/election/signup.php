@@ -92,6 +92,29 @@ if ($existingRegistration && !$canJoinMultipleClasses) {
     redirect_to('departments/election/classes.php');
 }
 
+$sameTitleStatement = db()->prepare(
+    'SELECT election_training_classes.class_title
+     FROM election_training_registrations
+     INNER JOIN election_training_classes ON election_training_classes.id = election_training_registrations.class_id
+     WHERE election_training_registrations.assignment_id = :assignment_id
+       AND election_training_classes.election_period_id = :election_period_id
+       AND election_training_classes.id <> :class_id
+       AND LOWER(TRIM(election_training_classes.class_title)) = LOWER(TRIM(:class_title))
+     LIMIT 1'
+);
+$sameTitleStatement->execute([
+    'assignment_id' => $assignmentId,
+    'election_period_id' => (int) $class['election_period_id'],
+    'class_id' => $classId,
+    'class_title' => $class['class_title'],
+]);
+$sameTitleRegistration = $sameTitleStatement->fetch();
+
+if ($sameTitleRegistration) {
+    flash('error', 'This worker is already signed up for a class with this name for this election period.');
+    redirect_to('departments/election/classes.php');
+}
+
 $countStatement = db()->prepare('SELECT COUNT(*) FROM election_training_registrations WHERE class_id = :class_id');
 $countStatement->execute(['class_id' => $classId]);
 if ((int) $countStatement->fetchColumn() >= (int) $class['seats_total']) {

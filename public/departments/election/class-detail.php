@@ -153,6 +153,15 @@ if ($canManageWorkers) {
                      AND election_worker_assignments.is_active = 1
                      AND election_worker_assignments.election_period_id = :period_id
                      AND election_training_registrations.assignment_id IS NULL
+                     AND NOT EXISTS (
+                         SELECT 1
+                         FROM election_training_registrations AS same_title_registrations
+                         INNER JOIN election_training_classes AS same_title_classes ON same_title_classes.id = same_title_registrations.class_id
+                         WHERE same_title_registrations.assignment_id = election_worker_assignments.id
+                           AND same_title_classes.election_period_id = :same_title_period_id
+                           AND same_title_classes.id <> :same_title_class_id
+                           AND LOWER(TRIM(same_title_classes.class_title)) = LOWER(TRIM(:same_title_class_title))
+                     )
                      AND (
                          period_classes.id IS NULL
                          OR election_positions.is_chief_judge = 1
@@ -163,6 +172,9 @@ if ($canManageWorkers) {
         'class_id' => $id,
         'period_id' => (int) $class['election_period_id'],
         'period_id_for_existing' => (int) $class['election_period_id'],
+        'same_title_period_id' => (int) $class['election_period_id'],
+        'same_title_class_id' => $id,
+        'same_title_class_title' => $class['class_title'],
         'availability_status' => ELECTION_WORKER_STATUS_ACTIVE,
     ];
     if ($allowedPositionIds) {
