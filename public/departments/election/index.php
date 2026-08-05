@@ -47,6 +47,7 @@ if ($isManager || $isChief) {
         'links' => [
             ['label' => 'Checklist', 'href' => url('departments/election/election-day-checklist.php')],
             ['label' => 'Precinct Notes', 'href' => url('departments/election/precinct-notes.php')],
+            ['label' => 'Chief Judge Debrief', 'href' => url('departments/election/chief-judge-debrief.php')],
         ],
     ];
 }

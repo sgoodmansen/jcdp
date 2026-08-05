@@ -136,7 +136,15 @@ function election_day_checklist_tables_exist(): bool
     }
 
     try {
-        foreach (['election_day_checklist_tasks', 'election_day_checklist_completions', 'election_day_equipment_schedules', 'election_precinct_notes'] as $tableName) {
+        foreach ([
+            'election_day_checklist_tasks',
+            'election_day_checklist_completions',
+            'election_day_equipment_schedules',
+            'election_precinct_notes',
+            'election_debrief_questions',
+            'election_debrief_responses',
+            'election_debrief_answers',
+        ] as $tableName) {
             $statement = db()->prepare('SHOW TABLES LIKE :table_name');
             $statement->execute(['table_name' => $tableName]);
             if (!$statement->fetchColumn()) {
@@ -503,6 +511,7 @@ function election_navigation(string $activeKey = ''): void
             'items' => [
                 ['key' => 'election-day-checklist', 'label' => 'Checklist', 'href' => url('departments/election/election-day-checklist.php')],
                 ['key' => 'precinct-notes', 'label' => 'Precinct Notes', 'href' => url('departments/election/precinct-notes.php')],
+                ['key' => 'chief-judge-debrief', 'label' => 'Chief Judge Debrief', 'href' => url('departments/election/chief-judge-debrief.php')],
             ],
         ];
         $groups['workers'] = [
