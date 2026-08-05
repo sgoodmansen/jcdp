@@ -85,6 +85,11 @@ page_header('Chief Judge How To');
                 <p>After election day, answer the debrief questions for your precinct. You can save a draft and come back, then submit when the answers are ready.</p>
                 <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-judge-debrief.php')) ?>">Chief Judge Debrief</a>
             </article>
+            <article class="card how-to-card">
+                <h2>Training Signups</h2>
+                <p>Review the training classes your precinct workers are scheduled for or have completed.</p>
+                <a class="button secondary compact-button" href="<?= e(url('departments/election/training-signups.php')) ?>">Training Signups</a>
+            </article>
         </div>
     </section>
 
@@ -118,6 +123,21 @@ page_header('Chief Judge How To');
         <p class="muted">Chief Judges can sign up workers from their precinct. The dropdown will not show workers who are unavailable, archived, outside your precinct, or already signed up for another class unless they are Chief Judge or Assistant Chief Judge.</p>
         <div class="actions">
             <a class="button" href="<?= e(url('departments/election/classes.php')) ?>">Training Classes</a>
+            <a class="button secondary" href="<?= e(url('departments/election/training-signups.php')) ?>">Training Signups</a>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
+        <h1>How to Remove Someone from Training</h1>
+        <ol class="how-to-steps">
+            <li><strong>Open Training Signups.</strong> Find the worker and the class they need to leave.</li>
+            <li><strong>Open the class.</strong> Use the class link to go to the class detail page.</li>
+            <li><strong>Check the roster.</strong> You may see the full roster, but you can only remove workers from your precinct.</li>
+            <li><strong>Select Remove.</strong> This removes the worker from the class only. It does not remove the worker from your precinct staffing.</li>
+        </ol>
+        <p class="muted">If you cannot remove a worker, they may belong to another precinct or may already be marked complete. Contact the election supervisor when a class record needs correction.</p>
+        <div class="actions">
+            <a class="button" href="<?= e(url('departments/election/training-signups.php')) ?>">Training Signups</a>
         </div>
     </section>
 
@@ -127,6 +147,7 @@ page_header('Chief Judge How To');
             <li>If the wrong person is assigned, clear that position and save the change.</li>
             <li>If a worker is missing from a dropdown, they may already be assigned somewhere else, archived, or marked unavailable.</li>
             <li>If a worker needs an address, phone, email, or note updated, open that person from the Address Book.</li>
+            <li>If a worker is signed up for the wrong class, use Training Signups to find the class and remove them from the class roster.</li>
             <li>If a worker cannot serve, mark that contact as unavailable and choose the reason when known.</li>
             <li>If you cannot complete a change, contact the election supervisor so they can review permissions, contact status, or duplicate records.</li>
         </ul>

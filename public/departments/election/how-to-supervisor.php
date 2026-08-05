@@ -80,6 +80,11 @@ page_header('Supervisor How To');
                 </div>
             </article>
             <article class="card how-to-card">
+                <h2>Training signups</h2>
+                <p>Use Training Signups to review each assigned worker, their position, and the classes they are scheduled for or have completed.</p>
+                <a class="button secondary compact-button" href="<?= e(url('departments/election/training-signups.php')) ?>">Training Signups</a>
+            </article>
+            <article class="card how-to-card">
                 <h2>Email access links</h2>
                 <p>Review the email wording first, then send access links so workers can sign up for training and update reminder preferences.</p>
                 <div class="actions">
@@ -133,6 +138,22 @@ page_header('Supervisor How To');
         <p class="muted">The dropdown only shows eligible active workers for that election. Most workers are hidden after they sign up for a class in the same election period, but Chief Judge and Assistant Chief Judge may join multiple classes as optional training.</p>
         <div class="actions">
             <a class="button" href="<?= e(url('departments/election/classes.php')) ?>">Training Classes</a>
+            <a class="button secondary" href="<?= e(url('departments/election/training-signups.php')) ?>">Training Signups</a>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
+        <h1>How to Remove Someone from Training</h1>
+        <ol class="how-to-steps">
+            <li><strong>Start with Training Signups.</strong> Find the worker and review every class they are signed up for.</li>
+            <li><strong>Open the class.</strong> Use the class link to go to the class detail page.</li>
+            <li><strong>Review the roster.</strong> Confirm you have the correct worker and class before removing anyone.</li>
+            <li><strong>Select Remove.</strong> The worker is removed from that class roster, but their contact record and precinct assignment stay in place.</li>
+        </ol>
+        <p class="muted">If the worker already attended the class, keep the attendance record unless it was entered by mistake. If their position changed, use Training Signups to decide whether they should stay in the class or be moved to a better fit.</p>
+        <div class="actions">
+            <a class="button" href="<?= e(url('departments/election/training-signups.php')) ?>">Training Signups</a>
+            <a class="button secondary" href="<?= e(url('departments/election/classes.php')) ?>">Training Classes</a>
         </div>
     </section>
 
@@ -142,6 +163,7 @@ page_header('Supervisor How To');
         <ul class="how-to-checklist">
             <li>Staffing gaps should be filled before election day.</li>
             <li>Training follow-ups should be reviewed until workers are signed up or complete.</li>
+            <li>Training Signups should be reviewed for workers in the wrong class, missed classes, or duplicate signups.</li>
             <li>Missing contact information should be corrected when possible.</li>
             <li>Status conflicts and duplicate contacts should be cleaned up before final reports.</li>
             <li>Election Day checklist items should be reviewed as the election gets close.</li>
