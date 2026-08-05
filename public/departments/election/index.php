@@ -84,6 +84,7 @@ if ($isManager) {
             ['label' => 'Precincts', 'href' => url('departments/election/precincts.php')],
             ['label' => 'Positions', 'href' => url('departments/election/positions.php')],
             ['label' => 'Election Day Setup', 'href' => url('departments/election/election-day-setup.php')],
+            ['label' => 'Debrief Questions', 'href' => url('departments/election/debrief-setup.php')],
         ],
     ];
 }

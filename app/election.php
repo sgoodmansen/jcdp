@@ -547,6 +547,7 @@ function election_navigation(string $activeKey = ''): void
                 ['key' => 'precincts', 'label' => 'Precincts', 'href' => url('departments/election/precincts.php')],
                 ['key' => 'positions', 'label' => 'Positions', 'href' => url('departments/election/positions.php')],
                 ['key' => 'election-day-setup', 'label' => 'Election Day Setup', 'href' => url('departments/election/election-day-setup.php')],
+                ['key' => 'debrief-setup', 'label' => 'Debrief Questions', 'href' => url('departments/election/debrief-setup.php')],
             ],
         ];
     }

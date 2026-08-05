@@ -25,6 +25,11 @@ $setupLinks = [
         'description' => 'Build checklist templates and copy checklist tasks from a previous election.',
         'href' => url('departments/election/election-day-setup.php'),
     ],
+    [
+        'title' => 'Debrief Questions',
+        'description' => 'Create the questions Chief Judges answer after election day.',
+        'href' => url('departments/election/debrief-setup.php'),
+    ],
 ];
 
 page_header('Election Setup');
