@@ -51,10 +51,25 @@ $statements = [
         CONSTRAINT fk_election_day_equipment_precinct FOREIGN KEY (precinct_id) REFERENCES election_precincts(id) ON DELETE RESTRICT,
         CONSTRAINT fk_election_day_equipment_updated_by FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE SET NULL
     )",
+    "CREATE TABLE IF NOT EXISTS election_precinct_notes (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        election_period_id INT UNSIGNED NOT NULL,
+        precinct_id INT UNSIGNED NOT NULL,
+        note_type VARCHAR(40) NOT NULL DEFAULT 'other',
+        note_text TEXT NOT NULL,
+        is_resolved TINYINT(1) NOT NULL DEFAULT 0,
+        created_by_user_id INT UNSIGNED NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_election_precinct_notes_lookup (election_period_id, precinct_id, is_resolved, created_at),
+        CONSTRAINT fk_election_precinct_notes_period FOREIGN KEY (election_period_id) REFERENCES election_periods(id) ON DELETE RESTRICT,
+        CONSTRAINT fk_election_precinct_notes_precinct FOREIGN KEY (precinct_id) REFERENCES election_precincts(id) ON DELETE RESTRICT,
+        CONSTRAINT fk_election_precinct_notes_created_by FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+    )",
 ];
 
 foreach ($statements as $statement) {
     db()->exec($statement);
 }
 
-echo "Election Day checklist tables ready.\n";
+echo "Election Day tables ready.\n";

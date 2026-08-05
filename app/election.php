@@ -136,7 +136,7 @@ function election_day_checklist_tables_exist(): bool
     }
 
     try {
-        foreach (['election_day_checklist_tasks', 'election_day_checklist_completions', 'election_day_equipment_schedules'] as $tableName) {
+        foreach (['election_day_checklist_tasks', 'election_day_checklist_completions', 'election_day_equipment_schedules', 'election_precinct_notes'] as $tableName) {
             $statement = db()->prepare('SHOW TABLES LIKE :table_name');
             $statement->execute(['table_name' => $tableName]);
             if (!$statement->fetchColumn()) {
@@ -165,7 +165,7 @@ function election_require_day_checklist_setup(): void
     <main class="shell">
         <section class="panel">
             <h1>Election setup required</h1>
-            <p>The Election Day checklist tables need to be added before this page can be used.</p>
+            <p>The Election Day tables need to be added before this page can be used.</p>
             <?php if (is_system_admin()): ?>
                 <div class="actions">
                     <a class="button" href="<?= e(url('admin/setup-election-module.php')) ?>">Run Election setup</a>
@@ -502,6 +502,7 @@ function election_navigation(string $activeKey = ''): void
             'label' => 'Election Day',
             'items' => [
                 ['key' => 'election-day-checklist', 'label' => 'Checklist', 'href' => url('departments/election/election-day-checklist.php')],
+                ['key' => 'precinct-notes', 'label' => 'Precinct Notes', 'href' => url('departments/election/precinct-notes.php')],
             ],
         ];
         $groups['workers'] = [

@@ -565,6 +565,24 @@ a {
     padding-top: 8px;
 }
 
+.precinct-note-list {
+    display: grid;
+    gap: 14px;
+}
+
+.precinct-note-card {
+    border-radius: 8px;
+}
+
+.precinct-note-card h2 {
+    font-size: 1.05rem;
+    margin-bottom: 4px;
+}
+
+.precinct-note-card.is-resolved {
+    opacity: 0.78;
+}
+
 .essay-winners-filter-form {
     max-width: 1080px;
 }
