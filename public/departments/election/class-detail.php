@@ -153,7 +153,12 @@ if ($canManageWorkers) {
                      AND election_worker_assignments.is_active = 1
                      AND election_worker_assignments.election_period_id = :period_id
                      AND election_training_registrations.assignment_id IS NULL
-                     AND period_classes.id IS NULL';
+                     AND (
+                         period_classes.id IS NULL
+                         OR election_positions.is_chief_judge = 1
+                         OR election_positions.is_assistant_chief_judge = 1
+                         OR election_precinct_roles.assignment_id IS NOT NULL
+                     )';
     $eligibleParams = [
         'class_id' => $id,
         'period_id' => (int) $class['election_period_id'],

@@ -625,6 +625,17 @@ function election_assignment_training_position_ids(array $assignment): array
     return array_values(array_unique(array_filter($positionIds)));
 }
 
+function election_assignment_has_optional_training_role(array $assignment): bool
+{
+    if ((int) ($assignment['is_chief_judge'] ?? 0) === 1
+        || (int) ($assignment['is_assistant_chief_judge'] ?? 0) === 1
+        || (int) ($assignment['is_assistant_chief_judge_extra'] ?? 0) === 1) {
+        return true;
+    }
+
+    return election_assignment_has_extra_role((int) ($assignment['id'] ?? 0), ELECTION_ROLE_ASSISTANT_CHIEF_JUDGE);
+}
+
 function election_normalized_email(?string $value): ?string
 {
     $value = strtolower(trim((string) $value));

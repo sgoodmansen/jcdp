@@ -95,7 +95,7 @@ page_header('Supervisor How To');
             <li><strong>Use Sign Up Worker.</strong> Choose the worker from the dropdown and select Sign up worker.</li>
             <li><strong>Check the roster.</strong> The worker should appear on the Attendance Roster for that class.</li>
         </ol>
-        <p class="muted">The dropdown only shows eligible active workers for that election who are not already signed up for another class in the same election period. Chief Judge and Assistant Chief Judge may join any class as optional training.</p>
+        <p class="muted">The dropdown only shows eligible active workers for that election. Most workers are hidden after they sign up for a class in the same election period, but Chief Judge and Assistant Chief Judge may join multiple classes as optional training.</p>
         <div class="actions">
             <a class="button" href="<?= e(url('departments/election/classes.php')) ?>">Training Classes</a>
         </div>

@@ -82,7 +82,7 @@ page_header('Chief Judge How To');
             <li><strong>Use Sign Up Worker.</strong> Select a worker from your precinct and choose Sign up worker.</li>
             <li><strong>Confirm the roster.</strong> The worker should be listed on the class Attendance Roster.</li>
         </ol>
-        <p class="muted">Chief Judges can sign up workers from their precinct. The dropdown will not show workers who are unavailable, archived, already signed up for another class in the election period, or outside your precinct.</p>
+        <p class="muted">Chief Judges can sign up workers from their precinct. The dropdown will not show workers who are unavailable, archived, outside your precinct, or already signed up for another class unless they are Chief Judge or Assistant Chief Judge.</p>
         <div class="actions">
             <a class="button" href="<?= e(url('departments/election/classes.php')) ?>">Training Classes</a>
         </div>

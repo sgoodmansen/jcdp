@@ -88,6 +88,7 @@ $classes = $statement->fetchAll();
 
 $registeredClassIds = [];
 $registeredClassByPeriod = [];
+$assignmentCanJoinMultipleClasses = $assignment ? election_assignment_has_optional_training_role($assignment) : false;
 if ($assignment) {
     $statement = db()->prepare(
         'SELECT election_training_classes.id, election_training_classes.election_period_id
@@ -186,7 +187,10 @@ page_header('Election Training Classes');
                     $remainingSeats = max(0, (int) $class['seats_total'] - (int) $class['registrations']);
                     $isRegistered = in_array((int) $class['id'], $registeredClassIds, true);
                     $registeredForPeriodClassId = $registeredClassByPeriod[(int) $class['election_period_id']] ?? null;
-                    $isRegisteredElsewhere = $assignment && $registeredForPeriodClassId && $registeredForPeriodClassId !== (int) $class['id'];
+                    $isRegisteredElsewhere = $assignment
+                        && !$assignmentCanJoinMultipleClasses
+                        && $registeredForPeriodClassId
+                        && $registeredForPeriodClassId !== (int) $class['id'];
                     $isCancelled = (int) $class['is_cancelled'] === 1;
                     $classStatus = $isCancelled ? 'Cancelled' : ($remainingSeats > 0 ? 'Open' : 'Full');
                     ?>

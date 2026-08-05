@@ -85,7 +85,9 @@ $existingStatement->execute([
 ]);
 $existingRegistration = $existingStatement->fetch();
 
-if ($existingRegistration) {
+$canJoinMultipleClasses = election_assignment_has_optional_training_role($assignment);
+
+if ($existingRegistration && !$canJoinMultipleClasses) {
     flash('error', 'This worker is already signed up for ' . $existingRegistration['class_title'] . '. Leave that class before selecting another.');
     redirect_to('departments/election/classes.php');
 }
