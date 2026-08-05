@@ -200,7 +200,6 @@ page_header('Training Signups');
                     <th>Precinct</th>
                     <th>Position</th>
                     <th>Training</th>
-                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -217,16 +216,18 @@ page_header('Training Signups');
                         <td data-label="Precinct"><?= e($row['precinct_name']) ?></td>
                         <td data-label="Position">
                             <?= e($row['position_name']) ?>
-                            <?php if ((int) ($row['is_extra'] ?? 0) === 1): ?>
-                                <br><span class="badge badge-muted">Extra</span>
-                            <?php endif; ?>
-                            <?php if ((int) ($row['is_assistant_chief_judge_extra'] ?? 0) === 1): ?>
-                                <br><span class="badge badge-muted">Assistant Chief</span>
-                            <?php endif; ?>
+                            <div class="training-role-tags">
+                                <?php if ((int) ($row['is_extra'] ?? 0) === 1): ?>
+                                    <span class="badge badge-muted training-role-tag">Extra</span>
+                                <?php endif; ?>
+                                <?php if ((int) ($row['is_assistant_chief_judge_extra'] ?? 0) === 1): ?>
+                                    <span class="badge badge-muted training-role-tag">Assistant Chief</span>
+                                <?php endif; ?>
+                            </div>
                         </td>
                         <td data-label="Training">
                             <?php if (!$registrations): ?>
-                                <span class="meta">No class signup</span>
+                                <span class="badge badge-muted">Not signed up</span>
                             <?php else: ?>
                                 <div class="training-signup-list">
                                     <?php foreach ($registrations as $registration): ?>
@@ -235,34 +236,28 @@ page_header('Training Signups');
                                         $isOptionalRole = (bool) array_intersect($assignmentTrainingIds, $optionalTrainingPositionIds);
                                         $matchesCurrentPosition = $isOptionalRole || (bool) array_intersect($assignmentTrainingIds, $classPositionIds);
                                         ?>
-                                        <span>
-                                            <a href="<?= e(url('departments/election/class-detail.php?id=' . (int) $registration['class_id'])) ?>">
-                                                <?= e($registration['class_title']) ?>
-                                            </a>
-                                            <br><span class="meta"><?= e(format_display_date($registration['class_date'])) ?> <?= e(format_display_time($registration['start_time'])) ?><?= $registration['class_positions'] ? ' - ' . e($registration['class_positions']) : '' ?></span>
-                                            <?php if (!$matchesCurrentPosition): ?>
-                                                <br><span class="badge badge-warning">Position mismatch</span>
-                                            <?php endif; ?>
-                                        </span>
+                                        <div class="training-signup-item">
+                                            <div>
+                                                <a href="<?= e(url('departments/election/class-detail.php?id=' . (int) $registration['class_id'])) ?>">
+                                                    <?= e($registration['class_title']) ?>
+                                                </a>
+                                                <br><span class="meta"><?= e(format_display_date($registration['class_date'])) ?> <?= e(format_display_time($registration['start_time'])) ?><?= $registration['class_positions'] ? ' - ' . e($registration['class_positions']) : '' ?></span>
+                                                <?php if (!$matchesCurrentPosition): ?>
+                                                    <br><span class="badge badge-warning">Position mismatch</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <span class="badge <?= (int) $registration['attended'] === 1 ? 'badge-success' : 'badge-muted' ?>">
+                                                <?= (int) $registration['attended'] === 1 ? 'Complete' : 'Signed up' ?>
+                                            </span>
+                                        </div>
                                     <?php endforeach; ?>
                                 </div>
-                            <?php endif; ?>
-                        </td>
-                        <td data-label="Status">
-                            <?php if (!$registrations): ?>
-                                <span class="badge badge-muted">Not signed up</span>
-                            <?php else: ?>
-                                <?php foreach ($registrations as $registration): ?>
-                                    <span class="badge <?= (int) $registration['attended'] === 1 ? 'badge-success' : 'badge-muted' ?>">
-                                        <?= (int) $registration['attended'] === 1 ? 'Complete' : 'Signed up' ?>
-                                    </span><br>
-                                <?php endforeach; ?>
                             <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$assignmentRows): ?>
-                    <tr><td colspan="5">No active worker assignments were found for this selection.</td></tr>
+                    <tr><td colspan="4">No active worker assignments were found for this selection.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

@@ -444,7 +444,28 @@ a {
 
 .training-signup-list {
     display: grid;
-    gap: 8px;
+    gap: 10px;
+}
+
+.training-signup-item {
+    align-items: flex-start;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) max-content;
+}
+
+.training-role-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.training-role-tag {
+    border-radius: 8px;
+    font-size: 0.78rem;
+    line-height: 1.2;
+    padding: 4px 8px;
 }
 
 .training-signups-table {
@@ -453,17 +474,17 @@ a {
 
 .training-signups-table th:nth-child(1),
 .training-signups-table td:nth-child(1) {
-    width: 22%;
+    width: 20%;
 }
 
 .training-signups-table th:nth-child(2),
 .training-signups-table td:nth-child(2) {
-    width: 14%;
+    width: 9%;
 }
 
 .training-signups-table th:nth-child(3),
 .training-signups-table td:nth-child(3) {
-    width: 17%;
+    width: 13%;
 }
 
 .training-signups-table th,
