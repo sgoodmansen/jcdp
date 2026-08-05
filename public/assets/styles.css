@@ -411,6 +411,50 @@ a {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.guide-panel {
+    align-items: start;
+    display: grid;
+    gap: 22px;
+    grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
+}
+
+.guide-topic-list {
+    display: grid;
+    gap: 8px;
+}
+
+.guide-topic-button {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--primary-dark);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 800;
+    padding: 12px 14px;
+    text-align: left;
+}
+
+.guide-topic-button:hover,
+.guide-topic-button:focus {
+    background: var(--surface);
+    border-color: var(--primary);
+}
+
+.guide-topic-button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
+}
+
+.guide-topic-content {
+    min-width: 0;
+}
+
+.guide-topic-pane h1 {
+    margin-bottom: 16px;
+}
+
 .how-to-card {
     align-content: start;
     display: grid;
@@ -2837,6 +2881,14 @@ textarea {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .guide-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .guide-topic-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .compact-form {
         grid-template-columns: 1fr;
     }
@@ -2873,6 +2925,10 @@ textarea {
     }
 
     .how-to-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .guide-topic-list {
         grid-template-columns: 1fr;
     }
 
