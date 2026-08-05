@@ -406,6 +406,8 @@ CREATE TABLE election_workers (
     reminder_preferences_asked_at TIMESTAMP NULL,
     access_token_hash CHAR(64) NULL UNIQUE,
     access_token_created_at TIMESTAMP NULL,
+    availability_status VARCHAR(20) NOT NULL DEFAULT 'active',
+    unavailable_reason TEXT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -414,6 +416,7 @@ CREATE TABLE election_workers (
     INDEX idx_election_worker_email_normalized (email_normalized),
     INDEX idx_election_worker_phone_digits (phone_digits),
     INDEX idx_election_worker_name_key (name_key, zip_code),
+    INDEX idx_election_worker_availability (availability_status, is_active),
     INDEX idx_election_worker_lookup (election_period_id, precinct_id, position_id, is_active),
     CONSTRAINT fk_election_workers_period
         FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
@@ -467,6 +470,21 @@ CREATE TABLE election_worker_assignments (
         ON DELETE SET NULL
 );
 
+CREATE TABLE election_worker_notes (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    worker_id INT UNSIGNED NOT NULL,
+    created_by_user_id INT UNSIGNED NULL,
+    note_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_election_worker_notes_worker_date (worker_id, created_at),
+    CONSTRAINT fk_election_worker_notes_worker
+        FOREIGN KEY (worker_id) REFERENCES election_workers(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_election_worker_notes_created_by
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
 CREATE TABLE election_precinct_roles (
     election_period_id INT UNSIGNED NOT NULL,
     precinct_id INT UNSIGNED NOT NULL,
@@ -491,6 +509,75 @@ CREATE TABLE election_precinct_roles (
         FOREIGN KEY (created_by_user_id) REFERENCES users(id)
         ON DELETE SET NULL,
     CONSTRAINT fk_election_precinct_roles_updated_by
+        FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_day_checklist_tasks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    election_period_id INT UNSIGNED NOT NULL,
+    task_title VARCHAR(190) NOT NULL,
+    instructions TEXT NULL,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    chief_can_complete TINYINT(1) NOT NULL DEFAULT 1,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_by_user_id INT UNSIGNED NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_election_day_tasks_period_order (election_period_id, is_active, sort_order, task_title),
+    CONSTRAINT fk_election_day_tasks_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_day_tasks_created_by
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_day_checklist_completions (
+    election_period_id INT UNSIGNED NOT NULL,
+    precinct_id INT UNSIGNED NOT NULL,
+    task_id INT UNSIGNED NOT NULL,
+    completed_at TIMESTAMP NULL,
+    completed_by_user_id INT UNSIGNED NULL,
+    completed_by_assignment_id INT UNSIGNED NULL,
+    notes TEXT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (election_period_id, precinct_id, task_id),
+    CONSTRAINT fk_election_day_completions_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_day_completions_precinct
+        FOREIGN KEY (precinct_id) REFERENCES election_precincts(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_day_completions_task
+        FOREIGN KEY (task_id) REFERENCES election_day_checklist_tasks(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_election_day_completions_user
+        FOREIGN KEY (completed_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_election_day_completions_assignment
+        FOREIGN KEY (completed_by_assignment_id) REFERENCES election_worker_assignments(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_day_equipment_schedules (
+    election_period_id INT UNSIGNED NOT NULL,
+    precinct_id INT UNSIGNED NOT NULL,
+    delivery_date DATE NULL,
+    delivery_time TIME NULL,
+    pickup_date DATE NULL,
+    pickup_time TIME NULL,
+    notes TEXT NULL,
+    updated_by_user_id INT UNSIGNED NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (election_period_id, precinct_id),
+    CONSTRAINT fk_election_day_equipment_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_day_equipment_precinct
+        FOREIGN KEY (precinct_id) REFERENCES election_precincts(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_day_equipment_updated_by
         FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
         ON DELETE SET NULL
 );

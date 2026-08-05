@@ -127,6 +127,59 @@ function election_assignments_table_exists(): bool
     return $exists;
 }
 
+function election_day_checklist_tables_exist(): bool
+{
+    static $exists = null;
+
+    if ($exists !== null) {
+        return $exists;
+    }
+
+    try {
+        foreach (['election_day_checklist_tasks', 'election_day_checklist_completions', 'election_day_equipment_schedules'] as $tableName) {
+            $statement = db()->prepare('SHOW TABLES LIKE :table_name');
+            $statement->execute(['table_name' => $tableName]);
+            if (!$statement->fetchColumn()) {
+                $exists = false;
+                return $exists;
+            }
+        }
+
+        $exists = true;
+    } catch (Throwable $exception) {
+        $exists = false;
+    }
+
+    return $exists;
+}
+
+function election_require_day_checklist_setup(): void
+{
+    if (election_day_checklist_tables_exist()) {
+        return;
+    }
+
+    http_response_code(503);
+    page_header('Election setup required');
+    ?>
+    <main class="shell">
+        <section class="panel">
+            <h1>Election setup required</h1>
+            <p>The Election Day checklist tables need to be added before this page can be used.</p>
+            <?php if (is_system_admin()): ?>
+                <div class="actions">
+                    <a class="button" href="<?= e(url('admin/setup-election-module.php')) ?>">Run Election setup</a>
+                </div>
+            <?php else: ?>
+                <p>Ask an IT system admin to run the Election module setup page.</p>
+            <?php endif; ?>
+        </section>
+    </main>
+    <?php
+    page_footer();
+    exit;
+}
+
 function election_require_assignment_setup(): void
 {
     if (election_assignments_table_exists()
@@ -443,6 +496,12 @@ function election_navigation(string $activeKey = ''): void
                 ['key' => 'staffing-sheet', 'label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php')],
                 ['key' => 'precinct-contact-sheet', 'label' => 'Precinct Contact Sheet', 'href' => url('departments/election/precinct-contact-sheet.php')],
                 ['key' => 'reuse-workers', 'label' => 'Reuse Past Workers', 'href' => url('departments/election/reuse-workers.php')],
+            ],
+        ];
+        $groups['election-day'] = [
+            'label' => 'Election Day',
+            'items' => [
+                ['key' => 'election-day-checklist', 'label' => 'Checklist', 'href' => url('departments/election/election-day-checklist.php')],
             ],
         ];
         $groups['workers'] = [

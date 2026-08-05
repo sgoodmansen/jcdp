@@ -503,6 +503,68 @@ a {
     vertical-align: top;
 }
 
+.election-day-equipment-summary {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 18px 0;
+    padding: 16px;
+}
+
+.election-day-checklist-table th:first-child,
+.election-day-checklist-table td:first-child {
+    width: 80px;
+}
+
+.election-day-checklist-table th:last-child,
+.election-day-checklist-table td:last-child {
+    width: 180px;
+}
+
+.election-day-overview-table th:last-child,
+.election-day-overview-table td:last-child {
+    width: 210px;
+}
+
+.inline-edit-form {
+    display: grid;
+    gap: 8px;
+}
+
+.inline-edit-form input,
+.inline-edit-form textarea {
+    width: 100%;
+}
+
+.election-day-print-card {
+    margin-top: 18px;
+}
+
+.election-day-print-table th:first-child,
+.election-day-print-table td:first-child {
+    text-align: center;
+    width: 70px;
+}
+
+.election-day-print-table th:last-child,
+.election-day-print-table td:last-child {
+    width: 170px;
+}
+
+.election-day-signature-lines {
+    display: grid;
+    gap: 40px;
+    grid-template-columns: 1fr 220px;
+    margin-top: 56px;
+}
+
+.election-day-signature-lines span {
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+}
+
 .essay-winners-filter-form {
     max-width: 1080px;
 }
@@ -2280,6 +2342,29 @@ textarea {
     .election-attendance-print {
         border: 0;
         padding: 0;
+    }
+
+    .election-day-print-card {
+        border: 0;
+        color: #111827;
+        padding: 0;
+    }
+
+    .election-day-print-card h1,
+    .election-day-print-card p,
+    .election-day-print-card .meta,
+    .election-day-print-card dt,
+    .election-day-print-card dd,
+    .election-day-print-card strong {
+        color: #111827;
+    }
+
+    .election-day-print-table th,
+    .election-day-print-table td {
+        border: 1px solid #9ca3af;
+        color: #111827;
+        font-size: 10pt;
+        padding: 7px;
     }
 
     .election-attendance-print .section-heading-row {

@@ -41,6 +41,13 @@ if ($isManager || $isChief) {
             ['label' => 'Reuse past workers', 'href' => url('departments/election/reuse-workers.php')],
         ],
     ];
+
+    $toolGroups[] = [
+        'title' => 'Election Day',
+        'links' => [
+            ['label' => 'Checklist', 'href' => url('departments/election/election-day-checklist.php')],
+        ],
+    ];
 }
 
 if ($isManager || $isChief) {
