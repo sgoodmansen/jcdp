@@ -125,6 +125,16 @@ $registrationStatement = db()->prepare($registrationSql);
 $registrationStatement->execute($registrationParams);
 $registrations = $registrationStatement->fetchAll();
 
+$totalRegistrationStatement = db()->prepare(
+    'SELECT COUNT(*)
+     FROM election_training_registrations
+     WHERE class_id = :class_id'
+);
+$totalRegistrationStatement->execute(['class_id' => $id]);
+$totalRegistrations = (int) $totalRegistrationStatement->fetchColumn();
+$remainingSeats = max(0, (int) $class['seats_total'] - $totalRegistrations);
+$isRosterFilteredToPrecinct = $assignment && !$canManageClassGlobally && election_assignment_has_chief_permissions($assignment);
+
 $eligibleWorkers = [];
 if ($canManageWorkers) {
     $eligibleSql = 'SELECT election_workers.*,
@@ -216,9 +226,16 @@ page_header('Training Class');
             <dt>Instructor</dt>
             <dd><?= e($class['instructor_name']) ?></dd>
             <dt>Seats</dt>
-            <dd><?= e((string) count($registrations)) ?> registered of <?= e((string) $class['seats_total']) ?></dd>
+            <dd>
+                <?= e((string) $totalRegistrations) ?> registered of <?= e((string) $class['seats_total']) ?>
+                <br><span class="meta"><?= e((string) $remainingSeats) ?> seats remaining</span>
+            </dd>
             <dt>Positions</dt>
             <dd><?= e(implode(', ', $positions) ?: 'No positions selected') ?></dd>
+            <?php if ($isRosterFilteredToPrecinct): ?>
+                <dt>Your precinct roster</dt>
+                <dd><?= e((string) count($registrations)) ?> worker<?= count($registrations) === 1 ? '' : 's' ?> shown for <?= e($assignment['precinct_name']) ?></dd>
+            <?php endif; ?>
         </dl>
     </section>
 
@@ -249,7 +266,13 @@ page_header('Training Class');
         <div class="section-heading-row">
             <div>
                 <h1>Attendance Roster</h1>
-                <p class="muted">Print this page for manual attendance, then record completion here.</p>
+                <p class="muted">
+                    <?php if ($isRosterFilteredToPrecinct): ?>
+                        This roster shows only workers from <?= e($assignment['precinct_name']) ?>. Class seats are counted across all precincts.
+                    <?php else: ?>
+                        Print this page for manual attendance, then record completion here.
+                    <?php endif; ?>
+                </p>
             </div>
             <?php if ($canManageClassGlobally): ?>
                 <button type="button" class="secondary compact-button" onclick="window.print()">Print</button>
@@ -264,7 +287,7 @@ page_header('Training Class');
             </div>
             <dl class="roster-summary">
                 <dt>Registered</dt>
-                <dd><?= e((string) count($registrations)) ?></dd>
+                <dd><?= e((string) $totalRegistrations) ?></dd>
                 <dt>Instructor</dt>
                 <dd><?= e($class['instructor_name']) ?></dd>
                 <dt>Positions</dt>
