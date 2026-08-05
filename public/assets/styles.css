@@ -484,21 +484,16 @@ a {
 
 .training-signups-table th:nth-child(1),
 .training-signups-table td:nth-child(1) {
-    width: 19%;
+    width: 24%;
 }
 
 .training-signups-table th:nth-child(2),
 .training-signups-table td:nth-child(2) {
-    width: 9%;
+    width: 16%;
 }
 
-.training-signups-table th:nth-child(3),
-.training-signups-table td:nth-child(3) {
-    width: 13%;
-}
-
-.training-signups-table th:nth-child(5),
-.training-signups-table td:nth-child(5) {
+.training-signups-table th:nth-child(4),
+.training-signups-table td:nth-child(4) {
     width: 15%;
 }
 

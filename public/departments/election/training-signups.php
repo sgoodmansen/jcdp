@@ -133,6 +133,21 @@ if ($assignmentIds) {
 
 $optionalTrainingPositionIds = election_optional_training_position_ids();
 $now = new DateTimeImmutable();
+$selectedPeriodName = 'Election not selected';
+foreach ($periods as $period) {
+    if ((int) $period['id'] === $selectedPeriodId) {
+        $selectedPeriodName = (string) $period['name'];
+        break;
+    }
+}
+
+$selectedPrecinctName = 'All precincts';
+foreach ($precincts as $precinct) {
+    if ((int) $precinct['id'] === $selectedPrecinctId) {
+        $selectedPrecinctName = (string) $precinct['name'];
+        break;
+    }
+}
 
 function election_training_signup_status(array $registration, DateTimeImmutable $now): array
 {
@@ -208,14 +223,16 @@ page_header('Training Signups');
 
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
-            <h1>Workers</h1>
+            <div>
+                <h1>Workers</h1>
+                <p class="muted"><?= e($selectedPeriodName) ?> - Precinct: <?= e($selectedPrecinctName) ?></p>
+            </div>
             <span class="badge badge-muted"><?= e((string) count($assignmentRows)) ?> shown</span>
         </div>
         <table class="table mobile-card-table training-signups-table">
             <thead>
                 <tr>
                     <th>Worker</th>
-                    <th>Precinct</th>
                     <th>Position</th>
                     <th>Training</th>
                     <th>Status</th>
@@ -230,9 +247,9 @@ page_header('Training Signups');
                     <tr>
                         <td data-label="Worker">
                             <?= e(election_person_name($row)) ?>
-                            <br><span class="meta"><?= e($row['email'] ?: 'No email') ?> - <?= e($row['phone'] ?: 'No phone') ?></span>
+                            <br><span class="meta"><?= e($row['email'] ?: 'No email') ?></span>
+                            <br><span class="meta"><?= e($row['phone'] ?: 'No phone') ?></span>
                         </td>
-                        <td data-label="Precinct"><?= e($row['precinct_name']) ?></td>
                         <td data-label="Position">
                             <?= e($row['position_name']) ?>
                             <div class="training-role-tags">
@@ -287,7 +304,7 @@ page_header('Training Signups');
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$assignmentRows): ?>
-                    <tr><td colspan="5">No active worker assignments were found for this selection.</td></tr>
+                    <tr><td colspan="4">No active worker assignments were found for this selection.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
