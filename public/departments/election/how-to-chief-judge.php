@@ -46,10 +46,14 @@ page_header('Chief Judge How To');
             <li><strong>Add extra workers only when needed.</strong> If the precinct needs more than one person for a non-Chief Judge position, use the Add button for that position.</li>
             <li><strong>Choose the Assistant Chief Judge.</strong> Pick someone already assigned to your precinct. This is an extra responsibility and cannot be assigned to the Chief Judge.</li>
             <li><strong>Check training status.</strong> The staffing page shows whether each assigned worker is signed up for training or has completed training.</li>
+            <li><strong>Use the Election Day checklist.</strong> Review delivery and pickup details, then check off items as they are completed.</li>
+            <li><strong>Complete the debrief after election day.</strong> Use the Chief Judge Debrief page to send feedback to the election supervisors.</li>
         </ol>
         <div class="actions">
             <a class="button" href="<?= e(url('departments/election/needs-attention.php')) ?>">Needs Attention</a>
             <a class="button secondary" href="<?= e(url('departments/election/staffing.php')) ?>">Precinct Staffing</a>
+            <a class="button secondary" href="<?= e(url('departments/election/election-day-checklist.php')) ?>">Precinct Checklist</a>
+            <a class="button secondary" href="<?= e(url('departments/election/chief-judge-debrief.php')) ?>">Chief Judge Debrief</a>
         </div>
     </section>
 
@@ -71,7 +75,36 @@ page_header('Chief Judge How To');
                 <p>Print or review names, phone numbers, and email addresses for the workers assigned to your precinct.</p>
                 <a class="button secondary compact-button" href="<?= e(url('departments/election/precinct-contact-sheet.php')) ?>">Precinct Contact Sheet</a>
             </article>
+            <article class="card how-to-card">
+                <h2>Precinct Checklist</h2>
+                <p>Review equipment delivery and pickup information, complete checklist items online, or print the checklist if you prefer a paper copy.</p>
+                <a class="button secondary compact-button" href="<?= e(url('departments/election/election-day-checklist.php')) ?>">Precinct Checklist</a>
+            </article>
+            <article class="card how-to-card">
+                <h2>Chief Judge Debrief</h2>
+                <p>After election day, answer the debrief questions for your precinct. You can save a draft and come back, then submit when the answers are ready.</p>
+                <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-judge-debrief.php')) ?>">Chief Judge Debrief</a>
+            </article>
         </div>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
+        <h1>Election Day Checklist</h1>
+        <ol class="how-to-steps">
+            <li><strong>Open the checklist before election day.</strong> Confirm the equipment delivery and pickup information for your precinct.</li>
+            <li><strong>Use the checklist while preparing.</strong> Check off items as they are completed. Supervisors can also check off items when they help with the task.</li>
+            <li><strong>Print when needed.</strong> If you prefer paper, use the print version and keep it with your election day materials.</li>
+        </ol>
+        <p class="muted">The checklist is created by the election supervisors. If something is missing or unclear, contact the supervisor so they can update the template or precinct details.</p>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
+        <h1>After Election Day</h1>
+        <ol class="how-to-steps">
+            <li><strong>Complete the debrief.</strong> Open Chief Judge Debrief and answer the questions for your precinct.</li>
+            <li><strong>Save a draft if needed.</strong> Drafts are useful if you need to collect details before submitting.</li>
+            <li><strong>Submit when finished.</strong> Once submitted, supervisors can review the response and follow up on any concerns.</li>
+        </ol>
     </section>
 
     <section class="panel" style="margin-top: 18px;">

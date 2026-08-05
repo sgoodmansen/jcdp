@@ -41,6 +41,14 @@ page_header('Supervisor How To');
                 <p>Copy assignments from a previous election when the same people are likely to serve again.</p>
                 <a class="button secondary compact-button" href="<?= e(url('departments/election/reuse-workers.php')) ?>">Reuse Past Workers</a>
             </article>
+            <article class="card how-to-card">
+                <h2>4. Prepare Election Day tools</h2>
+                <p>Create the precinct checklist, enter equipment delivery and pickup details, and set up the debrief questions Chief Judges will answer after election day.</p>
+                <div class="actions">
+                    <a class="button secondary compact-button" href="<?= e(url('departments/election/election-day-setup.php')) ?>">Election Day Setup</a>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/election/debrief-setup.php')) ?>">Debrief Questions</a>
+                </div>
+            </article>
         </div>
     </section>
 
@@ -88,6 +96,33 @@ page_header('Supervisor How To');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
+        <h1>Election Day Tools</h1>
+        <div class="grid how-to-grid">
+            <article class="card how-to-card">
+                <h2>Precinct Checklist</h2>
+                <p>Use Election Day Setup to build the checklist for the election period. Then use the Checklist page to review each precinct, enter equipment delivery and pickup times, and check off completed items.</p>
+                <div class="actions">
+                    <a class="button secondary compact-button" href="<?= e(url('departments/election/election-day-setup.php')) ?>">Checklist Setup</a>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/election/election-day-checklist.php')) ?>">Precinct Checklist</a>
+                </div>
+            </article>
+            <article class="card how-to-card">
+                <h2>Precinct Notes</h2>
+                <p>Record supervisor-only notes about a precinct, including incidents, reminders, and suggestions for the next election. Notes can be added quickly without opening a precinct first.</p>
+                <a class="button secondary compact-button" href="<?= e(url('departments/election/precinct-notes.php')) ?>">Precinct Notes</a>
+            </article>
+            <article class="card how-to-card">
+                <h2>Chief Judge Debrief</h2>
+                <p>Create debrief questions before election day. After the election, review each precinct response and follow up on anything that needs attention.</p>
+                <div class="actions">
+                    <a class="button secondary compact-button" href="<?= e(url('departments/election/debrief-setup.php')) ?>">Debrief Questions</a>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-judge-debrief.php')) ?>">Debrief Responses</a>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
         <h1>How to Sign Someone Up for Training</h1>
         <ol class="how-to-steps">
             <li><strong>Open Training Classes.</strong> Find the class the worker should attend.</li>
@@ -109,6 +144,8 @@ page_header('Supervisor How To');
             <li>Training follow-ups should be reviewed until workers are signed up or complete.</li>
             <li>Missing contact information should be corrected when possible.</li>
             <li>Status conflicts and duplicate contacts should be cleaned up before final reports.</li>
+            <li>Election Day checklist items should be reviewed as the election gets close.</li>
+            <li>After election day, debrief responses and precinct notes should be reviewed for follow-up items.</li>
             <li>Closing an election period should happen after election day, once staffing and attendance records have been reviewed.</li>
         </ul>
         <div class="actions">
