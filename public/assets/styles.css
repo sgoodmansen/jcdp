@@ -448,7 +448,7 @@ a {
 }
 
 .training-signup-item {
-    min-height: 44px;
+    min-height: 58px;
 }
 
 .training-status-list {
@@ -457,11 +457,11 @@ a {
 }
 
 .training-status-item {
-    align-items: flex-start;
+    align-items: center;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    min-height: 44px;
+    min-height: 58px;
 }
 
 .training-role-tags {
