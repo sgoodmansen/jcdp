@@ -13,6 +13,7 @@ if ($worker && !$assignment) {
 
 $isManager = can_manage_election_module();
 $isChief = $assignment && election_assignment_has_chief_permissions($assignment);
+$canJoinOptionalTraining = $assignment && election_assignment_has_optional_training_role($assignment);
 
 $activePeriods = election_active_periods();
 $activeWorkerCount = (int) db()->query('SELECT COUNT(*) FROM election_worker_assignments WHERE is_active = 1')->fetchColumn();
@@ -175,7 +176,17 @@ page_header('Election Training');
 
     <?php if ($worker): ?>
         <section class="panel" style="margin-top: 18px;">
-            <h1>My Training</h1>
+            <div class="section-heading-row">
+                <div>
+                    <h1>My Training</h1>
+                    <?php if ($canJoinOptionalTraining): ?>
+                        <p class="muted">Chief Judges and Assistant Chief Judges may join additional classes for optional training.</p>
+                    <?php endif; ?>
+                </div>
+                <?php if ($canJoinOptionalTraining): ?>
+                    <a class="button secondary" href="<?= e(url('departments/election/classes.php')) ?>">Find more classes</a>
+                <?php endif; ?>
+            </div>
             <?php if (!$registeredClasses): ?>
                 <p>You are not signed up for a class yet.</p>
                 <div class="actions">
