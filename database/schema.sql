@@ -743,5 +743,5 @@ INSERT INTO election_positions (name, sort_order, is_chief_judge, is_assistant_c
 INSERT INTO departments (name, slug, description) VALUES
     ('DMV', 'dmv', 'DMV department database module.'),
     ('DARE', 'dare', 'DARE department database module.'),
-    ('Election Training', 'election', 'Election worker training, precinct assignment, and attendance module.'),
+    ('Election Readiness', 'election', 'Election day preparation, staffing, training, checklist, and follow-up module.'),
     ('K-9', 'k-9', 'K-9 department database module.');

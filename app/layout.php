@@ -186,6 +186,7 @@ function friendly_user_title(array $user): string
             'DMV' => 'DMV Clerk',
             'DARE' => 'DARE Officer',
             'Election Training' => 'Election County Employee',
+            'Election Readiness' => 'Election County Employee',
             default => 'Department User',
         };
     }
@@ -195,6 +196,7 @@ function friendly_user_title(array $user): string
             'DMV' => 'DMV Supervisor',
             'DARE' => 'DARE Supervisor',
             'Election Training' => 'Election Supervisor',
+            'Election Readiness' => 'Election Supervisor',
             default => 'Department Supervisor',
         };
     }

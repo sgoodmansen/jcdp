@@ -197,7 +197,7 @@ page_header('Dashboard');
             </section>
         <?php elseif ($department['slug'] === 'election'): ?>
             <section class="panel" style="margin-top: 18px;">
-                <h1>Election Training</h1>
+                <h1>Election Readiness</h1>
                 <p><?= e($department['description']) ?></p>
                 <?php page_actions($electionActions); ?>
             </section>

@@ -132,15 +132,15 @@ if ($worker) {
     $registeredClasses = $statement->fetchAll();
 }
 
-page_header('Election Training');
+page_header('Election Readiness');
 ?>
 <main class="shell">
     <section class="panel">
-        <h1>Election Training</h1>
+        <h1>Election Readiness</h1>
         <?php if ($worker): ?>
             <p><?= e(election_person_name($worker)) ?> - <?= e($assignment['position_name']) ?>, <?= e($assignment['precinct_name']) ?></p>
         <?php else: ?>
-            <p>Manage election workers, precinct assignments, training classes, and attendance.</p>
+            <p>Prepare for election day with staffing, training, checklists, contacts, and follow-up tools.</p>
         <?php endif; ?>
         <?php election_navigation('home'); ?>
 

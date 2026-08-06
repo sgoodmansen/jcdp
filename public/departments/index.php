@@ -36,7 +36,7 @@ page_header('Departments');
                 <?php elseif ($department['slug'] === 'dare'): ?>
                     <a class="button" href="<?= e(url('departments/dare/index.php')) ?>">Open DARE</a>
                 <?php elseif ($department['slug'] === 'election'): ?>
-                    <a class="button" href="<?= e(url('departments/election/index.php')) ?>">Open Election Training</a>
+                    <a class="button" href="<?= e(url('departments/election/index.php')) ?>">Open Election Readiness</a>
                 <?php else: ?>
                     <span class="badge">Module placeholder</span>
                 <?php endif; ?>

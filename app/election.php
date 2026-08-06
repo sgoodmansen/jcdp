@@ -925,7 +925,7 @@ function election_send_worker_welcome_email(array $worker, string $accessUrl): b
     $name = election_person_name($worker) ?: 'Election Worker';
     $replacements = [
         '[Worker Name]' => $name,
-        '[Election Name]' => $worker['election_name'] ?? 'Election Training',
+        '[Election Name]' => $worker['election_name'] ?? 'Election Readiness',
         '[Precinct Name]' => $worker['precinct_name'] ?? '',
         '[Position Name]' => $worker['position_name'] ?? '',
         '[Access Link]' => $accessUrl,

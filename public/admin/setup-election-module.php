@@ -7,7 +7,7 @@ $ranSetup = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $statements = [
         "INSERT INTO departments (name, slug, description)
-         VALUES ('Election Training', 'election', 'Election worker training, precinct assignment, and attendance module.')
+         VALUES ('Election Readiness', 'election', 'Election day preparation, staffing, training, checklist, and follow-up module.')
          ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description)",
 
         "CREATE TABLE IF NOT EXISTS election_periods (
@@ -535,7 +535,7 @@ page_header('Setup Election Module');
 <main class="shell">
     <section class="panel">
         <h1>Setup Election Module</h1>
-        <p>Create or refresh the Election Training tables, department entry, and default worker positions.</p>
+        <p>Create or refresh the Election Readiness tables, department entry, and default worker positions.</p>
 
         <?php if ($ranSetup): ?>
             <div class="notice success">Election module setup is complete.</div>
@@ -543,7 +543,7 @@ page_header('Setup Election Module');
 
         <form method="post">
             <button type="submit">Run setup</button>
-            <a class="button secondary" href="<?= e(url('departments/election/index.php')) ?>">Open Election Training</a>
+            <a class="button secondary" href="<?= e(url('departments/election/index.php')) ?>">Open Election Readiness</a>
         </form>
     </section>
 </main>

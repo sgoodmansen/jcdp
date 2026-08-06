@@ -119,7 +119,7 @@ if (current_election_actor_can_manage_workers()) {
     $actions[] = ['label' => 'Contacts', 'href' => url('departments/election/workers.php')];
 }
 
-page_header('Election Training Classes');
+page_header('Training Classes');
 ?>
 <main class="shell">
     <section class="panel">
