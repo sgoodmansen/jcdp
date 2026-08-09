@@ -334,6 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             training_rate DECIMAL(8,2) NOT NULL DEFAULT 20.00,
             training_cap DECIMAL(8,2) NOT NULL DEFAULT 60.00,
             mileage_rate DECIMAL(8,3) NOT NULL DEFAULT 0.000,
+            mileage_minimum_miles DECIMAL(8,2) NOT NULL DEFAULT 20.00,
             courthouse_address VARCHAR(190) NOT NULL DEFAULT '210 Courthouse Way, Rigby ID, 83442',
             is_locked TINYINT(1) NOT NULL DEFAULT 0,
             locked_at TIMESTAMP NULL,
@@ -510,6 +511,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         db()->exec("ALTER TABLE election_training_registrations ADD COLUMN is_driver TINYINT(1) NOT NULL DEFAULT 0 AFTER attended_at");
     }
 
+    $payrollSettingColumns = db()->query("SHOW COLUMNS FROM election_payroll_settings")->fetchAll();
+    $payrollSettingColumnNames = array_column($payrollSettingColumns, 'Field');
+    if (!in_array('mileage_minimum_miles', $payrollSettingColumnNames, true)) {
+        db()->exec("ALTER TABLE election_payroll_settings ADD COLUMN mileage_minimum_miles DECIMAL(8,2) NOT NULL DEFAULT 20.00 AFTER mileage_rate");
+    }
+
     $assignmentColumns = db()->query("SHOW COLUMNS FROM election_worker_assignments")->fetchAll();
     $assignmentColumnNames = array_column($assignmentColumns, 'Field');
     if (!in_array('is_extra', $assignmentColumnNames, true)) {
@@ -609,9 +616,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     db()->exec(
         "INSERT IGNORE INTO election_payroll_settings (
-            election_period_id, training_rate, training_cap, mileage_rate, courthouse_address
+            election_period_id, training_rate, training_cap, mileage_rate, mileage_minimum_miles, courthouse_address
          )
-         SELECT id, 20.00, 60.00, 0.000, '210 Courthouse Way, Rigby ID, 83442'
+         SELECT id, 20.00, 60.00, 0.000, 20.00, '210 Courthouse Way, Rigby ID, 83442'
          FROM election_periods"
     );
 

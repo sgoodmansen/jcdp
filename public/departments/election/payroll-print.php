@@ -43,7 +43,7 @@ page_header('Payroll Print');
                 <p>
                     Training: <?= e(election_payroll_money((float) $settings['training_rate'])) ?> per completed class,
                     cap <?= e(election_payroll_money((float) $settings['training_cap'])) ?>.
-                    Mileage: <?= e(number_format((float) $settings['mileage_rate'], 3)) ?> per mile.
+                    Mileage: <?= e(number_format((float) $settings['mileage_rate'], 3)) ?> per mile over <?= e(number_format((float) ($settings['mileage_minimum_miles'] ?? 20), 2)) ?> round-trip miles.
                 </p>
             </div>
             <div>

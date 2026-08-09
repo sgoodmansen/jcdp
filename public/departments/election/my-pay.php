@@ -116,6 +116,7 @@ page_header('My Pay Estimate');
                         <td data-label="Category">Mileage</td>
                         <td data-label="Details">
                             <?= e(number_format((float) $payRow['training_miles_round_trip'], 2)) ?> approved round-trip training miles
+                            <br><span class="meta">Mileage pays only when approved miles are greater than <?= e(number_format((float) ($settings['mileage_minimum_miles'] ?? 20), 2)) ?>.</span>
                             <?php if ($payRow['mileage_notes']): ?>
                                 <br><span class="meta"><?= e($payRow['mileage_notes']) ?></span>
                             <?php endif; ?>

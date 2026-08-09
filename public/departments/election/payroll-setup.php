@@ -44,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selectedPeriodId > 0) {
                  SET target_settings.training_rate = source_settings.training_rate,
                      target_settings.training_cap = source_settings.training_cap,
                      target_settings.mileage_rate = source_settings.mileage_rate,
+                     target_settings.mileage_minimum_miles = source_settings.mileage_minimum_miles,
                      target_settings.courthouse_address = source_settings.courthouse_address,
                      target_settings.updated_by_user_id = :user_id
                  WHERE target_settings.election_period_id = :target_period_id'
@@ -80,17 +81,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selectedPeriodId > 0) {
     if ($action === 'save_rates') {
         $statement = db()->prepare(
             'UPDATE election_payroll_settings
-             SET training_rate = :training_rate,
-                 training_cap = :training_cap,
-                 mileage_rate = :mileage_rate,
-                 courthouse_address = :courthouse_address,
-                 updated_by_user_id = :user_id
+                 SET training_rate = :training_rate,
+                     training_cap = :training_cap,
+                     mileage_rate = :mileage_rate,
+                     mileage_minimum_miles = :mileage_minimum_miles,
+                     courthouse_address = :courthouse_address,
+                     updated_by_user_id = :user_id
              WHERE election_period_id = :election_period_id'
         );
         $statement->execute([
             'training_rate' => max(0, (float) ($_POST['training_rate'] ?? 0)),
             'training_cap' => max(0, (float) ($_POST['training_cap'] ?? 0)),
             'mileage_rate' => max(0, (float) ($_POST['mileage_rate'] ?? 0)),
+            'mileage_minimum_miles' => max(0, (float) ($_POST['mileage_minimum_miles'] ?? 20)),
             'courthouse_address' => trim($_POST['courthouse_address'] ?? ELECTION_PAYROLL_COURTHOUSE_ADDRESS),
             'user_id' => current_user()['id'] ?? null,
             'election_period_id' => $selectedPeriodId,
@@ -195,6 +198,10 @@ page_header('Payroll Setup');
                 <label>
                     Mileage rate
                     <input type="number" step="0.001" min="0" name="mileage_rate" value="<?= e((string) ($settings['mileage_rate'] ?? '0.000')) ?>" required>
+                </label>
+                <label>
+                    Minimum round-trip miles for mileage pay
+                    <input type="number" step="0.01" min="0" name="mileage_minimum_miles" value="<?= e((string) ($settings['mileage_minimum_miles'] ?? '20.00')) ?>" required>
                 </label>
                 <label>
                     Courthouse address

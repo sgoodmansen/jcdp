@@ -1229,8 +1229,8 @@ function election_payroll_ensure_period_defaults(int $periodId): void
 
     $statement = db()->prepare(
         'INSERT IGNORE INTO election_payroll_settings (
-            election_period_id, training_rate, training_cap, mileage_rate, courthouse_address
-         ) VALUES (:election_period_id, 20.00, 60.00, 0.000, :courthouse_address)'
+            election_period_id, training_rate, training_cap, mileage_rate, mileage_minimum_miles, courthouse_address
+         ) VALUES (:election_period_id, 20.00, 60.00, 0.000, 20.00, :courthouse_address)'
     );
     $statement->execute([
         'election_period_id' => $periodId,
@@ -1263,6 +1263,7 @@ function election_payroll_settings(int $periodId): array
         'training_rate' => '20.00',
         'training_cap' => '60.00',
         'mileage_rate' => '0.000',
+        'mileage_minimum_miles' => '20.00',
         'courthouse_address' => ELECTION_PAYROLL_COURTHOUSE_ADDRESS,
         'is_locked' => 0,
         'locked_at' => null,
@@ -1437,19 +1438,24 @@ function election_payroll_calculation(int $periodId): array
     $trainingRate = (float) $settings['training_rate'];
     $trainingCap = (float) $settings['training_cap'];
     $mileageRate = (float) $settings['mileage_rate'];
+    $mileageMinimumMiles = (float) ($settings['mileage_minimum_miles'] ?? 20.00);
     foreach ($summary as $workerId => &$row) {
         $training = $trainingByWorker[$workerId] ?? ['completed_count' => 0, 'driver_count' => 0];
         $mileage = $mileageByWorker[$workerId] ?? ['training_miles_round_trip' => 0, 'notes' => ''];
         $completedCount = (int) $training['completed_count'];
         $trainingPay = min($completedCount * $trainingRate, $trainingCap);
-        $mileagePay = (float) $mileage['training_miles_round_trip'] * $mileageRate;
+        $trainingMilesRoundTrip = (float) $mileage['training_miles_round_trip'];
+        $mileagePay = $trainingMilesRoundTrip > $mileageMinimumMiles
+            ? $trainingMilesRoundTrip * $mileageRate
+            : 0.00;
 
         $row['positions'] = implode(', ', array_values(array_unique(array_filter($row['positions']))));
         $row['precincts'] = implode(', ', array_values(array_unique(array_filter($row['precincts']))));
         $row['training_completed_count'] = $completedCount;
         $row['training_driver_count'] = (int) $training['driver_count'];
         $row['training_pay'] = $trainingPay;
-        $row['training_miles_round_trip'] = (float) $mileage['training_miles_round_trip'];
+        $row['training_miles_round_trip'] = $trainingMilesRoundTrip;
+        $row['mileage_minimum_miles'] = $mileageMinimumMiles;
         $row['mileage_notes'] = (string) ($mileage['notes'] ?? '');
         $row['mileage_pay'] = $mileagePay;
         $row['total_pay'] = (float) $row['election_day_pay'] + $trainingPay + $mileagePay;

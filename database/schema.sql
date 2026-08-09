@@ -766,6 +766,7 @@ CREATE TABLE election_payroll_settings (
     training_rate DECIMAL(8,2) NOT NULL DEFAULT 20.00,
     training_cap DECIMAL(8,2) NOT NULL DEFAULT 60.00,
     mileage_rate DECIMAL(8,3) NOT NULL DEFAULT 0.000,
+    mileage_minimum_miles DECIMAL(8,2) NOT NULL DEFAULT 20.00,
     courthouse_address VARCHAR(190) NOT NULL DEFAULT '210 Courthouse Way, Rigby ID, 83442',
     is_locked TINYINT(1) NOT NULL DEFAULT 0,
     locked_at TIMESTAMP NULL,

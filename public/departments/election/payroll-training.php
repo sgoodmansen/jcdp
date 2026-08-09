@@ -105,6 +105,10 @@ page_header('Training Pay');
                     <h3><?= e(number_format((float) ($settings['mileage_rate'] ?? 0), 3)) ?></h3>
                     <p>Mileage rate</p>
                 </article>
+                <article class="card dashboard-stat-card">
+                    <h3><?= e(number_format((float) ($settings['mileage_minimum_miles'] ?? 20), 2)) ?></h3>
+                    <p>Minimum miles</p>
+                </article>
             </div>
         </div>
     </section>
@@ -115,7 +119,7 @@ page_header('Training Pay');
             <div class="section-heading-row">
                 <div>
                     <h1><?= e($selectedPeriod['name'] ?? 'Election') ?></h1>
-                    <p class="muted">Mileage is manually entered for approved drivers who traveled round trip to training.</p>
+                    <p class="muted">Mileage is manually entered for approved drivers and pays only when round-trip miles are greater than <?= e(number_format((float) ($settings['mileage_minimum_miles'] ?? 20), 2)) ?>.</p>
                 </div>
                 <span class="badge <?= $isLocked ? 'badge-warning' : 'badge-success' ?>"><?= $isLocked ? 'Locked' : 'Editable' ?></span>
             </div>
