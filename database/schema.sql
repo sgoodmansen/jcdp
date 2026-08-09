@@ -664,6 +664,36 @@ CREATE TABLE election_debrief_answers (
         ON DELETE CASCADE
 );
 
+CREATE TABLE election_chief_feedback (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    election_period_id INT UNSIGNED NOT NULL,
+    precinct_id INT UNSIGNED NOT NULL,
+    chief_assignment_id INT UNSIGNED NOT NULL,
+    category VARCHAR(40) NOT NULL DEFAULT 'other',
+    message_text TEXT NOT NULL,
+    created_by_user_id INT UNSIGNED NULL,
+    updated_by_user_id INT UNSIGNED NULL,
+    acknowledged_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_election_chief_feedback_lookup (election_period_id, precinct_id, chief_assignment_id, acknowledged_at),
+    CONSTRAINT fk_election_chief_feedback_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_chief_feedback_precinct
+        FOREIGN KEY (precinct_id) REFERENCES election_precincts(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_chief_feedback_assignment
+        FOREIGN KEY (chief_assignment_id) REFERENCES election_worker_assignments(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_chief_feedback_created_by
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_election_chief_feedback_updated_by
+        FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
 CREATE TABLE election_training_classes (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     election_period_id INT UNSIGNED NOT NULL,

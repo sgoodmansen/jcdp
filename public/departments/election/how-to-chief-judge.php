@@ -13,6 +13,7 @@ if (!current_election_actor_can_manage_workers()) {
 
 $worker = current_election_worker();
 $assignment = current_election_assignment();
+$isActualChief = $assignment && election_assignment_is_chief_judge($assignment);
 
 if ($worker && !$assignment) {
     redirect_to('departments/election/select-assignment.php');
@@ -44,6 +45,9 @@ page_header('Chief Judge How To');
             <button type="button" class="guide-topic-button" data-guide-target="tools" role="tab" aria-selected="false">Helpful Tools</button>
             <button type="button" class="guide-topic-button" data-guide-target="checklist" role="tab" aria-selected="false">Checklist</button>
             <button type="button" class="guide-topic-button" data-guide-target="debrief" role="tab" aria-selected="false">Debrief</button>
+            <?php if ($isActualChief): ?>
+                <button type="button" class="guide-topic-button" data-guide-target="feedback" role="tab" aria-selected="false">Feedback</button>
+            <?php endif; ?>
             <button type="button" class="guide-topic-button" data-guide-target="signup" role="tab" aria-selected="false">Sign Up Training</button>
             <button type="button" class="guide-topic-button" data-guide-target="remove-training" role="tab" aria-selected="false">Remove Training</button>
             <button type="button" class="guide-topic-button" data-guide-target="wrong" role="tab" aria-selected="false">Problems</button>
@@ -60,6 +64,9 @@ page_header('Chief Judge How To');
                     <li><strong>Check training status.</strong> The staffing page shows whether each assigned worker is signed up for training or has completed training.</li>
                     <li><strong>Use the Election Day checklist.</strong> Review delivery and pickup details, then check off items as they are completed.</li>
                     <li><strong>Complete the debrief after election day.</strong> Use the Chief Judge Debrief page to send feedback to the election supervisors.</li>
+                    <?php if ($isActualChief): ?>
+                        <li><strong>Review supervisor feedback.</strong> New feedback appears on Election Home and stays available under My Feedback after it is acknowledged.</li>
+                    <?php endif; ?>
                 </ol>
                 <div class="actions">
                     <a class="button" href="<?= e(url('departments/election/needs-attention.php')) ?>">Needs Attention</a>
@@ -97,6 +104,13 @@ page_header('Chief Judge How To');
                         <p>After election day, answer the debrief questions for your precinct. You can save a draft and come back, then submit when the answers are ready.</p>
                         <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-judge-debrief.php')) ?>">Chief Judge Debrief</a>
                     </article>
+                    <?php if ($isActualChief): ?>
+                        <article class="card how-to-card">
+                            <h2>My Feedback</h2>
+                            <p>Read internal feedback from the Election Supervisor and acknowledge it after reviewing. Call the supervisor if you would like to discuss anything.</p>
+                            <a class="button secondary compact-button" href="<?= e(url('departments/election/my-feedback.php')) ?>">My Feedback</a>
+                        </article>
+                    <?php endif; ?>
                     <article class="card how-to-card">
                         <h2>Training Signups</h2>
                         <p>Review the training classes your precinct workers are scheduled for or have completed.</p>
@@ -129,6 +143,21 @@ page_header('Chief Judge How To');
                     <a class="button" href="<?= e(url('departments/election/chief-judge-debrief.php')) ?>">Chief Judge Debrief</a>
                 </div>
             </section>
+
+            <?php if ($isActualChief): ?>
+                <section class="guide-topic-pane" data-guide-pane="feedback" role="tabpanel" hidden>
+                    <h1>Supervisor Feedback</h1>
+                    <ol class="how-to-steps">
+                        <li><strong>Watch Election Home.</strong> New feedback from the Election Supervisor appears on your home dashboard.</li>
+                        <li><strong>Read the message.</strong> Feedback is grouped by category, such as staffing, preparation, or election day.</li>
+                        <li><strong>Acknowledge when reviewed.</strong> Acknowledged feedback leaves the Home dashboard but remains available under My Feedback.</li>
+                        <li><strong>Call if needed.</strong> The system does not include replies, so call the Election Supervisor if you would like to discuss the feedback.</li>
+                    </ol>
+                    <div class="actions">
+                        <a class="button" href="<?= e(url('departments/election/my-feedback.php')) ?>">My Feedback</a>
+                    </div>
+                </section>
+            <?php endif; ?>
 
             <section class="guide-topic-pane" data-guide-pane="signup" role="tabpanel" hidden>
                 <h1>How to Sign Someone Up for Training</h1>

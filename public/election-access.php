@@ -8,11 +8,11 @@ $worker = election_find_worker_by_token($workerId, $token);
 
 if (!$worker) {
     http_response_code(403);
-    page_header('Election access');
+    page_header('Election Readiness access');
     ?>
     <main class="shell">
         <section class="panel">
-            <h1>Election access link expired</h1>
+            <h1>Election Readiness access link expired</h1>
             <p>Ask your election supervisor for a new access link.</p>
         </section>
     </main>

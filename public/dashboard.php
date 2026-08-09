@@ -218,7 +218,7 @@ page_header('Dashboard');
             <div class="actions">
                 <a class="button" href="<?= e(url('admin/users.php')) ?>">Manage users</a>
                 <a class="button secondary" href="<?= e(url('admin/audit-log.php')) ?>">Audit log</a>
-                <a class="button secondary" href="<?= e(url('admin/setup-election-module.php')) ?>">Setup Election Module</a>
+                <a class="button secondary" href="<?= e(url('admin/setup-election-module.php')) ?>">Setup Election Readiness</a>
             </div>
         </section>
     <?php endif; ?>

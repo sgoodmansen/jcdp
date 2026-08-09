@@ -144,6 +144,7 @@ function election_day_checklist_tables_exist(): bool
             'election_debrief_questions',
             'election_debrief_responses',
             'election_debrief_answers',
+            'election_chief_feedback',
         ] as $tableName) {
             $statement = db()->prepare('SHOW TABLES LIKE :table_name');
             $statement->execute(['table_name' => $tableName]);
@@ -514,6 +515,9 @@ function election_navigation(string $activeKey = ''): void
                 ['key' => 'chief-judge-debrief', 'label' => 'Chief Judge Debrief', 'href' => url('departments/election/chief-judge-debrief.php')],
             ],
         ];
+        if ($isManager) {
+            $groups['election-day']['items'][] = ['key' => 'chief-feedback', 'label' => 'Chief Feedback', 'href' => url('departments/election/chief-feedback.php')];
+        }
         $groups['workers'] = [
             'label' => 'Contacts',
             'items' => [
@@ -572,9 +576,13 @@ function election_navigation(string $activeKey = ''): void
                 ['key' => 'select-assignment', 'label' => 'Switch Assignment', 'href' => url('departments/election/select-assignment.php')],
                 ['key' => 'my-information', 'label' => 'My Information', 'href' => url('departments/election/worker-edit.php?id=' . (int) $worker['id'])],
                 ['key' => 'reminders', 'label' => 'Reminder Preferences', 'href' => url('departments/election/reminders.php')],
-                ['key' => 'sign-out', 'label' => 'Sign Out', 'href' => url('departments/election/sign-out.php')],
             ],
         ];
+        $assignment = current_election_assignment();
+        if ($assignment && election_assignment_is_chief_judge($assignment)) {
+            $groups['account']['items'][] = ['key' => 'my-feedback', 'label' => 'My Feedback', 'href' => url('departments/election/my-feedback.php')];
+        }
+        $groups['account']['items'][] = ['key' => 'sign-out', 'label' => 'Sign Out', 'href' => url('departments/election/sign-out.php')];
     }
 
     $breadcrumb = [
@@ -666,6 +674,24 @@ function election_assignment_has_chief_permissions(array $assignment): bool
     }
 
     return election_assignment_has_extra_role((int) ($assignment['id'] ?? 0), ELECTION_ROLE_ASSISTANT_CHIEF_JUDGE);
+}
+
+function election_assignment_is_chief_judge(array $assignment): bool
+{
+    return (int) ($assignment['is_chief_judge'] ?? 0) === 1;
+}
+
+function election_feedback_categories(): array
+{
+    return [
+        'staffing' => 'Staffing',
+        'preparation' => 'Preparation',
+        'election_day' => 'Election Day',
+        'training' => 'Training',
+        'supplies_equipment' => 'Supplies / Equipment',
+        'communication' => 'Communication',
+        'other' => 'Other',
+    ];
 }
 
 function election_assistant_chief_position_ids(): array

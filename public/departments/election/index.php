@@ -13,6 +13,7 @@ if ($worker && !$assignment) {
 
 $isManager = can_manage_election_module();
 $isChief = $assignment && election_assignment_has_chief_permissions($assignment);
+$isActualChief = $assignment && election_assignment_is_chief_judge($assignment);
 $canJoinOptionalTraining = $assignment && election_assignment_has_optional_training_role($assignment);
 
 $activePeriods = election_active_periods();
@@ -51,6 +52,9 @@ if ($isManager || $isChief) {
             ['label' => 'Chief Judge Debrief', 'href' => url('departments/election/chief-judge-debrief.php')],
         ],
     ];
+    if ($isManager) {
+        $toolGroups[array_key_last($toolGroups)]['links'][] = ['label' => 'Chief Feedback', 'href' => url('departments/election/chief-feedback.php')];
+    }
 }
 
 if ($isManager || $isChief) {
@@ -110,12 +114,17 @@ if (!$primaryActions) {
 }
 
 if ($worker) {
+    $myAccountLinks = [
+        ['label' => 'My information', 'href' => url('departments/election/worker-edit.php?id=' . $worker['id'])],
+    ];
+    if ($isActualChief) {
+        $myAccountLinks[] = ['label' => 'My Feedback', 'href' => url('departments/election/my-feedback.php')];
+    }
+    $myAccountLinks[] = ['label' => 'Sign out', 'href' => url('departments/election/sign-out.php')];
+
     $toolGroups[] = [
         'title' => 'My Account',
-        'links' => [
-            ['label' => 'My information', 'href' => url('departments/election/worker-edit.php?id=' . $worker['id'])],
-            ['label' => 'Sign out', 'href' => url('departments/election/sign-out.php')],
-        ],
+        'links' => $myAccountLinks,
     ];
 }
 
@@ -130,6 +139,23 @@ if ($worker) {
     );
     $statement->execute(['assignment_id' => $assignment['id']]);
     $registeredClasses = $statement->fetchAll();
+}
+
+$unreadFeedback = [];
+if ($isActualChief && election_day_checklist_tables_exist()) {
+    $statement = db()->prepare(
+        'SELECT election_chief_feedback.*,
+                election_periods.name AS election_name,
+                election_precincts.name AS precinct_name
+         FROM election_chief_feedback
+         INNER JOIN election_periods ON election_periods.id = election_chief_feedback.election_period_id
+         INNER JOIN election_precincts ON election_precincts.id = election_chief_feedback.precinct_id
+         WHERE election_chief_feedback.chief_assignment_id = :chief_assignment_id
+           AND election_chief_feedback.acknowledged_at IS NULL
+         ORDER BY election_chief_feedback.created_at DESC'
+    );
+    $statement->execute(['chief_assignment_id' => (int) $assignment['id']]);
+    $unreadFeedback = $statement->fetchAll();
 }
 
 page_header('Election Readiness');
@@ -170,6 +196,37 @@ page_header('Election Readiness');
                         <p>Upcoming classes</p>
                     </article>
                 </div>
+            </div>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($unreadFeedback): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <div class="section-heading-row">
+                <div>
+                    <h1>New Feedback</h1>
+                    <p class="muted">Review feedback from the Election Supervisor. Call the Election Supervisor if you would like to discuss anything listed here.</p>
+                </div>
+                <a class="button secondary" href="<?= e(url('departments/election/my-feedback.php')) ?>">View all feedback</a>
+            </div>
+            <div class="precinct-note-list">
+                <?php foreach ($unreadFeedback as $feedback): ?>
+                    <article class="card precinct-note-card">
+                        <div class="section-heading-row">
+                            <div>
+                                <h2><?= e(election_feedback_categories()[$feedback['category']] ?? 'Other') ?></h2>
+                                <p class="muted"><?= e($feedback['election_name']) ?> - <?= e(format_display_date($feedback['created_at'])) ?></p>
+                            </div>
+                            <span class="badge badge-warning">New</span>
+                        </div>
+                        <p><?= nl2br(e($feedback['message_text'])) ?></p>
+                        <form method="post" action="<?= e(url('departments/election/my-feedback.php')) ?>" class="actions">
+                            <input type="hidden" name="action" value="acknowledge_feedback">
+                            <input type="hidden" name="feedback_id" value="<?= e((string) $feedback['id']) ?>">
+                            <button type="submit" class="secondary compact-button">Acknowledge</button>
+                        </form>
+                    </article>
+                <?php endforeach; ?>
             </div>
         </section>
     <?php endif; ?>

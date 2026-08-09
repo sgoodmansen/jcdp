@@ -136,6 +136,11 @@ page_header('Supervisor How To');
                             <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-judge-debrief.php')) ?>">Debrief Responses</a>
                         </div>
                     </article>
+                    <article class="card how-to-card">
+                        <h2>Chief Feedback</h2>
+                        <p>Send internal feedback to the assigned Chief Judge by category. Messages stay with the election period and can be edited if more details are learned.</p>
+                        <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php')) ?>">Chief Feedback</a>
+                    </article>
                 </div>
             </section>
 
@@ -179,7 +184,7 @@ page_header('Supervisor How To');
                     <li>Missing contact information should be corrected when possible.</li>
                     <li>Status conflicts and duplicate contacts should be cleaned up before final reports.</li>
                     <li>Election Day checklist items should be reviewed as the election gets close.</li>
-                    <li>After election day, debrief responses and precinct notes should be reviewed for follow-up items.</li>
+                    <li>After election day, debrief responses, precinct notes, and Chief Judge feedback should be reviewed for follow-up items.</li>
                     <li>Closing an election period should happen after election day, once staffing and attendance records have been reviewed.</li>
                 </ul>
                 <div class="actions">
