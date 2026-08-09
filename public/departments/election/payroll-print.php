@@ -53,7 +53,7 @@ page_header('Payroll Print');
             </div>
         </div>
 
-        <table class="table roster-table">
+        <table class="table roster-table payroll-print-table">
             <thead>
                 <tr>
                     <th>Worker</th>

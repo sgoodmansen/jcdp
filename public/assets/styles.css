@@ -2580,6 +2580,45 @@ textarea {
         padding: 7px 8px;
     }
 
+    .payroll-print-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    .payroll-print-table th,
+    .payroll-print-table td {
+        font-size: 9.5pt;
+        line-height: 1.2;
+        padding: 5px 6px;
+        vertical-align: top;
+    }
+
+    .payroll-print-table th:nth-child(1),
+    .payroll-print-table td:nth-child(1) {
+        width: 13%;
+    }
+
+    .payroll-print-table th:nth-child(2),
+    .payroll-print-table td:nth-child(2) {
+        width: 27%;
+    }
+
+    .payroll-print-table th:nth-child(3),
+    .payroll-print-table td:nth-child(3) {
+        width: 15%;
+    }
+
+    .payroll-print-table th:nth-child(4),
+    .payroll-print-table td:nth-child(4),
+    .payroll-print-table th:nth-child(5),
+    .payroll-print-table td:nth-child(5),
+    .payroll-print-table th:nth-child(6),
+    .payroll-print-table td:nth-child(6),
+    .payroll-print-table th:nth-child(7),
+    .payroll-print-table td:nth-child(7) {
+        width: 11.25%;
+    }
+
     .roster-table td {
         height: 0.36in;
     }
