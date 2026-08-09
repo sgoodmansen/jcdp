@@ -497,7 +497,6 @@ function election_navigation(string $activeKey = ''): void
             'items' => [
                 ['key' => 'needs-attention', 'label' => 'Needs Attention', 'href' => url('departments/election/needs-attention.php')],
                 ['key' => 'staffing-progress', 'label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php')],
-                ['key' => 'payroll', 'label' => 'Payroll', 'href' => url('departments/election/payroll.php')],
             ],
         ];
         if ($isManager) {
@@ -553,6 +552,15 @@ function election_navigation(string $activeKey = ''): void
     if ($isManager) {
         $groups['training']['items'][] = ['key' => 'class-edit', 'label' => 'New Class', 'href' => url('departments/election/class-edit.php')];
         $groups['training']['items'][] = ['key' => 'email-template', 'label' => 'Email Template', 'href' => url('departments/election/email-template.php')];
+        $groups['payroll'] = [
+            'label' => 'Payroll',
+            'items' => [
+                ['key' => 'payroll', 'label' => 'Summary', 'href' => url('departments/election/payroll.php')],
+                ['key' => 'payroll-election-day', 'label' => 'Election Day Pay', 'href' => url('departments/election/payroll-election-day.php')],
+                ['key' => 'payroll-training', 'label' => 'Training Pay', 'href' => url('departments/election/payroll-training.php')],
+                ['key' => 'payroll-setup', 'label' => 'Payroll Setup', 'href' => url('departments/election/payroll-setup.php')],
+            ],
+        ];
         $groups['setup-tools'] = [
             'label' => 'Setup',
             'items' => [
@@ -560,7 +568,6 @@ function election_navigation(string $activeKey = ''): void
                 ['key' => 'election-periods', 'label' => 'Election Periods', 'href' => url('departments/election/election-periods.php')],
                 ['key' => 'precincts', 'label' => 'Precincts', 'href' => url('departments/election/precincts.php')],
                 ['key' => 'positions', 'label' => 'Positions', 'href' => url('departments/election/positions.php')],
-                ['key' => 'payroll-setup', 'label' => 'Payroll Setup', 'href' => url('departments/election/payroll-setup.php')],
                 ['key' => 'election-day-setup', 'label' => 'Election Day Setup', 'href' => url('departments/election/election-day-setup.php')],
                 ['key' => 'debrief-setup', 'label' => 'Debrief Questions', 'href' => url('departments/election/debrief-setup.php')],
             ],
@@ -596,7 +603,7 @@ function election_navigation(string $activeKey = ''): void
         $groups['account']['items'][] = ['key' => 'sign-out', 'label' => 'Sign Out', 'href' => url('departments/election/sign-out.php')];
     }
 
-    $groupOrder = ['dashboard', 'workers', 'staffing', 'training', 'election-day', 'setup-tools', 'guides', 'account'];
+    $groupOrder = ['dashboard', 'workers', 'staffing', 'training', 'election-day', 'payroll', 'setup-tools', 'guides', 'account'];
     $orderedGroups = [];
     foreach ($groupOrder as $groupKey) {
         if (isset($groups[$groupKey])) {
@@ -1180,6 +1187,37 @@ function election_payroll_default_position_rate(string $positionName): float
 function election_payroll_money(float $amount): string
 {
     return '$' . number_format($amount, 2);
+}
+
+function election_payroll_period_context(): array
+{
+    $periods = db()->query('SELECT * FROM election_periods ORDER BY is_active DESC, starts_on DESC, name')->fetchAll();
+    $selectedPeriodId = (int) ($_GET['election_period_id'] ?? $_POST['election_period_id'] ?? 0);
+    if ($selectedPeriodId === 0) {
+        foreach ($periods as $period) {
+            if ((int) $period['is_active'] === 1) {
+                $selectedPeriodId = (int) $period['id'];
+                break;
+            }
+        }
+    }
+    if ($selectedPeriodId === 0 && $periods) {
+        $selectedPeriodId = (int) $periods[0]['id'];
+    }
+
+    $selectedPeriod = null;
+    foreach ($periods as $period) {
+        if ((int) $period['id'] === $selectedPeriodId) {
+            $selectedPeriod = $period;
+            break;
+        }
+    }
+
+    if ($selectedPeriodId > 0) {
+        election_payroll_ensure_period_defaults($selectedPeriodId);
+    }
+
+    return [$periods, $selectedPeriodId, $selectedPeriod];
 }
 
 function election_payroll_ensure_period_defaults(int $periodId): void

@@ -164,7 +164,7 @@ page_header('Payroll Setup');
             </label>
             <div class="actions">
                 <button type="submit">View setup</button>
-                <a class="button secondary" href="<?= e(url('departments/election/payroll.php?election_period_id=' . $selectedPeriodId)) ?>">Open payroll</a>
+                <a class="button secondary" href="<?= e(url('departments/election/payroll.php?election_period_id=' . $selectedPeriodId)) ?>">Open summary</a>
             </div>
         </form>
     </section>

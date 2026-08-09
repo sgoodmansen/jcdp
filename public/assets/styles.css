@@ -721,13 +721,23 @@ button:focus {
 }
 
 .payroll-options-form {
-    grid-template-columns: minmax(360px, 520px) auto;
+    grid-template-columns: minmax(320px, 500px) minmax(max-content, 1fr);
     max-width: none;
 }
 
 .payroll-options-form .actions {
     align-items: end;
     flex-wrap: nowrap;
+}
+
+.payroll-options-form .actions .button,
+.payroll-options-form .actions button {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    justify-content: center;
+    min-height: 58px;
+    white-space: nowrap;
 }
 
 .wide-form {

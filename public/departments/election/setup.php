@@ -21,11 +21,6 @@ $setupLinks = [
         'href' => url('departments/election/positions.php'),
     ],
     [
-        'title' => 'Payroll Setup',
-        'description' => 'Set election-day rates, training pay, mileage rate, and copy payroll rates from past elections.',
-        'href' => url('departments/election/payroll-setup.php'),
-    ],
-    [
         'title' => 'Election Day Setup',
         'description' => 'Build checklist templates and copy checklist tasks from a previous election.',
         'href' => url('departments/election/election-day-setup.php'),
