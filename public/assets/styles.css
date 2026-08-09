@@ -736,8 +736,67 @@ button:focus {
     display: inline-flex;
     flex: 0 0 auto;
     justify-content: center;
-    min-height: 58px;
+    min-height: 46px;
     white-space: nowrap;
+}
+
+.payroll-report-menu {
+    flex: 0 0 auto;
+    position: relative;
+}
+
+.payroll-report-menu summary {
+    align-items: center;
+    background: var(--secondary-bg);
+    border: 1px solid var(--secondary-border);
+    border-radius: 6px;
+    color: var(--primary-dark);
+    cursor: pointer;
+    display: inline-flex;
+    font-weight: 700;
+    justify-content: center;
+    min-height: 46px;
+    padding: 10px 16px;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.payroll-report-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.payroll-report-menu summary::after {
+    content: "▾";
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.payroll-report-list {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    display: grid;
+    min-width: 170px;
+    padding: 8px;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 20;
+}
+
+.payroll-report-list a {
+    border-radius: 4px;
+    color: var(--primary-dark);
+    font-weight: 700;
+    padding: 9px 10px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.payroll-report-list a:hover,
+.payroll-report-list a:focus {
+    background: var(--secondary-bg);
 }
 
 .wide-form {

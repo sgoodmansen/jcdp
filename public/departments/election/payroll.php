@@ -113,8 +113,13 @@ page_header('Payroll Summary');
                 <a class="button secondary" href="<?= e($electionDayUrl) ?>">Election Day Pay</a>
                 <a class="button secondary" href="<?= e($trainingUrl) ?>">Training Pay</a>
                 <a class="button secondary" href="<?= e($setupUrl) ?>">Setup</a>
-                <a class="button secondary" href="<?= e($exportUrl) ?>">Export CSV</a>
-                <a class="button secondary" href="<?= e($printUrl) ?>">Print PDF</a>
+                <details class="payroll-report-menu">
+                    <summary>Reports</summary>
+                    <div class="payroll-report-list">
+                        <a href="<?= e($exportUrl) ?>">Export CSV</a>
+                        <a href="<?= e($printUrl) ?>">Print PDF</a>
+                    </div>
+                </details>
             </div>
         </form>
     </section>
