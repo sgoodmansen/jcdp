@@ -720,6 +720,16 @@ button:focus {
     max-width: 860px;
 }
 
+.payroll-options-form {
+    grid-template-columns: minmax(360px, 520px) auto;
+    max-width: none;
+}
+
+.payroll-options-form .actions {
+    align-items: end;
+    flex-wrap: nowrap;
+}
+
 .wide-form {
     max-width: 1080px;
 }
@@ -2891,6 +2901,10 @@ textarea {
 
     .compact-form {
         grid-template-columns: 1fr;
+    }
+
+    .payroll-options-form .actions {
+        flex-wrap: wrap;
     }
 
     .essay-winners-filter-actions {

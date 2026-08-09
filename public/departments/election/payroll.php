@@ -198,7 +198,7 @@ page_header('Payroll');
 
     <section class="panel roster-toolbar" style="margin-top: 18px;">
         <h1>Options</h1>
-        <form class="form compact-form" method="get">
+        <form class="form compact-form payroll-options-form" method="get">
             <label>
                 Election
                 <select name="election_period_id" required>
