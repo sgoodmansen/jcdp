@@ -498,6 +498,15 @@ function election_navigation(string $activeKey = ''): void
                 ['key' => 'staffing-progress', 'label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php')],
             ],
         ];
+        if ($isManager) {
+            $groups['dashboard']['items'][] = ['key' => 'chief-feedback', 'label' => 'Feedback', 'href' => url('departments/election/chief-feedback.php')];
+        }
+        $groups['workers'] = [
+            'label' => 'Contacts',
+            'items' => [
+                ['key' => 'workers', 'label' => 'Address Book', 'href' => url('departments/election/workers.php')],
+            ],
+        ];
         $groups['staffing'] = [
             'label' => 'Staffing',
             'items' => [
@@ -515,18 +524,17 @@ function election_navigation(string $activeKey = ''): void
                 ['key' => 'chief-judge-debrief', 'label' => 'Chief Judge Debrief', 'href' => url('departments/election/chief-judge-debrief.php')],
             ],
         ];
-        if ($isManager) {
-            $groups['election-day']['items'][] = ['key' => 'chief-feedback', 'label' => 'Chief Feedback', 'href' => url('departments/election/chief-feedback.php')];
-        }
-        $groups['workers'] = [
-            'label' => 'Contacts',
-            'items' => [
-                ['key' => 'workers', 'label' => 'Address Book', 'href' => url('departments/election/workers.php')],
-            ],
-        ];
     }
 
     if ($isManager) {
+        if (!isset($groups['workers'])) {
+            $groups['workers'] = [
+                'label' => 'Contacts',
+                'items' => [
+                    ['key' => 'workers', 'label' => 'Address Book', 'href' => url('departments/election/workers.php')],
+                ],
+            ];
+        }
         $groups['workers']['items'][] = ['key' => 'import-workers', 'label' => 'Import Contacts', 'href' => url('departments/election/import-workers.php')];
         $groups['workers']['items'][] = ['key' => 'merge-workers', 'label' => 'Merge Contacts', 'href' => url('departments/election/merge-workers.php')];
         $groups['workers']['items'][] = ['key' => 'bulk-email', 'label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php')];
@@ -543,8 +551,8 @@ function election_navigation(string $activeKey = ''): void
     if ($isManager) {
         $groups['training']['items'][] = ['key' => 'class-edit', 'label' => 'New Class', 'href' => url('departments/election/class-edit.php')];
         $groups['training']['items'][] = ['key' => 'email-template', 'label' => 'Email Template', 'href' => url('departments/election/email-template.php')];
-        $groups['admin'] = [
-            'label' => 'Admin',
+        $groups['setup-tools'] = [
+            'label' => 'Setup',
             'items' => [
                 ['key' => 'setup', 'label' => 'Setup Home', 'href' => url('departments/election/setup.php')],
                 ['key' => 'election-periods', 'label' => 'Election Periods', 'href' => url('departments/election/election-periods.php')],
@@ -584,6 +592,20 @@ function election_navigation(string $activeKey = ''): void
         }
         $groups['account']['items'][] = ['key' => 'sign-out', 'label' => 'Sign Out', 'href' => url('departments/election/sign-out.php')];
     }
+
+    $groupOrder = ['dashboard', 'workers', 'staffing', 'training', 'election-day', 'setup-tools', 'guides', 'account'];
+    $orderedGroups = [];
+    foreach ($groupOrder as $groupKey) {
+        if (isset($groups[$groupKey])) {
+            $orderedGroups[$groupKey] = $groups[$groupKey];
+        }
+    }
+    foreach ($groups as $groupKey => $group) {
+        if (!isset($orderedGroups[$groupKey])) {
+            $orderedGroups[$groupKey] = $group;
+        }
+    }
+    $groups = $orderedGroups;
 
     $breadcrumb = [
         ['label' => 'Election Home', 'href' => url('departments/election/index.php')],

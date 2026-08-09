@@ -29,21 +29,56 @@ $toolGroups = [];
 if ($isManager || $isChief) {
     $primaryActions = [
         ['label' => 'Needs Attention', 'href' => url('departments/election/needs-attention.php'), 'primary' => true],
-        ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')],
         ['label' => 'Contacts', 'href' => url('departments/election/workers.php')],
+        ['label' => 'Precinct Staffing', 'href' => url('departments/election/staffing.php')],
         ['label' => 'Training classes', 'href' => url('departments/election/classes.php')],
     ];
 
     $toolGroups[] = [
-        'title' => 'Staffing',
+        'title' => 'Dashboard',
         'links' => [
             ['label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php')],
+        ],
+    ];
+    if ($isManager) {
+        $toolGroups[array_key_last($toolGroups)]['links'][] = ['label' => 'Feedback', 'href' => url('departments/election/chief-feedback.php')];
+    }
+
+    $toolGroups[] = [
+        'title' => 'Contacts',
+        'links' => [
+            ['label' => 'Address Book', 'href' => url('departments/election/workers.php')],
+        ],
+    ];
+    if ($isManager) {
+        $toolGroups[array_key_last($toolGroups)]['links'][] = ['label' => 'Import Contacts', 'href' => url('departments/election/import-workers.php')];
+        $toolGroups[array_key_last($toolGroups)]['links'][] = ['label' => 'Merge Contacts', 'href' => url('departments/election/merge-workers.php')];
+        $toolGroups[array_key_last($toolGroups)]['links'][] = ['label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php')];
+    }
+
+    $toolGroups[] = [
+        'title' => 'Staffing',
+        'links' => [
             ['label' => 'Staffing Sheet', 'href' => url('departments/election/staffing-sheet.php')],
             ['label' => 'Precinct Contact Sheet', 'href' => url('departments/election/precinct-contact-sheet.php')],
             ['label' => 'Reuse past workers', 'href' => url('departments/election/reuse-workers.php')],
         ],
     ];
 
+    $toolGroups[] = [
+        'title' => 'Training',
+        'links' => [
+            ['label' => 'Training Signups', 'href' => url('departments/election/training-signups.php')],
+        ],
+    ];
+}
+
+if ($isManager) {
+    $toolGroups[array_key_last($toolGroups)]['links'][] = ['label' => 'New Class', 'href' => url('departments/election/class-edit.php')];
+    $toolGroups[array_key_last($toolGroups)]['links'][] = ['label' => 'Email Template', 'href' => url('departments/election/email-template.php')];
+}
+
+if ($isManager || $isChief) {
     $toolGroups[] = [
         'title' => 'Election Day',
         'links' => [
@@ -52,37 +87,11 @@ if ($isManager || $isChief) {
             ['label' => 'Chief Judge Debrief', 'href' => url('departments/election/chief-judge-debrief.php')],
         ],
     ];
-    if ($isManager) {
-        $toolGroups[array_key_last($toolGroups)]['links'][] = ['label' => 'Chief Feedback', 'href' => url('departments/election/chief-feedback.php')];
-    }
-}
-
-if ($isManager || $isChief) {
-    $toolGroups[] = [
-        'title' => 'Training Review',
-        'links' => [
-            ['label' => 'Training Signups', 'href' => url('departments/election/training-signups.php')],
-        ],
-    ];
 }
 
 if ($isManager) {
     $toolGroups[] = [
-        'title' => 'Worker Tools',
-        'links' => [
-            ['label' => 'Bulk Email', 'href' => url('departments/election/bulk-email.php')],
-            ['label' => 'Merge contacts', 'href' => url('departments/election/merge-workers.php')],
-        ],
-    ];
-    $toolGroups[] = [
-        'title' => 'Training Setup',
-        'links' => [
-            ['label' => 'New class', 'href' => url('departments/election/class-edit.php')],
-            ['label' => 'Email Template', 'href' => url('departments/election/email-template.php')],
-        ],
-    ];
-    $toolGroups[] = [
-        'title' => 'Admin',
+        'title' => 'Setup',
         'links' => [
             ['label' => 'Setup Home', 'href' => url('departments/election/setup.php')],
             ['label' => 'Election Periods', 'href' => url('departments/election/election-periods.php')],
