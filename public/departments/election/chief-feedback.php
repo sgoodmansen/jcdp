@@ -110,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $precinctId = (int) ($_POST['precinct_id'] ?? 0);
         $category = (string) ($_POST['category'] ?? 'other');
         $messageText = trim($_POST['message_text'] ?? '');
+        $markAsNew = isset($_POST['mark_as_new']);
 
         if (!array_key_exists($category, $categories)) {
             $category = 'other';
@@ -125,7 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'UPDATE election_chief_feedback
                  SET category = :category,
                      message_text = :message_text,
-                     updated_by_user_id = :updated_by_user_id
+                     updated_by_user_id = :updated_by_user_id,
+                     acknowledged_at = CASE
+                         WHEN :mark_as_new = 1 THEN NULL
+                         ELSE acknowledged_at
+                     END
                  WHERE id = :id
                    AND election_period_id = :election_period_id'
             );
@@ -133,14 +138,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'category' => $category,
                 'message_text' => $messageText,
                 'updated_by_user_id' => $portalUser['id'] ?? null,
+                'mark_as_new' => $markAsNew ? 1 : 0,
                 'id' => $feedbackId,
                 'election_period_id' => $selectedPeriodId,
             ]);
             audit_event('updated', 'election_chief_feedback', (string) $feedbackId, [
                 'election_period_id' => $selectedPeriodId,
                 'precinct_id' => $precinctId,
+                'marked_as_new' => $markAsNew ? 1 : 0,
             ]);
-            flash('success', 'Chief Judge feedback updated.');
+            flash('success', $markAsNew ? 'Chief Judge feedback updated and marked new.' : 'Chief Judge feedback updated.');
         } else {
             $chiefAssignment = election_feedback_chief_assignment($selectedPeriodId, $precinctId);
             if (!$chiefAssignment) {
@@ -387,6 +394,10 @@ page_header('Chief Feedback');
                     <label class="span-2">
                         Message
                         <textarea name="message_text" required><?= e($editFeedback['message_text']) ?></textarea>
+                    </label>
+                    <label class="check-label span-2">
+                        <input type="checkbox" name="mark_as_new">
+                        Mark as new for Chief Judge
                     </label>
                     <p class="muted span-2">Chief Judges cannot reply here. Ask them to call the Election Supervisor if they would like to discuss this feedback.</p>
                     <div class="actions span-2">
