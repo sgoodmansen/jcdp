@@ -113,19 +113,6 @@ if ($isManager) {
     ];
 }
 
-if ($isManager || $isChief) {
-    $guideLinks = [];
-    if ($isManager) {
-        $guideLinks[] = ['label' => 'Supervisor How To', 'href' => url('departments/election/how-to-supervisor.php')];
-    }
-    $guideLinks[] = ['label' => 'Chief Judge How To', 'href' => url('departments/election/how-to-chief-judge.php')];
-
-    $toolGroups[] = [
-        'title' => 'Guides',
-        'links' => $guideLinks,
-    ];
-}
-
 if (!$primaryActions) {
     $primaryActions = [
         ['label' => 'Training classes', 'href' => url('departments/election/classes.php'), 'primary' => true],
@@ -228,6 +215,35 @@ page_header('Election Readiness');
                         <p>Upcoming classes</p>
                     </article>
                 </div>
+            </div>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($isManager || $isChief): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <div class="section-heading-row">
+                <div>
+                    <h1>Help / Guides</h1>
+                    <p class="muted">Use these guides when you need a quick reminder on common Election Readiness workflows.</p>
+                </div>
+            </div>
+            <div class="grid setup-link-grid">
+                <?php if ($isManager): ?>
+                    <article class="card setup-link-card">
+                        <h2>Supervisor How To</h2>
+                        <p>Steps for staffing precincts, managing training, reviewing payroll, and preparing for election day.</p>
+                        <div class="actions">
+                            <a class="button secondary" href="<?= e(url('departments/election/how-to-supervisor.php')) ?>">Open</a>
+                        </div>
+                    </article>
+                <?php endif; ?>
+                <article class="card setup-link-card">
+                    <h2>Chief Judge How To</h2>
+                    <p>Steps for reviewing assignments, signing workers up for training, completing checklists, and viewing feedback.</p>
+                    <div class="actions">
+                        <a class="button secondary" href="<?= e(url('departments/election/how-to-chief-judge.php')) ?>">Open</a>
+                    </div>
+                </article>
             </div>
         </section>
     <?php endif; ?>

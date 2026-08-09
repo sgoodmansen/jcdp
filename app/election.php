@@ -574,19 +574,6 @@ function election_navigation(string $activeKey = ''): void
         ];
     }
 
-    if ($isManager || $canManageWorkers) {
-        $groups['guides'] = [
-            'label' => 'Guides',
-            'items' => [],
-        ];
-
-        if ($isManager) {
-            $groups['guides']['items'][] = ['key' => 'how-to-supervisor', 'label' => 'Supervisor How To', 'href' => url('departments/election/how-to-supervisor.php')];
-        }
-
-        $groups['guides']['items'][] = ['key' => 'how-to-chief-judge', 'label' => 'Chief Judge How To', 'href' => url('departments/election/how-to-chief-judge.php')];
-    }
-
     if ($worker) {
         $groups['account'] = [
             'label' => 'My Account',
@@ -604,7 +591,7 @@ function election_navigation(string $activeKey = ''): void
         $groups['account']['items'][] = ['key' => 'sign-out', 'label' => 'Sign Out', 'href' => url('departments/election/sign-out.php')];
     }
 
-    $groupOrder = ['dashboard', 'workers', 'staffing', 'training', 'election-day', 'payroll', 'setup-tools', 'guides', 'account'];
+    $groupOrder = ['dashboard', 'workers', 'staffing', 'training', 'election-day', 'payroll', 'setup-tools', 'account'];
     $orderedGroups = [];
     foreach ($groupOrder as $groupKey) {
         if (isset($groups[$groupKey])) {
