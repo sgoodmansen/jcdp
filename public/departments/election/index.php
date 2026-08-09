@@ -160,6 +160,19 @@ if ($worker) {
     $registeredClasses = $statement->fetchAll();
 }
 
+$payEstimateRow = null;
+$payEstimateLocked = false;
+if ($worker && $assignment && election_payroll_tables_exist()) {
+    $payCalculation = election_payroll_calculation((int) $assignment['election_period_id']);
+    $payEstimateLocked = (int) ($payCalculation['settings']['is_locked'] ?? 0) === 1;
+    foreach ($payCalculation['summary_rows'] as $row) {
+        if ((int) $row['worker_id'] === (int) $worker['id']) {
+            $payEstimateRow = $row;
+            break;
+        }
+    }
+}
+
 $unreadFeedback = [];
 if ($isActualChief && election_day_checklist_tables_exist()) {
     $statement = db()->prepare(
@@ -246,6 +259,32 @@ page_header('Election Readiness');
                         </form>
                     </article>
                 <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($worker && $payEstimateRow): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <div class="section-heading-row">
+                <div>
+                    <h1>My Pay Estimate</h1>
+                    <p class="muted"><?= $payEstimateLocked ? 'Payroll has been finalized for this election period.' : 'This estimate may change until payroll is finalized.' ?></p>
+                </div>
+                <a class="button secondary" href="<?= e(url('departments/election/my-pay.php')) ?>">View details</a>
+            </div>
+            <div class="grid dashboard-stat-grid election-home-stat-grid">
+                <article class="card dashboard-stat-card">
+                    <h3><?= e(election_payroll_money((float) $payEstimateRow['election_day_pay'])) ?></h3>
+                    <p>Election day</p>
+                </article>
+                <article class="card dashboard-stat-card">
+                    <h3><?= e(election_payroll_money((float) $payEstimateRow['training_pay'])) ?></h3>
+                    <p>Training</p>
+                </article>
+                <article class="card dashboard-stat-card">
+                    <h3><?= e(election_payroll_money((float) $payEstimateRow['total_pay'])) ?></h3>
+                    <p>Estimated total</p>
+                </article>
             </div>
         </section>
     <?php endif; ?>

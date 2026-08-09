@@ -593,6 +593,7 @@ function election_navigation(string $activeKey = ''): void
             'items' => [
                 ['key' => 'select-assignment', 'label' => 'Switch Assignment', 'href' => url('departments/election/select-assignment.php')],
                 ['key' => 'my-information', 'label' => 'My Information', 'href' => url('departments/election/worker-edit.php?id=' . (int) $worker['id'])],
+                ['key' => 'my-pay', 'label' => 'My Pay Estimate', 'href' => url('departments/election/my-pay.php')],
                 ['key' => 'reminders', 'label' => 'Reminder Preferences', 'href' => url('departments/election/reminders.php')],
             ],
         ];

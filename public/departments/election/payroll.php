@@ -166,7 +166,7 @@ page_header('Payroll Summary');
 
     <section class="panel" style="margin-top: 18px;">
         <h1>Worker Totals</h1>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table payroll-summary-table">
             <thead>
                 <tr>
                     <th>Worker</th>
