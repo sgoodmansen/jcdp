@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_election_access();
 election_require_assignment_setup();
+election_require_payroll_setup();
 
 $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
 $worker = current_election_worker();
@@ -58,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     }
 
     $attendedAssignmentIds = array_map('intval', (array) ($_POST['attended_assignment_ids'] ?? []));
+    $driverAssignmentIds = array_map('intval', (array) ($_POST['driver_assignment_ids'] ?? []));
     $registeredStatement = db()->prepare('SELECT assignment_id FROM election_training_registrations WHERE class_id = :class_id');
     $registeredStatement->execute(['class_id' => $id]);
     $registeredAssignmentIds = array_map('intval', array_column($registeredStatement->fetchAll(), 'assignment_id'));
@@ -65,16 +67,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_
     $updateStatement = db()->prepare(
         'UPDATE election_training_registrations
          SET attended = :attended,
-             attended_at = CASE WHEN :attended_again = 1 THEN COALESCE(attended_at, NOW()) ELSE NULL END
+             attended_at = CASE WHEN :attended_again = 1 THEN COALESCE(attended_at, NOW()) ELSE NULL END,
+             is_driver = :is_driver
          WHERE class_id = :class_id
            AND assignment_id = :assignment_id'
     );
 
     foreach ($registeredAssignmentIds as $registeredAssignmentId) {
         $attended = in_array($registeredAssignmentId, $attendedAssignmentIds, true) ? 1 : 0;
+        $isDriver = $attended === 1 && in_array($registeredAssignmentId, $driverAssignmentIds, true) ? 1 : 0;
         $updateStatement->execute([
             'attended' => $attended,
             'attended_again' => $attended,
+            'is_driver' => $isDriver,
             'class_id' => $id,
             'assignment_id' => $registeredAssignmentId,
         ]);
@@ -314,6 +319,7 @@ page_header('Training Class');
                 <thead>
                     <tr>
                         <th>Attended</th>
+                        <th>Driver</th>
                         <th>Name</th>
                         <th>Precinct</th>
                         <th>Position</th>
@@ -329,6 +335,13 @@ page_header('Training Class');
                                     <input type="checkbox" name="attended_assignment_ids[]" value="<?= e((string) $registration['assignment_id']) ?>" <?= (int) $registration['attended'] === 1 ? 'checked' : '' ?>>
                                 <?php else: ?>
                                     <?= (int) $registration['attended'] === 1 ? 'Yes' : 'No' ?>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="Driver">
+                                <?php if ($canManageClassGlobally): ?>
+                                    <input type="checkbox" name="driver_assignment_ids[]" value="<?= e((string) $registration['assignment_id']) ?>" <?= (int) ($registration['is_driver'] ?? 0) === 1 ? 'checked' : '' ?>>
+                                <?php else: ?>
+                                    <?= (int) ($registration['is_driver'] ?? 0) === 1 ? 'Driver' : 'Passenger' ?>
                                 <?php endif; ?>
                             </td>
                             <td data-label="Name"><?= e(election_person_name($registration)) ?></td>
@@ -365,7 +378,7 @@ page_header('Training Class');
                         </tr>
                     <?php endforeach; ?>
                     <?php if (!$registrations): ?>
-                        <tr><td colspan="6">No workers are signed up yet.</td></tr>
+                        <tr><td colspan="7">No workers are signed up yet.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>

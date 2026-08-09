@@ -318,6 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             registered_by_assignment_id INT UNSIGNED NULL,
             attended TINYINT(1) NOT NULL DEFAULT 0,
             attended_at TIMESTAMP NULL,
+            is_driver TINYINT(1) NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (class_id, worker_id),
@@ -326,6 +327,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             CONSTRAINT fk_election_registrations_assignment FOREIGN KEY (assignment_id) REFERENCES election_worker_assignments(id) ON DELETE CASCADE,
             CONSTRAINT fk_election_registrations_user FOREIGN KEY (registered_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
             CONSTRAINT fk_election_registrations_assignment_by FOREIGN KEY (registered_by_assignment_id) REFERENCES election_worker_assignments(id) ON DELETE SET NULL
+        )",
+
+        "CREATE TABLE IF NOT EXISTS election_payroll_settings (
+            election_period_id INT UNSIGNED NOT NULL PRIMARY KEY,
+            training_rate DECIMAL(8,2) NOT NULL DEFAULT 20.00,
+            training_cap DECIMAL(8,2) NOT NULL DEFAULT 60.00,
+            mileage_rate DECIMAL(8,3) NOT NULL DEFAULT 0.000,
+            courthouse_address VARCHAR(190) NOT NULL DEFAULT '210 Courthouse Way, Rigby ID, 83442',
+            is_locked TINYINT(1) NOT NULL DEFAULT 0,
+            locked_at TIMESTAMP NULL,
+            locked_by_user_id INT UNSIGNED NULL,
+            updated_by_user_id INT UNSIGNED NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_election_payroll_settings_period FOREIGN KEY (election_period_id) REFERENCES election_periods(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_payroll_settings_locked_by FOREIGN KEY (locked_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+            CONSTRAINT fk_election_payroll_settings_updated_by FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+        )",
+
+        "CREATE TABLE IF NOT EXISTS election_payroll_position_rates (
+            election_period_id INT UNSIGNED NOT NULL,
+            position_id INT UNSIGNED NOT NULL,
+            full_day_rate DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+            updated_by_user_id INT UNSIGNED NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (election_period_id, position_id),
+            CONSTRAINT fk_election_payroll_rates_period FOREIGN KEY (election_period_id) REFERENCES election_periods(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_payroll_rates_position FOREIGN KEY (position_id) REFERENCES election_positions(id) ON DELETE CASCADE,
+            CONSTRAINT fk_election_payroll_rates_updated_by FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+        )",
+
+        "CREATE TABLE IF NOT EXISTS election_payroll_work_records (
+            assignment_id INT UNSIGNED NOT NULL PRIMARY KEY,
+            election_period_id INT UNSIGNED NOT NULL,
+            worker_id INT UNSIGNED NOT NULL,
+            work_status VARCHAR(20) NOT NULL DEFAULT 'not_set',
+            pay_as_chief_judge TINYINT(1) NOT NULL DEFAULT 0,
+            notes TEXT NULL,
+            updated_by_user_id INT UNSIGNED NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_election_payroll_work_period_worker (election_period_id, worker_id),
+            CONSTRAINT fk_election_payroll_work_assignment FOREIGN KEY (assignment_id) REFERENCES election_worker_assignments(id) ON DELETE CASCADE,
+            CONSTRAINT fk_election_payroll_work_period FOREIGN KEY (election_period_id) REFERENCES election_periods(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_payroll_work_worker FOREIGN KEY (worker_id) REFERENCES election_workers(id) ON DELETE CASCADE,
+            CONSTRAINT fk_election_payroll_work_updated_by FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+        )",
+
+        "CREATE TABLE IF NOT EXISTS election_payroll_worker_mileage (
+            election_period_id INT UNSIGNED NOT NULL,
+            worker_id INT UNSIGNED NOT NULL,
+            training_miles_round_trip DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+            notes TEXT NULL,
+            updated_by_user_id INT UNSIGNED NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (election_period_id, worker_id),
+            CONSTRAINT fk_election_payroll_mileage_period FOREIGN KEY (election_period_id) REFERENCES election_periods(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_election_payroll_mileage_worker FOREIGN KEY (worker_id) REFERENCES election_workers(id) ON DELETE CASCADE,
+            CONSTRAINT fk_election_payroll_mileage_updated_by FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE SET NULL
         )",
 
         "INSERT INTO election_positions (name, sort_order, is_chief_judge, is_assistant_chief_judge)
@@ -448,6 +506,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array('registered_by_assignment_id', $registrationColumnNames, true)) {
         db()->exec("ALTER TABLE election_training_registrations ADD COLUMN registered_by_assignment_id INT UNSIGNED NULL AFTER registered_by_user_id");
     }
+    if (!in_array('is_driver', $registrationColumnNames, true)) {
+        db()->exec("ALTER TABLE election_training_registrations ADD COLUMN is_driver TINYINT(1) NOT NULL DEFAULT 0 AFTER attended_at");
+    }
 
     $assignmentColumns = db()->query("SHOW COLUMNS FROM election_worker_assignments")->fetchAll();
     $assignmentColumnNames = array_column($assignmentColumns, 'Field');
@@ -544,6 +605,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          CROSS JOIN election_positions
          WHERE election_positions.is_chief_judge = 1
             OR election_positions.is_assistant_chief_judge = 1"
+    );
+
+    db()->exec(
+        "INSERT IGNORE INTO election_payroll_settings (
+            election_period_id, training_rate, training_cap, mileage_rate, courthouse_address
+         )
+         SELECT id, 20.00, 60.00, 0.000, '210 Courthouse Way, Rigby ID, 83442'
+         FROM election_periods"
+    );
+
+    db()->exec(
+        "INSERT IGNORE INTO election_payroll_position_rates (election_period_id, position_id, full_day_rate)
+         SELECT election_periods.id,
+                election_positions.id,
+                CASE
+                    WHEN election_positions.name = 'Chief Judge' THEN 200.00
+                    WHEN election_positions.name IN ('E Poll Book Clerk', 'DS 300 Specialist') THEN 170.00
+                    WHEN election_positions.name IN ('Greeter / Registrar', 'Issuing Clerk', 'Receiving Clerk') THEN 150.00
+                    ELSE 0.00
+                END
+         FROM election_periods
+         CROSS JOIN election_positions"
     );
 
     audit_event('setup', 'election_module', 'schema');

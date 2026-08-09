@@ -9,6 +9,7 @@ const ELECTION_WORKER_STATUS_UNAVAILABLE = 'unavailable';
 const ELECTION_WORKER_STATUS_INACTIVE = 'inactive';
 const ELECTION_DEFAULT_ACCESS_EMAIL_SUBJECT = 'Election training access for [Election Name]';
 const ELECTION_DEFAULT_ACCESS_EMAIL_BODY = "Hello [Worker Name],\n\nYou have been added as an election worker for [Election Name].\n\nUse this access link to review your information and sign up for an available training class:\n\n[Access Link]\n\nThis link is intended for you only. It remains active through the election period unless a supervisor sends a replacement link.\n\nThank you.";
+const ELECTION_PAYROLL_COURTHOUSE_ADDRESS = '210 Courthouse Way, Rigby ID, 83442';
 
 function election_worker_position_flags(?int $positionId): array
 {
@@ -496,6 +497,7 @@ function election_navigation(string $activeKey = ''): void
             'items' => [
                 ['key' => 'needs-attention', 'label' => 'Needs Attention', 'href' => url('departments/election/needs-attention.php')],
                 ['key' => 'staffing-progress', 'label' => 'Staffing Progress', 'href' => url('departments/election/staffing-progress.php')],
+                ['key' => 'payroll', 'label' => 'Payroll', 'href' => url('departments/election/payroll.php')],
             ],
         ];
         if ($isManager) {
@@ -558,6 +560,7 @@ function election_navigation(string $activeKey = ''): void
                 ['key' => 'election-periods', 'label' => 'Election Periods', 'href' => url('departments/election/election-periods.php')],
                 ['key' => 'precincts', 'label' => 'Precincts', 'href' => url('departments/election/precincts.php')],
                 ['key' => 'positions', 'label' => 'Positions', 'href' => url('departments/election/positions.php')],
+                ['key' => 'payroll-setup', 'label' => 'Payroll Setup', 'href' => url('departments/election/payroll-setup.php')],
                 ['key' => 'election-day-setup', 'label' => 'Election Day Setup', 'href' => url('departments/election/election-day-setup.php')],
                 ['key' => 'debrief-setup', 'label' => 'Debrief Questions', 'href' => url('departments/election/debrief-setup.php')],
             ],
@@ -1101,6 +1104,327 @@ function election_worker_scope_sql(string $workerAlias = 'election_workers'): ar
     }
 
     return [" AND {$workerAlias}.worker_id = :scope_worker_id", ['scope_worker_id' => (int) $assignment['worker_id']]];
+}
+
+function election_payroll_tables_exist(): bool
+{
+    static $exists = null;
+
+    if ($exists !== null) {
+        return $exists;
+    }
+
+    try {
+        foreach ([
+            'election_payroll_settings',
+            'election_payroll_position_rates',
+            'election_payroll_work_records',
+            'election_payroll_worker_mileage',
+        ] as $tableName) {
+            $statement = db()->prepare('SHOW TABLES LIKE :table_name');
+            $statement->execute(['table_name' => $tableName]);
+            if (!$statement->fetchColumn()) {
+                $exists = false;
+                return $exists;
+            }
+        }
+
+        $statement = db()->query("SHOW COLUMNS FROM election_training_registrations WHERE Field = 'is_driver'");
+        $exists = (bool) $statement->fetchColumn();
+    } catch (Throwable $exception) {
+        $exists = false;
+    }
+
+    return $exists;
+}
+
+function election_require_payroll_setup(): void
+{
+    if (election_payroll_tables_exist()) {
+        return;
+    }
+
+    http_response_code(503);
+    page_header('Election setup required');
+    ?>
+    <main class="shell">
+        <section class="panel">
+            <h1>Election setup required</h1>
+            <p>The Election Payroll tables need to be added before this page can be used.</p>
+            <?php if (is_system_admin()): ?>
+                <div class="actions">
+                    <a class="button" href="<?= e(url('admin/setup-election-module.php')) ?>">Run Election setup</a>
+                </div>
+            <?php else: ?>
+                <p>Ask an IT system admin to run the Election module setup page.</p>
+            <?php endif; ?>
+        </section>
+    </main>
+    <?php
+    page_footer();
+    exit;
+}
+
+function election_payroll_default_position_rate(string $positionName): float
+{
+    $normalized = strtolower(trim($positionName));
+
+    return match ($normalized) {
+        'chief judge' => 200.00,
+        'e poll book clerk', 'ds 300 specialist' => 170.00,
+        'greeter / registrar', 'issuing clerk', 'receiving clerk' => 150.00,
+        default => 0.00,
+    };
+}
+
+function election_payroll_money(float $amount): string
+{
+    return '$' . number_format($amount, 2);
+}
+
+function election_payroll_ensure_period_defaults(int $periodId): void
+{
+    if ($periodId <= 0 || !election_payroll_tables_exist()) {
+        return;
+    }
+
+    $statement = db()->prepare(
+        'INSERT IGNORE INTO election_payroll_settings (
+            election_period_id, training_rate, training_cap, mileage_rate, courthouse_address
+         ) VALUES (:election_period_id, 20.00, 60.00, 0.000, :courthouse_address)'
+    );
+    $statement->execute([
+        'election_period_id' => $periodId,
+        'courthouse_address' => ELECTION_PAYROLL_COURTHOUSE_ADDRESS,
+    ]);
+
+    $insertRate = db()->prepare(
+        'INSERT IGNORE INTO election_payroll_position_rates (election_period_id, position_id, full_day_rate)
+         VALUES (:election_period_id, :position_id, :full_day_rate)'
+    );
+    foreach (election_positions(false) as $position) {
+        $insertRate->execute([
+            'election_period_id' => $periodId,
+            'position_id' => (int) $position['id'],
+            'full_day_rate' => election_payroll_default_position_rate((string) $position['name']),
+        ]);
+    }
+}
+
+function election_payroll_settings(int $periodId): array
+{
+    election_payroll_ensure_period_defaults($periodId);
+
+    $statement = db()->prepare('SELECT * FROM election_payroll_settings WHERE election_period_id = :election_period_id');
+    $statement->execute(['election_period_id' => $periodId]);
+    $settings = $statement->fetch();
+
+    return $settings ?: [
+        'election_period_id' => $periodId,
+        'training_rate' => '20.00',
+        'training_cap' => '60.00',
+        'mileage_rate' => '0.000',
+        'courthouse_address' => ELECTION_PAYROLL_COURTHOUSE_ADDRESS,
+        'is_locked' => 0,
+        'locked_at' => null,
+    ];
+}
+
+function election_payroll_period_is_locked(int $periodId): bool
+{
+    $settings = election_payroll_settings($periodId);
+    return (int) ($settings['is_locked'] ?? 0) === 1;
+}
+
+function election_payroll_calculation(int $periodId): array
+{
+    election_payroll_ensure_period_defaults($periodId);
+    $settings = election_payroll_settings($periodId);
+
+    $chiefRateStatement = db()->prepare(
+        'SELECT election_payroll_position_rates.full_day_rate
+         FROM election_payroll_position_rates
+         INNER JOIN election_positions ON election_positions.id = election_payroll_position_rates.position_id
+         WHERE election_payroll_position_rates.election_period_id = :election_period_id
+           AND election_positions.is_chief_judge = 1
+         ORDER BY election_positions.sort_order
+         LIMIT 1'
+    );
+    $chiefRateStatement->execute(['election_period_id' => $periodId]);
+    $chiefRate = (float) ($chiefRateStatement->fetchColumn() ?: 200.00);
+
+    $assignmentStatement = db()->prepare(
+        'SELECT election_worker_assignments.id AS assignment_id,
+                election_worker_assignments.worker_id,
+                election_worker_assignments.precinct_id,
+                election_workers.first_name,
+                election_workers.last_name,
+                election_workers.email,
+                election_workers.phone,
+                election_workers.mailing_address,
+                election_workers.city,
+                election_workers.state,
+                election_workers.zip_code,
+                election_positions.id AS position_id,
+                election_positions.name AS position_name,
+                election_positions.sort_order,
+                election_positions.is_chief_judge,
+                CASE WHEN election_precinct_roles.assignment_id IS NULL THEN 0 ELSE 1 END AS is_assistant_chief,
+                election_precincts.name AS precinct_name,
+                COALESCE(election_payroll_position_rates.full_day_rate, 0) AS full_day_rate,
+                COALESCE(election_payroll_work_records.work_status, "not_set") AS work_status,
+                COALESCE(election_payroll_work_records.pay_as_chief_judge, 0) AS pay_as_chief_judge,
+                COALESCE(election_payroll_work_records.notes, "") AS payroll_notes
+         FROM election_worker_assignments
+         INNER JOIN election_workers ON election_workers.id = election_worker_assignments.worker_id
+         INNER JOIN election_positions ON election_positions.id = election_worker_assignments.position_id
+         INNER JOIN election_precincts ON election_precincts.id = election_worker_assignments.precinct_id
+         LEFT JOIN election_precinct_roles ON election_precinct_roles.assignment_id = election_worker_assignments.id
+            AND election_precinct_roles.role_key = :assistant_role_key
+         LEFT JOIN election_payroll_position_rates ON election_payroll_position_rates.election_period_id = election_worker_assignments.election_period_id
+            AND election_payroll_position_rates.position_id = election_worker_assignments.position_id
+         LEFT JOIN election_payroll_work_records ON election_payroll_work_records.assignment_id = election_worker_assignments.id
+         WHERE election_worker_assignments.election_period_id = :election_period_id
+         ORDER BY election_precincts.name, election_positions.sort_order, election_workers.last_name, election_workers.first_name'
+    );
+    $assignmentStatement->execute([
+        'election_period_id' => $periodId,
+        'assistant_role_key' => ELECTION_ROLE_ASSISTANT_CHIEF_JUDGE,
+    ]);
+    $assignments = $assignmentStatement->fetchAll();
+
+    $trainingStatement = db()->prepare(
+        'SELECT election_training_registrations.worker_id,
+                COUNT(DISTINCT CASE WHEN election_training_registrations.attended = 1 THEN election_training_registrations.class_id END) AS completed_count,
+                COUNT(DISTINCT CASE WHEN election_training_registrations.attended = 1 AND election_training_registrations.is_driver = 1 THEN election_training_registrations.class_id END) AS driver_count
+         FROM election_training_registrations
+         INNER JOIN election_training_classes ON election_training_classes.id = election_training_registrations.class_id
+         WHERE election_training_classes.election_period_id = :election_period_id
+         GROUP BY election_training_registrations.worker_id'
+    );
+    $trainingStatement->execute(['election_period_id' => $periodId]);
+    $trainingByWorker = [];
+    foreach ($trainingStatement->fetchAll() as $row) {
+        $trainingByWorker[(int) $row['worker_id']] = $row;
+    }
+
+    $mileageStatement = db()->prepare(
+        'SELECT * FROM election_payroll_worker_mileage WHERE election_period_id = :election_period_id'
+    );
+    $mileageStatement->execute(['election_period_id' => $periodId]);
+    $mileageByWorker = [];
+    foreach ($mileageStatement->fetchAll() as $row) {
+        $mileageByWorker[(int) $row['worker_id']] = $row;
+    }
+
+    $trainingOnlyStatement = db()->prepare(
+        'SELECT DISTINCT election_workers.*
+         FROM election_training_registrations
+         INNER JOIN election_training_classes ON election_training_classes.id = election_training_registrations.class_id
+         INNER JOIN election_workers ON election_workers.id = election_training_registrations.worker_id
+         WHERE election_training_classes.election_period_id = :election_period_id
+           AND election_training_registrations.attended = 1
+           AND NOT EXISTS (
+               SELECT 1
+               FROM election_worker_assignments
+               WHERE election_worker_assignments.worker_id = election_workers.id
+                 AND election_worker_assignments.election_period_id = :election_period_id_for_assignment
+           )
+         ORDER BY election_workers.last_name, election_workers.first_name'
+    );
+    $trainingOnlyStatement->execute([
+        'election_period_id' => $periodId,
+        'election_period_id_for_assignment' => $periodId,
+    ]);
+    $trainingOnlyWorkers = $trainingOnlyStatement->fetchAll();
+
+    $summary = [];
+    $assignmentRows = [];
+    foreach ($assignments as $assignment) {
+        $workerId = (int) $assignment['worker_id'];
+        $status = (string) $assignment['work_status'];
+        $rate = (int) $assignment['pay_as_chief_judge'] === 1 ? $chiefRate : (float) $assignment['full_day_rate'];
+        $dayPay = match ($status) {
+            'full_day' => $rate,
+            'half_day' => $rate / 2,
+            default => 0.00,
+        };
+
+        $assignment['calculated_day_pay'] = $dayPay;
+        $assignment['calculated_rate'] = $rate;
+        $assignmentRows[] = $assignment;
+
+        if (!isset($summary[$workerId])) {
+            $summary[$workerId] = [
+                'worker_id' => $workerId,
+                'first_name' => $assignment['first_name'],
+                'last_name' => $assignment['last_name'],
+                'email' => $assignment['email'],
+                'phone' => $assignment['phone'],
+                'mailing_address' => $assignment['mailing_address'],
+                'city' => $assignment['city'],
+                'state' => $assignment['state'],
+                'zip_code' => $assignment['zip_code'],
+                'positions' => [],
+                'precincts' => [],
+                'election_day_pay' => 0.00,
+            ];
+        }
+        $summary[$workerId]['positions'][] = ((int) $assignment['pay_as_chief_judge'] === 1 ? 'Chief Judge' : $assignment['position_name']);
+        $summary[$workerId]['precincts'][] = $assignment['precinct_name'];
+        $summary[$workerId]['election_day_pay'] += $dayPay;
+    }
+
+    foreach ($trainingOnlyWorkers as $worker) {
+        $workerId = (int) $worker['id'];
+        if (!isset($summary[$workerId])) {
+            $summary[$workerId] = [
+                'worker_id' => $workerId,
+                'first_name' => $worker['first_name'],
+                'last_name' => $worker['last_name'],
+                'email' => $worker['email'],
+                'phone' => $worker['phone'],
+                'mailing_address' => $worker['mailing_address'],
+                'city' => $worker['city'],
+                'state' => $worker['state'],
+                'zip_code' => $worker['zip_code'],
+                'positions' => ['Training only'],
+                'precincts' => [],
+                'election_day_pay' => 0.00,
+            ];
+        }
+    }
+
+    $trainingRate = (float) $settings['training_rate'];
+    $trainingCap = (float) $settings['training_cap'];
+    $mileageRate = (float) $settings['mileage_rate'];
+    foreach ($summary as $workerId => &$row) {
+        $training = $trainingByWorker[$workerId] ?? ['completed_count' => 0, 'driver_count' => 0];
+        $mileage = $mileageByWorker[$workerId] ?? ['training_miles_round_trip' => 0, 'notes' => ''];
+        $completedCount = (int) $training['completed_count'];
+        $trainingPay = min($completedCount * $trainingRate, $trainingCap);
+        $mileagePay = (float) $mileage['training_miles_round_trip'] * $mileageRate;
+
+        $row['positions'] = implode(', ', array_values(array_unique(array_filter($row['positions']))));
+        $row['precincts'] = implode(', ', array_values(array_unique(array_filter($row['precincts']))));
+        $row['training_completed_count'] = $completedCount;
+        $row['training_driver_count'] = (int) $training['driver_count'];
+        $row['training_pay'] = $trainingPay;
+        $row['training_miles_round_trip'] = (float) $mileage['training_miles_round_trip'];
+        $row['mileage_notes'] = (string) ($mileage['notes'] ?? '');
+        $row['mileage_pay'] = $mileagePay;
+        $row['total_pay'] = (float) $row['election_day_pay'] + $trainingPay + $mileagePay;
+    }
+    unset($row);
+
+    uasort($summary, fn($a, $b) => [$a['last_name'], $a['first_name']] <=> [$b['last_name'], $b['first_name']]);
+
+    return [
+        'settings' => $settings,
+        'chief_rate' => $chiefRate,
+        'assignment_rows' => $assignmentRows,
+        'summary_rows' => array_values($summary),
+    ];
 }
 
 function election_close_period(int $periodId): int

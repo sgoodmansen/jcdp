@@ -740,6 +740,7 @@ CREATE TABLE election_training_registrations (
     registered_by_assignment_id INT UNSIGNED NULL,
     attended TINYINT(1) NOT NULL DEFAULT 0,
     attended_at TIMESTAMP NULL,
+    is_driver TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (class_id, worker_id),
@@ -757,6 +758,89 @@ CREATE TABLE election_training_registrations (
         ON DELETE SET NULL,
     CONSTRAINT fk_election_registrations_assignment_by
         FOREIGN KEY (registered_by_assignment_id) REFERENCES election_worker_assignments(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_payroll_settings (
+    election_period_id INT UNSIGNED NOT NULL PRIMARY KEY,
+    training_rate DECIMAL(8,2) NOT NULL DEFAULT 20.00,
+    training_cap DECIMAL(8,2) NOT NULL DEFAULT 60.00,
+    mileage_rate DECIMAL(8,3) NOT NULL DEFAULT 0.000,
+    courthouse_address VARCHAR(190) NOT NULL DEFAULT '210 Courthouse Way, Rigby ID, 83442',
+    is_locked TINYINT(1) NOT NULL DEFAULT 0,
+    locked_at TIMESTAMP NULL,
+    locked_by_user_id INT UNSIGNED NULL,
+    updated_by_user_id INT UNSIGNED NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_election_payroll_settings_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_payroll_settings_locked_by
+        FOREIGN KEY (locked_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_election_payroll_settings_updated_by
+        FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_payroll_position_rates (
+    election_period_id INT UNSIGNED NOT NULL,
+    position_id INT UNSIGNED NOT NULL,
+    full_day_rate DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+    updated_by_user_id INT UNSIGNED NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (election_period_id, position_id),
+    CONSTRAINT fk_election_payroll_rates_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_payroll_rates_position
+        FOREIGN KEY (position_id) REFERENCES election_positions(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_election_payroll_rates_updated_by
+        FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_payroll_work_records (
+    assignment_id INT UNSIGNED NOT NULL PRIMARY KEY,
+    election_period_id INT UNSIGNED NOT NULL,
+    worker_id INT UNSIGNED NOT NULL,
+    work_status VARCHAR(20) NOT NULL DEFAULT 'not_set',
+    pay_as_chief_judge TINYINT(1) NOT NULL DEFAULT 0,
+    notes TEXT NULL,
+    updated_by_user_id INT UNSIGNED NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_election_payroll_work_period_worker (election_period_id, worker_id),
+    CONSTRAINT fk_election_payroll_work_assignment
+        FOREIGN KEY (assignment_id) REFERENCES election_worker_assignments(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_election_payroll_work_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_payroll_work_worker
+        FOREIGN KEY (worker_id) REFERENCES election_workers(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_election_payroll_work_updated_by
+        FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE election_payroll_worker_mileage (
+    election_period_id INT UNSIGNED NOT NULL,
+    worker_id INT UNSIGNED NOT NULL,
+    training_miles_round_trip DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+    notes TEXT NULL,
+    updated_by_user_id INT UNSIGNED NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (election_period_id, worker_id),
+    CONSTRAINT fk_election_payroll_mileage_period
+        FOREIGN KEY (election_period_id) REFERENCES election_periods(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_election_payroll_mileage_worker
+        FOREIGN KEY (worker_id) REFERENCES election_workers(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_election_payroll_mileage_updated_by
+        FOREIGN KEY (updated_by_user_id) REFERENCES users(id)
         ON DELETE SET NULL
 );
 
