@@ -272,6 +272,41 @@ page_header('Chief Feedback');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
+        <h1>Add Feedback</h1>
+        <form class="form compact-form" method="post">
+            <input type="hidden" name="action" value="save_feedback">
+            <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
+            <label>
+                Precinct
+                <select name="precinct_id" required>
+                    <option value="">Select precinct</option>
+                    <?php foreach ($precincts as $precinct): ?>
+                        <?php $chiefAssignment = $chiefByPrecinct[(int) $precinct['id']] ?? null; ?>
+                        <option value="<?= e((string) $precinct['id']) ?>" <?= $selectedPrecinctId === (int) $precinct['id'] ? 'selected' : '' ?> <?= !$chiefAssignment ? 'disabled' : '' ?>>
+                            <?= e($precinct['name']) ?><?= $chiefAssignment ? ' - ' . e(election_person_name($chiefAssignment)) : ' - no Chief Judge' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                Category
+                <select name="category">
+                    <?php foreach ($categories as $key => $label): ?>
+                        <option value="<?= e($key) ?>"><?= e($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="span-2">
+                Message
+                <textarea name="message_text" required placeholder="Add suggestions or notes for the Chief Judge to review before the next election."></textarea>
+            </label>
+            <div class="actions span-2">
+                <button type="submit">Save feedback</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
         <h1>Filters</h1>
         <form class="form compact-form" method="get">
             <label>
@@ -319,41 +354,6 @@ page_header('Chief Feedback');
             <div class="actions">
                 <button type="submit">View feedback</button>
                 <a class="button secondary" href="<?= e(url('departments/election/chief-feedback.php')) ?>">Clear</a>
-            </div>
-        </form>
-    </section>
-
-    <section class="panel" style="margin-top: 18px;">
-        <h1>Add Feedback</h1>
-        <form class="form compact-form" method="post">
-            <input type="hidden" name="action" value="save_feedback">
-            <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
-            <label>
-                Precinct
-                <select name="precinct_id" required>
-                    <option value="">Select precinct</option>
-                    <?php foreach ($precincts as $precinct): ?>
-                        <?php $chiefAssignment = $chiefByPrecinct[(int) $precinct['id']] ?? null; ?>
-                        <option value="<?= e((string) $precinct['id']) ?>" <?= $selectedPrecinctId === (int) $precinct['id'] ? 'selected' : '' ?> <?= !$chiefAssignment ? 'disabled' : '' ?>>
-                            <?= e($precinct['name']) ?><?= $chiefAssignment ? ' - ' . e(election_person_name($chiefAssignment)) : ' - no Chief Judge' ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <label>
-                Category
-                <select name="category" required>
-                    <?php foreach ($categories as $key => $label): ?>
-                        <option value="<?= e($key) ?>"><?= e($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <label class="span-2">
-                Message
-                <textarea name="message_text" required placeholder="Add suggestions or notes for the Chief Judge to review before the next election."></textarea>
-            </label>
-            <div class="actions span-2">
-                <button type="submit">Save feedback</button>
             </div>
         </form>
     </section>
