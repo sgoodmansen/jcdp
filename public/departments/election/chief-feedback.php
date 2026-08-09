@@ -71,6 +71,16 @@ function election_feedback_chief_assignment(int $periodId, int $precinctId): ?ar
     return $assignment ?: null;
 }
 
+function election_feedback_preview(string $message, int $limit = 140): string
+{
+    $message = trim(preg_replace('/\s+/', ' ', $message));
+    if (strlen($message) <= $limit) {
+        return $message;
+    }
+
+    return rtrim(substr($message, 0, $limit - 3)) . '...';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -194,10 +204,15 @@ $statement = db()->prepare($feedbackSql);
 $statement->execute($feedbackParams);
 $feedbackMessages = $selectedPeriodId > 0 ? $statement->fetchAll() : [];
 
+$editFeedbackId = (int) ($_GET['edit_feedback'] ?? 0);
+$editFeedback = null;
 $unreadCount = 0;
 foreach ($feedbackMessages as $feedback) {
     if (empty($feedback['acknowledged_at'])) {
         $unreadCount++;
+    }
+    if ($editFeedbackId > 0 && (int) $feedback['id'] === $editFeedbackId) {
+        $editFeedback = $feedback;
     }
 }
 
@@ -291,51 +306,71 @@ page_header('Chief Feedback');
             <span class="badge <?= $unreadCount > 0 ? 'badge-warning' : 'badge-success' ?>"><?= e((string) $unreadCount) ?> unacknowledged</span>
         </div>
 
-        <div class="precinct-note-list">
-            <?php foreach ($feedbackMessages as $feedback): ?>
-                <article class="card precinct-note-card">
-                    <div class="section-heading-row">
-                        <div>
-                            <h2><?= e($categories[$feedback['category']] ?? 'Other') ?></h2>
-                            <p class="muted">
-                                <?= e($feedback['precinct_name']) ?> - <?= e(election_person_name($feedback)) ?>
-                                - <?= e(format_display_date($feedback['created_at'])) ?> <?= e(format_display_time($feedback['created_at'])) ?>
-                            </p>
-                        </div>
-                        <?php if (!empty($feedback['acknowledged_at'])): ?>
-                            <span class="badge badge-success">Acknowledged <?= e(format_display_date($feedback['acknowledged_at'])) ?></span>
-                        <?php else: ?>
-                            <span class="badge badge-warning">Not acknowledged</span>
-                        <?php endif; ?>
+        <?php if ($editFeedback): ?>
+            <section class="card" style="margin-bottom: 18px;">
+                <h2>Edit Feedback</h2>
+                <p class="muted"><?= e($editFeedback['precinct_name']) ?> - <?= e(election_person_name($editFeedback)) ?></p>
+                <form method="post" class="form compact-form">
+                    <input type="hidden" name="action" value="save_feedback">
+                    <input type="hidden" name="feedback_id" value="<?= e((string) $editFeedback['id']) ?>">
+                    <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
+                    <input type="hidden" name="precinct_id" value="<?= e((string) $editFeedback['precinct_id']) ?>">
+                    <label>
+                        Category
+                        <select name="category">
+                            <?php foreach ($categories as $key => $label): ?>
+                                <option value="<?= e($key) ?>" <?= $editFeedback['category'] === $key ? 'selected' : '' ?>><?= e($label) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label class="span-2">
+                        Message
+                        <textarea name="message_text" required><?= e($editFeedback['message_text']) ?></textarea>
+                    </label>
+                    <p class="muted span-2">Chief Judges cannot reply here. Ask them to call the Election Supervisor if they would like to discuss this feedback.</p>
+                    <div class="actions span-2">
+                        <button type="submit" class="secondary compact-button">Save edits</button>
+                        <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $selectedPrecinctId)) ?>">Cancel</a>
                     </div>
-                    <form method="post" class="form inline-edit-form">
-                        <input type="hidden" name="action" value="save_feedback">
-                        <input type="hidden" name="feedback_id" value="<?= e((string) $feedback['id']) ?>">
-                        <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
-                        <input type="hidden" name="precinct_id" value="<?= e((string) $feedback['precinct_id']) ?>">
-                        <label>
-                            Category
-                            <select name="category">
-                                <?php foreach ($categories as $key => $label): ?>
-                                    <option value="<?= e($key) ?>" <?= $feedback['category'] === $key ? 'selected' : '' ?>><?= e($label) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
-                        <label>
-                            Message
-                            <textarea name="message_text" required><?= e($feedback['message_text']) ?></textarea>
-                        </label>
-                        <p class="muted">Chief Judges cannot reply here. Ask them to call the Election Supervisor if they would like to discuss this feedback.</p>
-                        <div class="actions">
-                            <button type="submit" class="secondary compact-button">Save edits</button>
-                        </div>
-                    </form>
-                </article>
-            <?php endforeach; ?>
-            <?php if (!$feedbackMessages): ?>
-                <p>No feedback messages were found for this selection.</p>
-            <?php endif; ?>
-        </div>
+                </form>
+            </section>
+        <?php endif; ?>
+
+        <table class="table mobile-card-table">
+            <thead>
+                <tr>
+                    <th>Precinct</th>
+                    <th>Chief Judge</th>
+                    <th>Category</th>
+                    <th>Message</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($feedbackMessages as $feedback): ?>
+                    <tr>
+                        <td data-label="Precinct"><?= e($feedback['precinct_name']) ?></td>
+                        <td data-label="Chief Judge"><?= e(election_person_name($feedback)) ?></td>
+                        <td data-label="Category"><?= e($categories[$feedback['category']] ?? 'Other') ?></td>
+                        <td data-label="Message">
+                            <?= e(election_feedback_preview($feedback['message_text'])) ?>
+                            <br>
+                            <?php if (!empty($feedback['acknowledged_at'])): ?>
+                                <span class="meta">Acknowledged <?= e(format_display_date($feedback['acknowledged_at'])) ?></span>
+                            <?php else: ?>
+                                <span class="meta">Not acknowledged</span>
+                            <?php endif; ?>
+                        </td>
+                        <td data-label="Actions">
+                            <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $selectedPrecinctId . '&edit_feedback=' . (int) $feedback['id'])) ?>">Edit</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$feedbackMessages): ?>
+                    <tr><td colspan="5">No feedback messages were found for this selection.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
     </section>
 </main>
 <?php page_footer(); ?>
