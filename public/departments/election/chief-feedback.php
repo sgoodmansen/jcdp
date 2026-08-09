@@ -27,6 +27,27 @@ $allowedPrecinctIds = array_map(fn($precinct) => (int) $precinct['id'], $precinc
 if ($selectedPrecinctId > 0 && !in_array($selectedPrecinctId, $allowedPrecinctIds, true)) {
     $selectedPrecinctId = 0;
 }
+$categoryFilter = (string) ($_GET['category'] ?? '');
+if ($categoryFilter !== '' && !array_key_exists($categoryFilter, $categories)) {
+    $categoryFilter = '';
+}
+$statusFilter = (string) ($_GET['status'] ?? 'all');
+if (!in_array($statusFilter, ['all', 'unacknowledged', 'acknowledged'], true)) {
+    $statusFilter = 'all';
+}
+$searchQuery = trim((string) ($_GET['q'] ?? ''));
+
+$feedbackBaseQuery = [
+    'election_period_id' => $selectedPeriodId,
+    'precinct_id' => $selectedPrecinctId,
+    'category' => $categoryFilter,
+    'status' => $statusFilter,
+    'q' => $searchQuery,
+];
+$feedbackBaseQuery = array_filter(
+    $feedbackBaseQuery,
+    fn($value) => !($value === '' || $value === 0 || $value === 'all')
+);
 
 $selectedPeriod = null;
 foreach ($periods as $period) {
@@ -197,6 +218,24 @@ if ($selectedPrecinctId > 0) {
     $feedbackSql .= ' AND election_chief_feedback.precinct_id = :precinct_id';
     $feedbackParams['precinct_id'] = $selectedPrecinctId;
 }
+if ($categoryFilter !== '') {
+    $feedbackSql .= ' AND election_chief_feedback.category = :category';
+    $feedbackParams['category'] = $categoryFilter;
+}
+if ($statusFilter === 'unacknowledged') {
+    $feedbackSql .= ' AND election_chief_feedback.acknowledged_at IS NULL';
+} elseif ($statusFilter === 'acknowledged') {
+    $feedbackSql .= ' AND election_chief_feedback.acknowledged_at IS NOT NULL';
+}
+if ($searchQuery !== '') {
+    $feedbackSql .= ' AND (
+        election_chief_feedback.message_text LIKE :search
+        OR election_workers.first_name LIKE :search
+        OR election_workers.last_name LIKE :search
+        OR CONCAT(election_workers.first_name, " ", election_workers.last_name) LIKE :search
+    )';
+    $feedbackParams['search'] = '%' . $searchQuery . '%';
+}
 $feedbackSql .= ' ORDER BY election_chief_feedback.acknowledged_at IS NULL DESC,
                          election_precincts.name,
                          election_chief_feedback.created_at DESC';
@@ -256,8 +295,30 @@ page_header('Chief Feedback');
                     <?php endforeach; ?>
                 </select>
             </label>
+            <label>
+                Category
+                <select name="category">
+                    <option value="">All categories</option>
+                    <?php foreach ($categories as $key => $label): ?>
+                        <option value="<?= e($key) ?>" <?= $categoryFilter === $key ? 'selected' : '' ?>><?= e($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                Status
+                <select name="status">
+                    <option value="all" <?= $statusFilter === 'all' ? 'selected' : '' ?>>All statuses</option>
+                    <option value="unacknowledged" <?= $statusFilter === 'unacknowledged' ? 'selected' : '' ?>>Not acknowledged</option>
+                    <option value="acknowledged" <?= $statusFilter === 'acknowledged' ? 'selected' : '' ?>>Acknowledged</option>
+                </select>
+            </label>
+            <label>
+                Search
+                <input name="q" value="<?= e($searchQuery) ?>" placeholder="Chief Judge or message">
+            </label>
             <div class="actions">
                 <button type="submit">View feedback</button>
+                <a class="button secondary" href="<?= e(url('departments/election/chief-feedback.php')) ?>">Clear</a>
             </div>
         </form>
     </section>
@@ -330,7 +391,7 @@ page_header('Chief Feedback');
                     <p class="muted span-2">Chief Judges cannot reply here. Ask them to call the Election Supervisor if they would like to discuss this feedback.</p>
                     <div class="actions span-2">
                         <button type="submit" class="secondary compact-button">Save edits</button>
-                        <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $selectedPrecinctId)) ?>">Cancel</a>
+                        <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php?' . http_build_query($feedbackBaseQuery))) ?>">Cancel</a>
                     </div>
                 </form>
             </section>
@@ -362,7 +423,8 @@ page_header('Chief Feedback');
                             <?php endif; ?>
                         </td>
                         <td data-label="Actions">
-                            <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $selectedPrecinctId . '&edit_feedback=' . (int) $feedback['id'])) ?>">Edit</a>
+                            <?php $editQuery = $feedbackBaseQuery + ['edit_feedback' => (int) $feedback['id']]; ?>
+                            <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php?' . http_build_query($editQuery))) ?>">Edit</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
