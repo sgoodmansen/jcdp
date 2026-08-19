@@ -957,4 +957,4 @@ INSERT INTO departments (name, slug, description) VALUES
     ('DARE', 'dare', 'DARE department database module.'),
     ('Election Readiness', 'election', 'Election day preparation, staffing, training, checklist, and follow-up module.'),
     ('Sheriff Training', 'sheriff-training', 'Sheriff Office training requests, lodging costs, fiscal budgets, and attendance history.'),
-    ('K-9', 'k-9', 'K-9 department database module.');
+    ('K-9 Activity & Records', 'k9', 'K-9 team activity, deployments, medical reminders, shots, expenses, and reports.');
