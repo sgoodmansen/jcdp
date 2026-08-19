@@ -4,7 +4,6 @@ require_k9_access();
 
 $startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
 $endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
-$activityTypeId = (int) ($_GET['activity_type_id'] ?? 0);
 $recordType = $_GET['record_type'] ?? '';
 if (!in_array($recordType, ['', 'training', 'deployment', 'medical', 'expense'], true)) {
     $recordType = '';
@@ -37,12 +36,6 @@ if ($endDate !== '') {
     $medicalWhere .= ' AND k9_medical_visits.visit_date <= :end_date';
     $expenseWhere .= ' AND k9_expenses.expense_date <= :end_date';
     $params['end_date'] = $endDate;
-}
-if ($activityTypeId > 0) {
-    $activityWhere .= ' AND k9_activity_logs.activity_type_id = :activity_type_id';
-    $medicalWhere .= ' AND 1 = 0';
-    $expenseWhere .= ' AND 1 = 0';
-    $params['activity_type_id'] = $activityTypeId;
 }
 if ($recordType === 'training') {
     $activityWhere .= ' AND k9_activity_types.name = "Training"';
@@ -138,7 +131,6 @@ $sql = "SELECT *
 $statement = db()->prepare($sql);
 $statement->execute($params);
 $activities = $statement->fetchAll();
-$activityTypes = k9_lookup_options('k9_activity_types');
 
 page_header('K-9 Activity Log');
 ?>
@@ -165,15 +157,6 @@ page_header('K-9 Activity Log');
                 <select name="record_type">
                     <?php foreach ($recordTypeOptions as $typeKey => $typeLabel): ?>
                         <option value="<?= e($typeKey) ?>" <?= $recordType === $typeKey ? 'selected' : '' ?>><?= e($typeLabel) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <label>
-                Training / deployment type
-                <select name="activity_type_id">
-                    <option value="">Any type</option>
-                    <?php foreach ($activityTypes as $type): ?>
-                        <option value="<?= e((string) $type['id']) ?>" <?= $activityTypeId === (int) $type['id'] ? 'selected' : '' ?>><?= e($type['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
