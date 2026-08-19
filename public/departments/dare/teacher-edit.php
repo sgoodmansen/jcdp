@@ -86,9 +86,13 @@ page_header('Edit Teacher');
                 Email
                 <input type="email" name="email" value="<?= e($teacher['email']) ?>">
             </label>
-            <label class="check-label compact-check">
+            <label class="toggle-option">
                 <input type="checkbox" name="is_active" value="1" <?= (int) $teacher['is_active'] === 1 ? 'checked' : '' ?>>
-                Active teacher
+                <span class="toggle-track" aria-hidden="true"></span>
+                <span>
+                    Active teacher
+                    <small>Show this teacher as available for DARE classes.</small>
+                </span>
             </label>
             <div class="actions span-2">
                 <button type="submit">Save changes</button>

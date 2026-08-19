@@ -37,6 +37,10 @@ page_header('Departments');
                     <a class="button" href="<?= e(url('departments/dare/index.php')) ?>">Open DARE</a>
                 <?php elseif ($department['slug'] === 'election'): ?>
                     <a class="button" href="<?= e(url('departments/election/index.php')) ?>">Open Election Readiness</a>
+                <?php elseif ($department['slug'] === 'k9'): ?>
+                    <a class="button" href="<?= e(url('departments/k9/index.php')) ?>">Open K-9 Activity & Records</a>
+                <?php elseif ($department['slug'] === 'sheriff-training'): ?>
+                    <a class="button" href="<?= e(url('departments/sheriff-training/index.php')) ?>">Open Sheriff Training</a>
                 <?php else: ?>
                     <span class="badge">Module placeholder</span>
                 <?php endif; ?>

@@ -125,9 +125,13 @@ page_header('Edit DARE Officer');
                 </select>
                 <span class="meta">Name and email come from the selected portal user.</span>
             </label>
-            <label class="check-label compact-check">
+            <label class="toggle-option">
                 <input type="checkbox" name="is_active" value="1" <?= (int) $officer['is_active'] === 1 ? 'checked' : '' ?>>
-                Active officer
+                <span class="toggle-track" aria-hidden="true"></span>
+                <span>
+                    Active officer
+                    <small>Show this officer as available for DARE classes.</small>
+                </span>
             </label>
             <div class="actions span-2">
                 <button type="submit">Save changes</button>

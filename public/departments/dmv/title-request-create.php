@@ -77,6 +77,7 @@ page_header('New Title Request');
     <section class="panel">
         <h1>New Title Request</h1>
         <p>Create a record for the individual registering the vehicle, then generate the lienholder letter.</p>
+        <?php dmv_navigation('new-title-request'); ?>
 
         <?php if (!$lienholders): ?>
             <div class="notice error">Create at least one lienholder before creating a title request.</div>

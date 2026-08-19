@@ -20,18 +20,6 @@ foreach ($statusRows as $row) {
     $statusCounts[$row['status']] = (int) $row['request_count'];
 }
 
-$actions = [
-    ['label' => 'New title request', 'href' => url('departments/dmv/title-request-create.php'), 'primary' => true],
-    ['label' => 'New lienholder', 'href' => url('departments/dmv/lienholder-create.php')],
-    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
-    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php')],
-    ['label' => 'Reports', 'href' => url('departments/dmv/report.php')],
-];
-
-if (can_manage_department('dmv')) {
-    $actions[] = ['label' => 'Vehicle lookups', 'href' => url('departments/dmv/vehicle-lookups.php')];
-}
-
 $recentRecords = db()->query(
     'SELECT
         dmv_title_requests.*,
@@ -55,7 +43,7 @@ page_header('DMV Home');
     <section class="panel">
         <h1>DMV Home</h1>
         <p>Create title request letters, track request status, and maintain reusable lienholder contact information.</p>
-        <?php page_actions($actions); ?>
+        <?php dmv_navigation('home'); ?>
     </section>
 
     <section class="dashboard-stat-row" style="margin-top: 18px;">

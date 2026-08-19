@@ -19,7 +19,7 @@ function page_header(string $title): void
                 document.documentElement.dataset.theme = savedTheme || (prefersDark ? 'dark' : 'light');
             })();
         </script>
-        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260730g')) ?>">
+        <link rel="stylesheet" href="<?= e(url('assets/styles.css?v=20260819q')) ?>">
     </head>
     <body>
         <header class="topbar">
@@ -187,6 +187,8 @@ function friendly_user_title(array $user): string
             'DARE' => 'DARE Officer',
             'Election Training' => 'Election County Employee',
             'Election Readiness' => 'Election County Employee',
+            'K-9 Activity & Records' => 'K-9 Handler',
+            'Sheriff Training' => 'Sheriff Training User',
             default => 'Department User',
         };
     }
@@ -197,6 +199,8 @@ function friendly_user_title(array $user): string
             'DARE' => 'DARE Supervisor',
             'Election Training' => 'Election Supervisor',
             'Election Readiness' => 'Election Supervisor',
+            'K-9 Activity & Records' => 'K-9 Supervisor',
+            'Sheriff Training' => 'Sheriff Training Supervisor',
             default => 'Department Supervisor',
         };
     }

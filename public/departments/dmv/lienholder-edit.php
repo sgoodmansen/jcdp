@@ -60,11 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('departments/dmv/lienholders.php');
 }
 
-$actions = [
-    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php'), 'primary' => true],
-    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
-];
-
 page_header('Edit Lienholder');
 ?>
 <main class="shell">
@@ -72,7 +67,7 @@ page_header('Edit Lienholder');
         <h1>Edit Lienholder</h1>
         <p>Update lienholder contact information used on title request letters.</p>
 
-        <?php page_actions($actions); ?>
+        <?php dmv_navigation('lienholder-edit'); ?>
 
         <form class="form compact-form" method="post">
             <input type="hidden" name="id" value="<?= e((string) $lienholder['id']) ?>">

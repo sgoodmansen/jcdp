@@ -60,13 +60,6 @@ $registrantNames = $request['registrant_name'];
 if (!empty($request['registrant_name_2'])) {
     $registrantNames .= ' and ' . $request['registrant_name_2'];
 }
-$actions = [
-    ['label' => 'Download PDF', 'href' => url('departments/dmv/letter-pdf.php?id=' . $request['id']), 'primary' => true],
-    ['label' => 'Edit request', 'href' => url('departments/dmv/title-request-edit.php?id=' . $request['id'])],
-    ['label' => 'Request details', 'href' => url('departments/dmv/title-request-detail.php?id=' . $request['id'])],
-    ['label' => 'Back to requests', 'href' => url('departments/dmv/title-requests.php')],
-];
-
 page_header('Title Request Letter');
 ?>
 <main class="shell">
@@ -77,10 +70,15 @@ page_header('Title Request Letter');
         <?php if ($message = flash('error')): ?>
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
+        <?php dmv_navigation('letter'); ?>
         <div class="page-toolbar">
             <div class="letter-action-row">
                 <button type="button" class="button desktop-print-button" onclick="window.print()">Print letter</button>
-                <?php page_actions($actions); ?>
+                <?php page_actions([
+                    ['label' => 'Download PDF', 'href' => url('departments/dmv/letter-pdf.php?id=' . $request['id']), 'primary' => true],
+                    ['label' => 'Edit request', 'href' => url('departments/dmv/title-request-edit.php?id=' . $request['id'])],
+                    ['label' => 'Request details', 'href' => url('departments/dmv/title-request-detail.php?id=' . $request['id'])],
+                ]); ?>
             </div>
             <aside class="status-panel" aria-label="Request status">
                 <div class="status-panel-header">

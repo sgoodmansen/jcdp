@@ -1,0 +1,175 @@
+<?php
+
+declare(strict_types=1);
+
+const K9_DEPARTMENT_SLUG = 'k9';
+
+function k9_schema_ready(): bool
+{
+    foreach (['k9_activity_logs', 'k9_teams', 'k9_locations', 'k9_training_aids'] as $tableName) {
+        $statement = db()->query("SHOW TABLES LIKE " . db()->quote($tableName));
+        if (!$statement->fetchColumn()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function k9_require_ready(): void
+{
+    if (k9_schema_ready()) {
+        return;
+    }
+
+    page_header('K-9 Setup Needed');
+    ?>
+    <main class="shell">
+        <section class="panel">
+            <h1>K-9 Setup Needed</h1>
+            <p>The K-9 Activity & Records module needs to be installed before this page can be used.</p>
+            <?php if (is_system_admin()): ?>
+                <a class="button" href="<?= e(url('admin/setup-k9-module.php')) ?>">Run K-9 setup</a>
+            <?php else: ?>
+                <p>Ask an IT system admin to run the K-9 setup page.</p>
+            <?php endif; ?>
+        </section>
+    </main>
+    <?php
+    page_footer();
+    exit;
+}
+
+function require_k9_access(): void
+{
+    require_department_access(K9_DEPARTMENT_SLUG);
+    k9_require_ready();
+}
+
+function require_k9_manager(): void
+{
+    require_department_manager(K9_DEPARTMENT_SLUG);
+    k9_require_ready();
+}
+
+function current_k9_handler(): ?array
+{
+    $user = current_user();
+    if (!$user) {
+        return null;
+    }
+
+    $statement = db()->prepare('SELECT * FROM k9_handlers WHERE user_id = :user_id AND is_active = 1');
+    $statement->execute(['user_id' => $user['id']]);
+
+    return $statement->fetch() ?: null;
+}
+
+function k9_user_can_manage(): bool
+{
+    return can_manage_department(K9_DEPARTMENT_SLUG);
+}
+
+function k9_navigation(string $activeKey): void
+{
+    $isManager = k9_user_can_manage();
+    $items = [
+        ['key' => 'home', 'label' => 'K-9 Home', 'href' => url('departments/k9/index.php')],
+        ['key' => 'activity', 'label' => 'Activity Log', 'href' => url('departments/k9/activity.php')],
+        ['key' => 'activity-edit', 'label' => 'Add Training', 'href' => url('departments/k9/activity-edit.php')],
+        ['key' => 'deployment-edit', 'label' => 'Add Deployment', 'href' => url('departments/k9/deployment-edit.php')],
+    ];
+
+    if ($isManager) {
+        $items[] = ['key' => 'teams', 'label' => 'Teams', 'href' => url('departments/k9/teams.php')];
+        $items[] = ['key' => 'setup', 'label' => 'Setup', 'href' => url('departments/k9/setup.php')];
+    }
+    ?>
+    <div class="department-nav election-nav">
+        <?php foreach ($items as $item): ?>
+            <a class="button<?= $activeKey === $item['key'] ? '' : ' secondary' ?>" href="<?= e($item['href']) ?>"><?= e($item['label']) ?></a>
+        <?php endforeach; ?>
+    </div>
+    <?php
+}
+
+function k9_lookup_options(string $tableName, string $labelColumn = 'name', bool $activeOnly = true): array
+{
+    $allowed = [
+        'k9_activity_types',
+        'k9_training_areas',
+        'k9_indications',
+        'k9_locations',
+        'k9_training_aids',
+        'k9_expense_categories',
+        'k9_incident_types',
+        'k9_assisting_agencies',
+        'k9_deployment_outcomes',
+    ];
+
+    if (!in_array($tableName, $allowed, true)) {
+        return [];
+    }
+
+    $sql = "SELECT * FROM $tableName";
+    if ($activeOnly) {
+        $sql .= ' WHERE is_active = 1';
+    }
+    $sql .= " ORDER BY sort_order, $labelColumn";
+
+    return db()->query($sql)->fetchAll();
+}
+
+function k9_lookup_id_by_name(string $tableName, string $name): ?int
+{
+    $allowed = [
+        'k9_activity_types',
+        'k9_training_areas',
+        'k9_indications',
+        'k9_locations',
+        'k9_training_aids',
+        'k9_expense_categories',
+        'k9_incident_types',
+        'k9_assisting_agencies',
+        'k9_deployment_outcomes',
+    ];
+
+    if (!in_array($tableName, $allowed, true)) {
+        return null;
+    }
+
+    $statement = db()->prepare("SELECT id FROM $tableName WHERE LOWER(name) = LOWER(:name) LIMIT 1");
+    $statement->execute(['name' => $name]);
+    $id = $statement->fetchColumn();
+
+    return $id ? (int) $id : null;
+}
+
+function k9_visible_team_sql(string $teamAlias = 'k9_teams'): array
+{
+    if (k9_user_can_manage()) {
+        return ['', []];
+    }
+
+    $handler = current_k9_handler();
+    if (!$handler) {
+        return [' AND 1 = 0', []];
+    }
+
+    return [" AND $teamAlias.handler_id = :current_handler_id", ['current_handler_id' => $handler['id']]];
+}
+
+function k9_decimal(?string $value): float
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return 0.0;
+    }
+
+    return round((float) str_replace([','], '', $value), 2);
+}
+
+function k9_money(float|int|string|null $amount): string
+{
+    return '$' . number_format((float) ($amount ?? 0), 2);
+}

@@ -112,11 +112,6 @@ $rangeLabel = 'All dates';
 if ($startDate !== '' || $endDate !== '') {
     $rangeLabel = ($startDate ?: 'Beginning') . ' through ' . ($endDate ?: 'Today');
 }
-$actions = [
-    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php'), 'primary' => true],
-    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
-];
-
 page_header('DMV Reports');
 ?>
 <main class="shell">
@@ -124,7 +119,7 @@ page_header('DMV Reports');
         <h1>DMV Reports</h1>
         <p>Review title request activity by date range, status, clerk, and lienholder.</p>
 
-        <?php page_actions($actions); ?>
+        <?php dmv_navigation('reports'); ?>
 
         <form class="form compact-form" method="get">
             <label>

@@ -6,6 +6,10 @@ election_require_assignment_setup();
 $query = trim($_GET['q'] ?? '');
 $periodId = (int) ($_GET['election_period_id'] ?? 0);
 $positionId = (int) ($_GET['position_id'] ?? 0);
+$assignedFilter = $_GET['assigned'] ?? '';
+if (!in_array($assignedFilter, ['', 'current', 'none'], true)) {
+    $assignedFilter = '';
+}
 $statusFilter = $_GET['status'] ?? ELECTION_WORKER_STATUS_ACTIVE;
 if (!in_array($statusFilter, [ELECTION_WORKER_STATUS_ACTIVE, ELECTION_WORKER_STATUS_UNAVAILABLE, ELECTION_WORKER_STATUS_INACTIVE, 'all'], true)) {
     $statusFilter = 'active';
@@ -32,12 +36,18 @@ foreach ($positions as $position) {
 }
 $sql = 'SELECT election_workers.*,
                COUNT(DISTINCT active_assignments.id) AS active_assignment_count,
+               COUNT(DISTINCT CASE
+                   WHEN active_assignments.is_active = 1 AND election_periods.is_active = 1
+                   THEN active_assignments.id
+                   ELSE NULL
+               END) AS current_assignment_count,
                GROUP_CONCAT(DISTINCT active_assignments.position_id ORDER BY election_positions.sort_order SEPARATOR ",") AS position_history_ids,
                GROUP_CONCAT(DISTINCT election_positions.name ORDER BY election_positions.sort_order SEPARATOR "\n") AS position_history_names,
                GROUP_CONCAT(DISTINCT election_precinct_roles.role_key SEPARATOR ",") AS extra_role_history_keys
         FROM election_workers
         LEFT JOIN election_worker_assignments active_assignments ON active_assignments.worker_id = election_workers.id
         LEFT JOIN election_periods ON election_periods.id = active_assignments.election_period_id
+        LEFT JOIN election_precincts ON election_precincts.id = active_assignments.precinct_id
         LEFT JOIN election_positions ON election_positions.id = active_assignments.position_id
         LEFT JOIN election_precinct_roles ON election_precinct_roles.assignment_id = active_assignments.id
         WHERE 1 = 1';
@@ -92,6 +102,26 @@ if ($positionId > 0) {
     $params['position_id'] = $positionId;
 }
 
+if ($assignedFilter === 'current') {
+    $sql .= ' AND EXISTS (
+        SELECT 1
+        FROM election_worker_assignments current_assignments
+        INNER JOIN election_periods current_periods ON current_periods.id = current_assignments.election_period_id
+        WHERE current_assignments.worker_id = election_workers.id
+          AND current_assignments.is_active = 1
+          AND current_periods.is_active = 1
+    )';
+} elseif ($assignedFilter === 'none') {
+    $sql .= ' AND NOT EXISTS (
+        SELECT 1
+        FROM election_worker_assignments current_assignments
+        INNER JOIN election_periods current_periods ON current_periods.id = current_assignments.election_period_id
+        WHERE current_assignments.worker_id = election_workers.id
+          AND current_assignments.is_active = 1
+          AND current_periods.is_active = 1
+    )';
+}
+
 if ($statusFilter === ELECTION_WORKER_STATUS_ACTIVE) {
     $sql .= ' AND election_workers.availability_status = :availability_status
               AND election_workers.is_active = 1';
@@ -115,6 +145,7 @@ $sortQuery = [
     'q' => $query,
     'election_period_id' => $periodId > 0 ? (string) $periodId : '',
     'position_id' => $positionId > 0 ? (string) $positionId : '',
+    'assigned' => $assignedFilter,
     'status' => $statusFilter,
 ];
 $sortByLastUrl = url('departments/election/workers.php?' . http_build_query(array_merge($sortQuery, ['sort' => 'last'])));
@@ -182,6 +213,14 @@ page_header('Election Contacts');
                 </select>
             </label>
             <label>
+                Current assignment
+                <select name="assigned">
+                    <option value="" <?= $assignedFilter === '' ? 'selected' : '' ?>>Any</option>
+                    <option value="current" <?= $assignedFilter === 'current' ? 'selected' : '' ?>>Current</option>
+                    <option value="none" <?= $assignedFilter === 'none' ? 'selected' : '' ?>>No current assignment</option>
+                </select>
+            </label>
+            <label>
                 Status
                 <select name="status">
                     <option value="active" <?= $statusFilter === ELECTION_WORKER_STATUS_ACTIVE ? 'selected' : '' ?>>Available workers</option>
@@ -220,6 +259,7 @@ page_header('Election Contacts');
                     <th>Name</th>
                     <th>Contact</th>
                     <th>Position history</th>
+                    <th>Assigned</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -246,6 +286,13 @@ page_header('Election Contacts');
                                 <span class="meta">No position history</span>
                             <?php endif; ?>
                         </td>
+                        <td data-label="Assigned">
+                            <?php if ((int) ($worker['current_assignment_count'] ?? 0) > 0): ?>
+                                <span class="badge badge-success">Current</span>
+                            <?php else: ?>
+                                <span class="badge badge-muted">No</span>
+                            <?php endif; ?>
+                        </td>
                         <td data-label="Status">
                             <span class="badge <?= e(election_worker_status_badge_class($worker)) ?>">
                                 <?= e(election_worker_status_label($worker)) ?>
@@ -257,13 +304,12 @@ page_header('Election Contacts');
                         <td data-label="Actions">
                             <div class="table-actions">
                                 <a class="icon-link" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'])) ?>" title="Edit contact" aria-label="Edit contact">&#9998;</a>
-                                <a class="button secondary compact-button" href="<?= e(url('departments/election/worker-edit.php?id=' . $worker['id'] . '&new_assignment=1')) ?>">Add assignment</a>
                             </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$workers): ?>
-                    <tr><td colspan="5">No workers matched the selected filters.</td></tr>
+                    <tr><td colspan="6">No workers matched the selected filters.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

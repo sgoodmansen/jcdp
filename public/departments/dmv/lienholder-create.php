@@ -38,11 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('departments/dmv/lienholders.php');
 }
 
-$actions = [
-    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php'), 'primary' => true],
-    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
-];
-
 page_header('New Lienholder');
 ?>
 <main class="shell">
@@ -50,7 +45,7 @@ page_header('New Lienholder');
         <h1>New Lienholder</h1>
         <p>Add a lienholder contact that can be reused for title request letters.</p>
 
-        <?php page_actions($actions); ?>
+        <?php dmv_navigation('new-lienholder'); ?>
 
         <form class="form compact-form" method="post">
             <label class="span-2">

@@ -104,11 +104,6 @@ $source = $sourceId > 0 ? fetch_lienholder($sourceId) : null;
 $destination = $destinationId > 0 ? fetch_lienholder($destinationId) : null;
 $sourceRequestCount = $source ? count_lienholder_requests((int) $source['id']) : 0;
 $destinationRequestCount = $destination ? count_lienholder_requests((int) $destination['id']) : 0;
-$actions = [
-    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php'), 'primary' => true],
-    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
-];
-
 page_header('Merge Lienholders');
 ?>
 <main class="shell">
@@ -120,7 +115,7 @@ page_header('Merge Lienholders');
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
 
-        <?php page_actions($actions); ?>
+        <?php dmv_navigation('merge-lienholders'); ?>
 
         <form class="form compact-form wide-form" method="get">
             <label>

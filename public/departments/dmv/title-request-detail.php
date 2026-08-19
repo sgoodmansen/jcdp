@@ -122,13 +122,6 @@ $historyStatement = db()->prepare(
 );
 $historyStatement->execute(['entity_id' => (string) $request['id']]);
 $historyEvents = $historyStatement->fetchAll();
-$actions = [
-    ['label' => 'View letter', 'href' => url('departments/dmv/letter.php?id=' . $request['id']), 'primary' => true],
-    ['label' => 'Edit request', 'href' => url('departments/dmv/title-request-edit.php?id=' . $request['id'])],
-    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
-    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
-];
-
 page_header('Title Request Detail');
 ?>
 <main class="shell">
@@ -142,9 +135,13 @@ page_header('Title Request Detail');
 
         <h1>Title Request Detail</h1>
         <p><?= e($registrantNames) ?> - <?= e(ucfirst($request['status'])) ?></p>
+        <?php dmv_navigation('title-request-detail'); ?>
 
         <div class="page-toolbar">
-            <?php page_actions($actions); ?>
+            <?php page_actions([
+                ['label' => 'View letter', 'href' => url('departments/dmv/letter.php?id=' . $request['id']), 'primary' => true],
+                ['label' => 'Edit request', 'href' => url('departments/dmv/title-request-edit.php?id=' . $request['id'])],
+            ]); ?>
             <aside class="status-panel" aria-label="Request status">
                 <div class="status-panel-header">
                     <strong>Request Status</strong>

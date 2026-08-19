@@ -345,18 +345,19 @@ page_header('DARE Class Detail');
                     <strong>Class Status</strong>
                     <span class="badge"><?= e(dare_class_status_label($class['status'])) ?></span>
                 </div>
-                <div class="actions status-actions">
-                    <?php foreach (dare_class_status_options() as $statusValue => $statusLabel): ?>
-                        <?php if ($class['status'] !== $statusValue): ?>
-                            <form class="inline-edit-form" method="post">
-                                <input type="hidden" name="id" value="<?= e((string) $id) ?>">
-                                <input type="hidden" name="action" value="update_status">
-                                <input type="hidden" name="status" value="<?= e($statusValue) ?>">
-                                <button type="submit" class="secondary compact-button"><?= e($statusLabel) ?></button>
-                            </form>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </div>
+                <form class="class-status-form" method="post">
+                    <input type="hidden" name="id" value="<?= e((string) $id) ?>">
+                    <input type="hidden" name="action" value="update_status">
+                    <label>
+                        Change status
+                        <select name="status">
+                            <?php foreach (dare_class_status_options() as $statusValue => $statusLabel): ?>
+                                <option value="<?= e($statusValue) ?>" <?= $class['status'] === $statusValue ? 'selected' : '' ?>><?= e($statusLabel) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <button type="submit" class="secondary compact-button">Update status</button>
+                </form>
                 <?php if ($class['status'] === 'completed' && !$class['graduation_date']): ?>
                     <p class="meta">Set the graduation date before printing final graduation certificates.</p>
                 <?php endif; ?>

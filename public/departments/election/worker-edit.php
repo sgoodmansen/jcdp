@@ -654,16 +654,24 @@ page_header($pageTitle);
                 ZIP code
                 <input name="zip_code" value="<?= e($worker['zip_code'] ?? '') ?>">
             </label>
-            <label class="check-label">
+            <label class="toggle-option">
                 <input type="checkbox" name="wants_email_reminders" <?= (int) ($worker['wants_email_reminders'] ?? 0) === 1 ? 'checked' : '' ?>>
-                Email reminders
+                <span class="toggle-track" aria-hidden="true"></span>
+                <span>
+                    Email reminders
+                    <small>Send election reminder messages by email.</small>
+                </span>
             </label>
-            <label class="check-label">
+            <label class="toggle-option">
                 <input type="checkbox" name="wants_text_reminders" <?= (int) ($worker['wants_text_reminders'] ?? 0) === 1 ? 'checked' : '' ?>>
-                Text reminders
+                <span class="toggle-track" aria-hidden="true"></span>
+                <span>
+                    Text reminders
+                    <small>Send election reminder messages by text.</small>
+                </span>
             </label>
             <?php if (!$isSelfEdit): ?>
-                <div class="worker-status-panel span-2">
+                <div class="worker-status-panel">
                     <label>
                         Worker status
                         <select name="availability_status" id="worker-availability-status">
@@ -684,9 +692,13 @@ page_header($pageTitle);
                         </span>
                     </label>
                 </div>
-                <label class="check-label">
+                <label class="toggle-option">
                     <input type="checkbox" name="is_active" <?= (int) ($assignment['is_active'] ?? 1) === 1 ? 'checked' : '' ?>>
-                    Active assignment
+                    <span class="toggle-track" aria-hidden="true"></span>
+                    <span>
+                        Active assignment
+                        <small>Include this assignment in current election staffing.</small>
+                    </span>
                 </label>
                 <label class="span-2">
                     Notes

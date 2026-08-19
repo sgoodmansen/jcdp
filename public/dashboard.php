@@ -15,9 +15,13 @@ if ($user['role'] === 'system_admin') {
 $hasDmvAccess = can_access_department('dmv');
 $hasDareAccess = can_access_department('dare');
 $hasElectionAccess = can_access_department('election');
+$hasK9Access = can_access_department('k9');
+$hasSheriffTrainingAccess = can_manage_department('sheriff-training');
 $dmvActions = [];
 $dareActions = [];
 $electionActions = [];
+$k9Actions = [];
+$sheriffTrainingActions = [];
 $recentDmvRequests = [];
 $nextDareLessons = [];
 
@@ -80,6 +84,32 @@ if ($hasElectionAccess) {
         $electionActions[] = ['label' => 'New class', 'href' => url('departments/election/class-edit.php')];
         $electionActions[] = ['label' => 'Setup', 'href' => url('departments/election/setup.php')];
     }
+}
+
+if ($hasK9Access) {
+    $k9Actions = [
+        ['label' => 'K-9 Home', 'href' => url('departments/k9/index.php'), 'primary' => true],
+        ['label' => 'Add training', 'href' => url('departments/k9/activity-edit.php')],
+        ['label' => 'Add deployment', 'href' => url('departments/k9/deployment-edit.php')],
+        ['label' => 'Activity log', 'href' => url('departments/k9/activity.php')],
+    ];
+
+    if (can_manage_department('k9')) {
+        $k9Actions[] = ['label' => 'Teams', 'href' => url('departments/k9/teams.php')];
+        $k9Actions[] = ['label' => 'Setup', 'href' => url('departments/k9/setup.php')];
+    }
+}
+
+if ($hasSheriffTrainingAccess) {
+    $sheriffTrainingActions = [
+        ['label' => 'Sheriff Training Home', 'href' => url('departments/sheriff-training/index.php'), 'primary' => true],
+        ['label' => 'New request', 'href' => url('departments/sheriff-training/request-edit.php')],
+        ['label' => 'Requests', 'href' => url('departments/sheriff-training/requests.php')],
+        ['label' => 'Officers', 'href' => url('departments/sheriff-training/officers.php')],
+        ['label' => 'Divisions', 'href' => url('departments/sheriff-training/divisions.php')],
+        ['label' => 'Fiscal budgets', 'href' => url('departments/sheriff-training/budgets.php')],
+        ['label' => 'Reports', 'href' => url('departments/sheriff-training/reports.php')],
+    ];
 }
 
 page_header('Dashboard');
@@ -201,6 +231,22 @@ page_header('Dashboard');
                 <p><?= e($department['description']) ?></p>
                 <?php page_actions($electionActions); ?>
             </section>
+        <?php elseif ($department['slug'] === 'k9'): ?>
+            <section class="panel" style="margin-top: 18px;">
+                <h1>K-9 Activity & Records</h1>
+                <p><?= e($department['description']) ?></p>
+                <?php page_actions($k9Actions); ?>
+            </section>
+        <?php elseif ($department['slug'] === 'sheriff-training'): ?>
+            <section class="panel" style="margin-top: 18px;">
+                <h1>Sheriff Training</h1>
+                <p><?= e($department['description']) ?></p>
+                <?php if ($hasSheriffTrainingAccess): ?>
+                    <?php page_actions($sheriffTrainingActions); ?>
+                <?php else: ?>
+                    <div class="notice error">Sheriff Training is currently limited to department supervisors.</div>
+                <?php endif; ?>
+            </section>
         <?php else: ?>
             <section class="panel" style="margin-top: 18px;">
                 <h1><?= e($department['name']) ?></h1>
@@ -219,6 +265,8 @@ page_header('Dashboard');
                 <a class="button" href="<?= e(url('admin/users.php')) ?>">Manage users</a>
                 <a class="button secondary" href="<?= e(url('admin/audit-log.php')) ?>">Audit log</a>
                 <a class="button secondary" href="<?= e(url('admin/setup-election-module.php')) ?>">Setup Election Readiness</a>
+                <a class="button secondary" href="<?= e(url('admin/setup-k9-module.php')) ?>">Setup K-9</a>
+                <a class="button secondary" href="<?= e(url('admin/setup-sheriff-training-module.php')) ?>">Setup Sheriff Training</a>
             </div>
         </section>
     <?php endif; ?>

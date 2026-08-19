@@ -35,13 +35,6 @@ $statement = db()->prepare(
 );
 $statement->execute($params);
 $requests = $statement->fetchAll();
-$actions = [
-    ['label' => 'New title request', 'href' => url('departments/dmv/title-request-create.php'), 'primary' => true],
-    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
-    ['label' => 'Lienholders', 'href' => url('departments/dmv/lienholders.php')],
-    ['label' => 'New lienholder', 'href' => url('departments/dmv/lienholder-create.php')],
-];
-
 page_header('Title Requests');
 ?>
 <main class="shell">
@@ -53,7 +46,7 @@ page_header('Title Requests');
             <div class="notice success"><?= e($message) ?></div>
         <?php endif; ?>
 
-        <?php page_actions($actions); ?>
+        <?php dmv_navigation('title-requests'); ?>
 
         <form class="form" method="get">
             <?php if ($status !== ''): ?>

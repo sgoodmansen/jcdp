@@ -114,12 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('departments/dmv/letter.php?id=' . $id);
 }
 
-$actions = [
-    ['label' => 'View letter', 'href' => url('departments/dmv/letter.php?id=' . $request['id']), 'primary' => true],
-    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
-    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
-];
-
 page_header('Edit Title Request');
 ?>
 <main class="shell">
@@ -127,7 +121,10 @@ page_header('Edit Title Request');
         <h1>Edit Title Request</h1>
         <p>Update the registrant, lienholder, vehicle, or status information for this request.</p>
 
-        <?php page_actions($actions); ?>
+        <?php dmv_navigation('title-request-edit'); ?>
+        <?php page_actions([
+            ['label' => 'View letter', 'href' => url('departments/dmv/letter.php?id=' . $request['id']), 'primary' => true],
+        ]); ?>
 
         <?php if ($message = flash('error')): ?>
             <div class="notice error"><?= e($message) ?></div>

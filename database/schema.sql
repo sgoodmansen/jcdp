@@ -845,6 +845,103 @@ CREATE TABLE election_payroll_worker_mileage (
         ON DELETE SET NULL
 );
 
+CREATE TABLE sheriff_training_officers (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(80) NOT NULL,
+    last_name VARCHAR(80) NOT NULL,
+    email VARCHAR(190) NULL,
+    rank_title VARCHAR(120) NULL,
+    division VARCHAR(120) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sheriff_training_officer_name (last_name, first_name),
+    INDEX idx_sheriff_training_officer_active (is_active, last_name, first_name)
+);
+
+CREATE TABLE sheriff_training_divisions (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL UNIQUE,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sheriff_training_division_active_order (is_active, sort_order, name)
+);
+
+CREATE TABLE sheriff_training_fiscal_years (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    fiscal_year INT UNSIGNED NOT NULL UNIQUE,
+    label VARCHAR(20) NOT NULL UNIQUE,
+    starts_on DATE NOT NULL,
+    ends_on DATE NOT NULL,
+    training_budget DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    lodging_budget DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sheriff_training_fy_dates (starts_on, ends_on)
+);
+
+CREATE TABLE sheriff_training_requests (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    officer_id INT UNSIGNED NOT NULL,
+    fiscal_year_id INT UNSIGNED NOT NULL,
+    created_by_user_id INT UNSIGNED NULL,
+    decision_by_user_id INT UNSIGNED NULL,
+    class_name VARCHAR(190) NOT NULL,
+    provider VARCHAR(160) NULL,
+    location VARCHAR(190) NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NULL,
+    estimated_training_cost DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    estimated_lodging_cost DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    actual_training_cost DECIMAL(10,2) NULL,
+    actual_lodging_cost DECIMAL(10,2) NULL,
+    status ENUM('pending', 'approved', 'denied', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
+    decision_comment TEXT NULL,
+    decision_at TIMESTAMP NULL,
+    status_email_sent_at TIMESTAMP NULL,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sheriff_training_request_status (status, start_date),
+    INDEX idx_sheriff_training_request_officer (officer_id, start_date),
+    INDEX idx_sheriff_training_request_fy (fiscal_year_id, status),
+    CONSTRAINT fk_sheriff_training_requests_officer
+        FOREIGN KEY (officer_id) REFERENCES sheriff_training_officers(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_sheriff_training_requests_fy
+        FOREIGN KEY (fiscal_year_id) REFERENCES sheriff_training_fiscal_years(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_sheriff_training_requests_created_by
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_sheriff_training_requests_decision_by
+        FOREIGN KEY (decision_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+CREATE TABLE sheriff_training_request_history (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    request_id INT UNSIGNED NOT NULL,
+    changed_by_user_id INT UNSIGNED NULL,
+    old_status VARCHAR(30) NULL,
+    new_status VARCHAR(30) NULL,
+    comment TEXT NULL,
+    email_sent TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sheriff_training_history_request (request_id, created_at),
+    CONSTRAINT fk_sheriff_training_history_request
+        FOREIGN KEY (request_id) REFERENCES sheriff_training_requests(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_sheriff_training_history_user
+        FOREIGN KEY (changed_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
 INSERT INTO election_positions (name, sort_order, is_chief_judge, is_assistant_chief_judge) VALUES
     ('Chief Judge', 10, 1, 0),
     ('Assistant Chief Judge', 20, 0, 1),
@@ -859,4 +956,5 @@ INSERT INTO departments (name, slug, description) VALUES
     ('DMV', 'dmv', 'DMV department database module.'),
     ('DARE', 'dare', 'DARE department database module.'),
     ('Election Readiness', 'election', 'Election day preparation, staffing, training, checklist, and follow-up module.'),
+    ('Sheriff Training', 'sheriff-training', 'Sheriff Office training requests, lodging costs, fiscal budgets, and attendance history.'),
     ('K-9', 'k-9', 'K-9 department database module.');

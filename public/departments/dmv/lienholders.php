@@ -55,17 +55,6 @@ $queryBase = [
     'search' => $search,
     'status' => $status,
 ];
-$actions = [
-    ['label' => 'New lienholder', 'href' => url('departments/dmv/lienholder-create.php'), 'primary' => true],
-    ['label' => 'DMV home', 'href' => url('departments/dmv/index.php')],
-    ['label' => 'New title request', 'href' => url('departments/dmv/title-request-create.php')],
-    ['label' => 'Title requests', 'href' => url('departments/dmv/title-requests.php')],
-];
-
-if (can_manage_department('dmv')) {
-    $actions[] = ['label' => 'Merge lienholders', 'href' => url('departments/dmv/lienholder-merge.php')];
-}
-
 function lienholder_page_url(array $queryBase, int $page): string
 {
     $query = array_filter(
@@ -90,7 +79,7 @@ page_header('Lienholders');
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
 
-        <?php page_actions($actions); ?>
+        <?php dmv_navigation('lienholders'); ?>
 
         <form class="form" method="get">
             <label>
