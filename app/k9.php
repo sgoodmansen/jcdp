@@ -73,24 +73,32 @@ function k9_user_can_manage(): bool
 function k9_navigation(string $activeKey): void
 {
     $isManager = k9_user_can_manage();
-    $items = [
-        ['key' => 'home', 'label' => 'K-9 Home', 'href' => url('departments/k9/index.php')],
-        ['key' => 'activity', 'label' => 'Activity Log', 'href' => url('departments/k9/activity.php')],
+    $activityKeys = ['activity', 'activity-edit', 'deployment-edit', 'medical-edit', 'expense-edit'];
+    $activityItems = [
+        ['key' => 'activity', 'label' => 'View Activity Log', 'href' => url('departments/k9/activity.php')],
         ['key' => 'activity-edit', 'label' => 'Add Training', 'href' => url('departments/k9/activity-edit.php')],
         ['key' => 'deployment-edit', 'label' => 'Add Deployment', 'href' => url('departments/k9/deployment-edit.php')],
         ['key' => 'medical-edit', 'label' => 'Add Medical', 'href' => url('departments/k9/medical-edit.php')],
         ['key' => 'expense-edit', 'label' => 'Add Expense', 'href' => url('departments/k9/expense-edit.php')],
     ];
 
-    if ($isManager) {
-        $items[] = ['key' => 'teams', 'label' => 'Teams', 'href' => url('departments/k9/teams.php')];
-        $items[] = ['key' => 'setup', 'label' => 'Setup', 'href' => url('departments/k9/setup.php')];
-    }
     ?>
     <div class="department-nav election-nav">
-        <?php foreach ($items as $item): ?>
-            <a class="button<?= $activeKey === $item['key'] ? '' : ' secondary' ?>" href="<?= e($item['href']) ?>"><?= e($item['label']) ?></a>
-        <?php endforeach; ?>
+        <a class="button<?= $activeKey === 'home' ? '' : ' secondary' ?>" href="<?= e(url('departments/k9/index.php')) ?>">K-9 Home</a>
+
+        <details class="election-nav-menu">
+            <summary class="<?= in_array($activeKey, $activityKeys, true) ? 'active' : '' ?>">Activity Log</summary>
+            <div class="election-nav-list">
+                <?php foreach ($activityItems as $item): ?>
+                    <a class="<?= $activeKey === $item['key'] ? 'active' : '' ?>" href="<?= e($item['href']) ?>"><?= e($item['label']) ?></a>
+                <?php endforeach; ?>
+            </div>
+        </details>
+
+        <?php if ($isManager): ?>
+            <a class="button<?= $activeKey === 'teams' ? '' : ' secondary' ?>" href="<?= e(url('departments/k9/teams.php')) ?>">Teams</a>
+            <a class="button<?= $activeKey === 'setup' ? '' : ' secondary' ?>" href="<?= e(url('departments/k9/setup.php')) ?>">Setup</a>
+        <?php endif; ?>
     </div>
     <?php
 }
