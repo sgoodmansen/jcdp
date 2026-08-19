@@ -95,6 +95,8 @@ function k9_navigation(string $activeKey): void
             </div>
         </details>
 
+        <a class="button<?= $activeKey === 'reports' ? '' : ' secondary' ?>" href="<?= e(url('departments/k9/reports.php')) ?>">Reports</a>
+
         <?php if ($isManager): ?>
             <a class="button<?= $activeKey === 'teams' ? '' : ' secondary' ?>" href="<?= e(url('departments/k9/teams.php')) ?>">Teams</a>
             <a class="button<?= $activeKey === 'setup' ? '' : ' secondary' ?>" href="<?= e(url('departments/k9/setup.php')) ?>">Setup</a>
