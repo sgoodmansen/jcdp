@@ -6,7 +6,7 @@ const K9_DEPARTMENT_SLUG = 'k9';
 
 function k9_schema_ready(): bool
 {
-    foreach (['k9_activity_logs', 'k9_teams', 'k9_locations', 'k9_training_aids'] as $tableName) {
+    foreach (['k9_activity_logs', 'k9_teams', 'k9_locations', 'k9_training_aids', 'k9_medical_visits', 'k9_expenses'] as $tableName) {
         $statement = db()->query("SHOW TABLES LIKE " . db()->quote($tableName));
         if (!$statement->fetchColumn()) {
             return false;
@@ -78,6 +78,8 @@ function k9_navigation(string $activeKey): void
         ['key' => 'activity', 'label' => 'Activity Log', 'href' => url('departments/k9/activity.php')],
         ['key' => 'activity-edit', 'label' => 'Add Training', 'href' => url('departments/k9/activity-edit.php')],
         ['key' => 'deployment-edit', 'label' => 'Add Deployment', 'href' => url('departments/k9/deployment-edit.php')],
+        ['key' => 'medical-edit', 'label' => 'Add Medical', 'href' => url('departments/k9/medical-edit.php')],
+        ['key' => 'expense-edit', 'label' => 'Add Expense', 'href' => url('departments/k9/expense-edit.php')],
     ];
 
     if ($isManager) {

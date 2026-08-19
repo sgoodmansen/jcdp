@@ -1074,6 +1074,19 @@ button:focus {
     display: none !important;
 }
 
+.k9-shot-list {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.k9-shot-row {
+    align-items: end;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(220px, 1fr) minmax(140px, 220px);
+}
+
 .field-warning {
     color: var(--danger);
     display: none;
@@ -3265,6 +3278,10 @@ textarea {
     }
 
     .k9-aid-row {
+        grid-template-columns: 1fr;
+    }
+
+    .k9-shot-row {
         grid-template-columns: 1fr;
     }
 

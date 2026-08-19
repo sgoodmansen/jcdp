@@ -5,35 +5,135 @@ require_k9_access();
 $startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
 $endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
 $activityTypeId = (int) ($_GET['activity_type_id'] ?? 0);
+$recordType = $_GET['record_type'] ?? '';
+if (!in_array($recordType, ['', 'training', 'deployment', 'medical', 'expense'], true)) {
+    $recordType = '';
+}
 [$teamWhere, $teamParams] = k9_visible_team_sql('k9_teams');
 
-$params = $teamParams;
-$where = 'WHERE 1 = 1' . $teamWhere;
+$recordTypeOptions = [
+    '' => 'All records',
+    'training' => 'Training',
+    'deployment' => 'Deployment',
+    'medical' => 'Medical',
+    'expense' => 'Expense',
+];
+
+$params = [];
+$activityWhere = 'WHERE 1 = 1' . $teamWhere;
+$medicalWhere = 'WHERE 1 = 1' . $teamWhere;
+$expenseWhere = 'WHERE 1 = 1' . $teamWhere;
+foreach ($teamParams as $key => $value) {
+    $params[$key] = $value;
+}
 if ($startDate !== '') {
-    $where .= ' AND k9_activity_logs.activity_date >= :start_date';
+    $activityWhere .= ' AND k9_activity_logs.activity_date >= :start_date';
+    $medicalWhere .= ' AND k9_medical_visits.visit_date >= :start_date';
+    $expenseWhere .= ' AND k9_expenses.expense_date >= :start_date';
     $params['start_date'] = $startDate;
 }
 if ($endDate !== '') {
-    $where .= ' AND k9_activity_logs.activity_date <= :end_date';
+    $activityWhere .= ' AND k9_activity_logs.activity_date <= :end_date';
+    $medicalWhere .= ' AND k9_medical_visits.visit_date <= :end_date';
+    $expenseWhere .= ' AND k9_expenses.expense_date <= :end_date';
     $params['end_date'] = $endDate;
 }
 if ($activityTypeId > 0) {
-    $where .= ' AND k9_activity_logs.activity_type_id = :activity_type_id';
+    $activityWhere .= ' AND k9_activity_logs.activity_type_id = :activity_type_id';
+    $medicalWhere .= ' AND 1 = 0';
+    $expenseWhere .= ' AND 1 = 0';
     $params['activity_type_id'] = $activityTypeId;
 }
+if ($recordType === 'training') {
+    $activityWhere .= ' AND k9_activity_types.name = "Training"';
+    $medicalWhere .= ' AND 1 = 0';
+    $expenseWhere .= ' AND 1 = 0';
+} elseif ($recordType === 'deployment') {
+    $activityWhere .= ' AND k9_activity_types.name = "Deployed"';
+    $medicalWhere .= ' AND 1 = 0';
+    $expenseWhere .= ' AND 1 = 0';
+} elseif ($recordType === 'medical') {
+    $activityWhere .= ' AND 1 = 0';
+    $expenseWhere .= ' AND 1 = 0';
+} elseif ($recordType === 'expense') {
+    $activityWhere .= ' AND 1 = 0';
+    $medicalWhere .= ' AND 1 = 0';
+}
 
-$sql = "SELECT k9_activity_logs.*, k9_dogs.dog_name, k9_handlers.handler_name, k9_activity_types.name AS activity_type,
-               k9_training_areas.name AS training_area, k9_locations.name AS location_name, k9_indications.name AS indication
-        FROM k9_activity_logs
-        INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
-        INNER JOIN k9_dogs ON k9_dogs.id = k9_activity_logs.dog_id
-        INNER JOIN k9_handlers ON k9_handlers.id = k9_activity_logs.handler_id
-        LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
-        LEFT JOIN k9_training_areas ON k9_training_areas.id = k9_activity_logs.training_area_id
-        LEFT JOIN k9_locations ON k9_locations.id = k9_activity_logs.location_id
-        LEFT JOIN k9_indications ON k9_indications.id = k9_activity_logs.indication_id
-        $where
-        ORDER BY k9_activity_logs.activity_date DESC, k9_activity_logs.id DESC
+$sql = "SELECT *
+        FROM (
+            SELECT
+                k9_activity_logs.id,
+                CASE WHEN k9_activity_types.name = 'Deployed' THEN 'deployment' ELSE 'training' END AS record_type,
+                k9_activity_logs.activity_date AS record_date,
+                k9_dogs.dog_name,
+                k9_handlers.handler_name,
+                COALESCE(k9_activity_types.name, 'Activity') AS record_title,
+                COALESCE(k9_training_areas.name, k9_indications.name, k9_deployment_outcomes.name, 'Not set') AS detail,
+                COALESCE(k9_locations.name, k9_assisting_agencies.name, '') AS secondary_detail,
+                k9_activity_logs.incident_number,
+                k9_activity_logs.training_hours,
+                k9_activity_logs.is_post_training,
+                NULL AS amount,
+                k9_activity_logs.notes
+            FROM k9_activity_logs
+            INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
+            INNER JOIN k9_dogs ON k9_dogs.id = k9_activity_logs.dog_id
+            INNER JOIN k9_handlers ON k9_handlers.id = k9_activity_logs.handler_id
+            LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
+            LEFT JOIN k9_training_areas ON k9_training_areas.id = k9_activity_logs.training_area_id
+            LEFT JOIN k9_locations ON k9_locations.id = k9_activity_logs.location_id
+            LEFT JOIN k9_indications ON k9_indications.id = k9_activity_logs.indication_id
+            LEFT JOIN k9_assisting_agencies ON k9_assisting_agencies.id = k9_activity_logs.assisting_agency_id
+            LEFT JOIN k9_deployment_outcomes ON k9_deployment_outcomes.id = k9_activity_logs.deployment_outcome_id
+            $activityWhere
+
+            UNION ALL
+
+            SELECT
+                k9_medical_visits.id,
+                'medical' AS record_type,
+                k9_medical_visits.visit_date AS record_date,
+                k9_dogs.dog_name,
+                k9_handlers.handler_name,
+                'Medical Visit' AS record_title,
+                COALESCE(k9_medical_visits.reason_for_visit, 'Not set') AS detail,
+                COALESCE(k9_medical_visits.vet_office_name, '') AS secondary_detail,
+                NULL AS incident_number,
+                NULL AS training_hours,
+                0 AS is_post_training,
+                NULL AS amount,
+                k9_medical_visits.notes
+            FROM k9_medical_visits
+            INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_visits.dog_id
+            INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+            INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+            $medicalWhere
+
+            UNION ALL
+
+            SELECT
+                k9_expenses.id,
+                'expense' AS record_type,
+                k9_expenses.expense_date AS record_date,
+                k9_dogs.dog_name,
+                k9_handlers.handler_name,
+                'Expense' AS record_title,
+                COALESCE(k9_expense_categories.name, 'Not set') AS detail,
+                COALESCE(k9_expenses.vendor, '') AS secondary_detail,
+                NULL AS incident_number,
+                NULL AS training_hours,
+                0 AS is_post_training,
+                k9_expenses.amount,
+                k9_expenses.notes
+            FROM k9_expenses
+            INNER JOIN k9_dogs ON k9_dogs.id = k9_expenses.dog_id
+            INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+            INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+            LEFT JOIN k9_expense_categories ON k9_expense_categories.id = k9_expenses.expense_category_id
+            $expenseWhere
+        ) records
+        ORDER BY record_date DESC, id DESC
         LIMIT 300";
 $statement = db()->prepare($sql);
 $statement->execute($params);
@@ -45,7 +145,7 @@ page_header('K-9 Activity Log');
 <main class="shell">
     <section class="panel">
         <h1>Activity Log</h1>
-        <p>Review K-9 training and deployment records.</p>
+        <p>Review K-9 training, deployments, medical visits, and expenses.</p>
         <?php k9_navigation('activity'); ?>
     </section>
 
@@ -61,7 +161,15 @@ page_header('K-9 Activity Log');
                 <input type="date" name="end_date" value="<?= e($endDate) ?>">
             </label>
             <label>
-                Activity type
+                Record type
+                <select name="record_type">
+                    <?php foreach ($recordTypeOptions as $typeKey => $typeLabel): ?>
+                        <option value="<?= e($typeKey) ?>" <?= $recordType === $typeKey ? 'selected' : '' ?>><?= e($typeLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                Training / deployment type
                 <select name="activity_type_id">
                     <option value="">Any type</option>
                     <?php foreach ($activityTypes as $type): ?>
@@ -85,6 +193,8 @@ page_header('K-9 Activity Log');
             <div class="actions">
                 <a class="button compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
                 <a class="button secondary compact-button" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">Add deployment</a>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/medical-edit.php')) ?>">Add medical</a>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/expense-edit.php')) ?>">Add expense</a>
             </div>
         </div>
         <table class="table mobile-card-table">
@@ -92,32 +202,46 @@ page_header('K-9 Activity Log');
                 <tr>
                     <th>Date</th>
                     <th>Team</th>
-                    <th>Activity</th>
-                    <th>Area</th>
-                    <th>Location</th>
-                    <th>Hours</th>
+                    <th>Record</th>
+                    <th>Details</th>
+                    <th>Hours / Amount</th>
                     <th>POST</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($activities as $activity): ?>
                     <tr>
-                        <td data-label="Date"><?= e(format_display_date($activity['activity_date'])) ?></td>
+                        <td data-label="Date"><?= e(format_display_date($activity['record_date'])) ?></td>
                         <td data-label="Team"><?= e($activity['dog_name']) ?><br><span class="meta"><?= e($activity['handler_name']) ?></span></td>
-                        <td data-label="Activity">
-                            <?= e($activity['activity_type'] ?: 'Not set') ?>
+                        <td data-label="Record">
+                            <?= e($activity['record_title']) ?>
                             <?php if ($activity['incident_number']): ?>
                                 <br><span class="meta"><?= e($activity['incident_number']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td data-label="Area"><?= e($activity['training_area'] ?: 'Not set') ?></td>
-                        <td data-label="Location"><?= e($activity['location_name'] ?: 'Not set') ?></td>
-                        <td data-label="Hours"><?= e(number_format((float) $activity['training_hours'], 2)) ?></td>
-                        <td data-label="POST"><?= (int) $activity['is_post_training'] === 1 ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-muted">No</span>' ?></td>
+                        <td data-label="Details">
+                            <?= e($activity['detail'] ?: 'Not set') ?>
+                            <?php if ($activity['secondary_detail']): ?>
+                                <br><span class="meta"><?= e($activity['secondary_detail']) ?></span>
+                            <?php endif; ?>
+                            <?php if ($activity['notes']): ?>
+                                <br><span class="meta"><?= e($activity['notes']) ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td data-label="Hours / Amount">
+                            <?= $activity['record_type'] === 'expense' ? e(k9_money($activity['amount'])) : e($activity['training_hours'] !== null ? number_format((float) $activity['training_hours'], 2) : '') ?>
+                        </td>
+                        <td data-label="POST">
+                            <?php if ((int) $activity['is_post_training'] === 1): ?>
+                                <span class="badge badge-success">Yes</span>
+                            <?php elseif ($activity['record_type'] === 'training'): ?>
+                                <span class="badge badge-muted">No</span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$activities): ?>
-                    <tr><td colspan="7">No activity matched the selected filters.</td></tr>
+                    <tr><td colspan="6">No activity matched the selected filters.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

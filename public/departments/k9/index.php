@@ -163,6 +163,8 @@ page_header('K-9 Activity & Records');
             <div class="actions">
                 <a class="button compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
                 <a class="button secondary compact-button" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">Add deployment</a>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/medical-edit.php')) ?>">Add medical</a>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/expense-edit.php')) ?>">Add expense</a>
             </div>
         </div>
         <table class="table mobile-card-table">
