@@ -101,6 +101,36 @@ if ($type === 'medical') {
     $shots = $shotStatement->fetchAll();
 }
 
+$trainingAids = [];
+if ($type === 'training') {
+    $aidStatement = db()->prepare(
+        'SELECT k9_training_aids.name, k9_training_aids.category, k9_activity_log_aids.amount_grams
+         FROM k9_activity_log_aids
+         INNER JOIN k9_training_aids ON k9_training_aids.id = k9_activity_log_aids.training_aid_id
+         WHERE k9_activity_log_aids.activity_log_id = :id
+         ORDER BY k9_activity_log_aids.id'
+    );
+    $aidStatement->execute(['id' => $id]);
+    $trainingAids = $aidStatement->fetchAll();
+}
+
+$formatTrainingAids = static function (array $aids): string {
+    if (!$aids) {
+        return 'None listed';
+    }
+
+    $lines = [];
+    foreach ($aids as $aid) {
+        $line = (string) $aid['name'];
+        if ((float) $aid['amount_grams'] > 0) {
+            $line .= ' - ' . number_format((float) $aid['amount_grams'], 2) . ' grams';
+        }
+        $lines[] = $line;
+    }
+
+    return implode("\n", $lines);
+};
+
 $detailRow = static function (string $label, string $value): void {
     ?>
     <div class="k9-detail-item">
@@ -129,9 +159,10 @@ page_header($title);
 
     <section class="panel" style="margin-top: 18px;">
         <dl class="k9-detail-list">
-                <?php if ($type === 'training'): ?>
+                    <?php if ($type === 'training'): ?>
                     <?php $detailRow('Date', format_display_date($record['activity_date'])); ?>
                     <?php $detailRow('Training area', $record['training_area'] ?: 'Not set'); ?>
+                    <?php $detailRow('Training aids', $formatTrainingAids($trainingAids)); ?>
                     <?php $detailRow('Location', $record['location_name'] ?: 'Not set'); ?>
                     <?php $detailRow('Indication', $record['indication'] ?: 'Not set'); ?>
                     <?php $detailRow('Hours', number_format((float) $record['training_hours'], 2)); ?>

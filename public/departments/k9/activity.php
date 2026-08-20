@@ -187,7 +187,7 @@ page_header('K-9 Activity Log');
                     <th>Team</th>
                     <th>Record</th>
                     <th>Details</th>
-                    <th>Hours / Amount</th>
+                    <th>Hours / Cost</th>
                     <th>POST</th>
                     <th>Actions</th>
                 </tr>
@@ -214,7 +214,7 @@ page_header('K-9 Activity Log');
                                 <br><span class="meta k9-activity-notes-preview"><?= e($activity['notes']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td data-label="Hours / Amount">
+                        <td data-label="Hours / Cost">
                             <?= $activity['record_type'] === 'expense' ? e(k9_money($activity['amount'])) : e($activity['training_hours'] !== null ? number_format((float) $activity['training_hours'], 2) : '') ?>
                         </td>
                         <td data-label="POST">
