@@ -1223,6 +1223,54 @@ button:focus {
     padding-left: 0;
 }
 
+.k9-activity-table {
+    table-layout: fixed;
+}
+
+.k9-activity-table th,
+.k9-activity-table td {
+    vertical-align: top;
+}
+
+.k9-activity-table th:nth-child(1),
+.k9-activity-table td:nth-child(1) {
+    white-space: nowrap;
+    width: 110px;
+}
+
+.k9-activity-table th:nth-child(2),
+.k9-activity-table td:nth-child(2) {
+    width: 130px;
+}
+
+.k9-activity-table th:nth-child(3),
+.k9-activity-table td:nth-child(3) {
+    width: 100px;
+}
+
+.k9-activity-table th:nth-child(5),
+.k9-activity-table td:nth-child(5) {
+    width: 80px;
+}
+
+.k9-activity-table th:nth-child(6),
+.k9-activity-table td:nth-child(6) {
+    white-space: nowrap;
+    width: 95px;
+}
+
+.k9-activity-table th:nth-child(7),
+.k9-activity-table td:nth-child(7) {
+    width: 100px;
+}
+
+.k9-activity-notes-preview {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
 .k9-training-detail-grid {
     display: grid;
     gap: 12px 16px;
@@ -3676,7 +3724,7 @@ textarea {
         display: none;
     }
 
-    .k9-activity-table td[data-label="POST"]:empty {
+    .k9-activity-table td[data-label="Cost"]:empty {
         display: none;
     }
 

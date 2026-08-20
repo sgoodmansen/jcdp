@@ -222,6 +222,17 @@ $statement = db()->prepare($sql);
 $statement->execute($params);
 $activities = $statement->fetchAll();
 
+$activityPreview = static function (?string $value, int $limit = 130): string {
+    $clean = preg_replace('/\s+/', ' ', (string) $value);
+    $clean = trim($clean ?? '');
+
+    if ($clean === '') {
+        return '';
+    }
+
+    return strlen($clean) > $limit ? substr($clean, 0, $limit) . '...' : $clean;
+};
+
 $filterQuery = http_build_query([
     'period' => $period,
     'start_date' => $startDate,
@@ -383,13 +394,14 @@ page_header('K-9 Activity Log');
                     <th>Team</th>
                     <th>Record</th>
                     <th>Details</th>
-                    <th>Hours / Cost</th>
-                    <th>POST</th>
+                    <th>Hours</th>
+                    <th>Cost</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($activities as $activity): ?>
+                    <?php $notesPreview = $activityPreview($activity['notes'] ?? null); ?>
                     <tr>
                         <td data-label="Date"><?= e(format_display_date($activity['record_date'])) ?></td>
                         <td data-label="Team">
@@ -397,6 +409,9 @@ page_header('K-9 Activity Log');
                         </td>
                         <td data-label="Record">
                             <?= e($activity['record_title']) ?>
+                            <?php if ((int) $activity['is_post_training'] === 1): ?>
+                                <br><span class="badge badge-success">POST</span>
+                            <?php endif; ?>
                             <?php if ($activity['incident_number']): ?>
                                 <br><span class="meta"><?= e($activity['incident_number']) ?></span>
                             <?php endif; ?>
@@ -406,19 +421,15 @@ page_header('K-9 Activity Log');
                             <?php if ($activity['secondary_detail']): ?>
                                 <br><span class="meta k9-activity-secondary-detail"><?= e($activity['secondary_detail']) ?></span>
                             <?php endif; ?>
-                            <?php if ($activity['notes']): ?>
-                                <br><span class="meta k9-activity-notes-preview"><?= e($activity['notes']) ?></span>
+                            <?php if ($notesPreview): ?>
+                                <br><span class="meta k9-activity-notes-preview"><?= e($notesPreview) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td data-label="Hours / Cost">
-                            <?= $activity['record_type'] === 'expense' ? e(k9_money($activity['amount'])) : e($activity['training_hours'] !== null ? number_format((float) $activity['training_hours'], 2) : '') ?>
+                        <td data-label="Hours">
+                            <?= $activity['record_type'] !== 'expense' && $activity['training_hours'] !== null ? e(number_format((float) $activity['training_hours'], 2)) : '' ?>
                         </td>
-                        <td data-label="POST">
-                            <?php if ((int) $activity['is_post_training'] === 1): ?>
-                                <span class="badge badge-success">Yes</span>
-                            <?php elseif ($activity['record_type'] === 'training'): ?>
-                                <span class="badge badge-muted">No</span>
-                            <?php endif; ?>
+                        <td data-label="Cost">
+                            <?= $activity['record_type'] === 'expense' ? e(k9_money($activity['amount'])) : '' ?>
                         </td>
                         <td data-label="Actions">
                             <a class="button secondary compact-button" href="<?= e(url('departments/k9/record-detail.php?type=' . urlencode($activity['record_type']) . '&id=' . (int) $activity['id'])) ?>">Open</a>
