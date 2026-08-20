@@ -65,8 +65,6 @@ $dareActions = [];
 $electionActions = [];
 $k9Actions = [];
 $sheriffTrainingActions = [];
-$recentDmvRequests = [];
-$nextDareLessons = [];
 
 if ($hasDmvAccess) {
     $dmvActions = [
@@ -80,23 +78,6 @@ if ($hasDmvAccess) {
     if (can_manage_department('dmv')) {
         $dmvActions[] = ['label' => 'Vehicle lookups', 'href' => url('departments/dmv/vehicle-lookups.php')];
     }
-
-    $recentStatement = db()->prepare(
-        'SELECT
-            dmv_title_requests.id,
-            dmv_title_requests.request_date,
-            dmv_title_requests.registrant_name,
-            dmv_title_requests.registrant_name_2,
-            dmv_title_requests.status,
-            dmv_lienholders.company_name
-         FROM dmv_title_requests
-         INNER JOIN dmv_lienholders ON dmv_lienholders.id = dmv_title_requests.lienholder_id
-         WHERE dmv_title_requests.created_by = :user_id
-         ORDER BY dmv_title_requests.created_at DESC
-         LIMIT 5'
-    );
-    $recentStatement->execute(['user_id' => $user['id']]);
-    $recentDmvRequests = $recentStatement->fetchAll();
 }
 
 if ($hasDareAccess) {
@@ -112,8 +93,6 @@ if ($hasDareAccess) {
         $dareActions[] = ['label' => 'Schools & officers', 'href' => url('departments/dare/lookups.php')];
         $dareActions[] = ['label' => 'Lessons', 'href' => url('departments/dare/lessons.php')];
     }
-
-    $nextDareLessons = dare_next_lessons_for_user($user, 5);
 }
 
 if ($hasElectionAccess) {
@@ -189,44 +168,6 @@ page_header('Dashboard');
                     <?php dashboard_start_preference_control('dmv', $startDepartmentSlug); ?>
                 </div>
                 <?php page_actions($dmvActions); ?>
-
-                <h2 style="margin-top: 24px;">My Recent Title Requests</h2>
-                <?php if (!$recentDmvRequests): ?>
-                    <p>No DMV title requests have been entered by you yet.</p>
-                <?php else: ?>
-                    <table class="table mobile-card-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Registrant</th>
-                                <th>Lienholder</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($recentDmvRequests as $request): ?>
-                                <tr>
-                                    <td data-label="Date"><?= e($request['request_date']) ?></td>
-                                    <td data-label="Registrant">
-                                        <?= e($request['registrant_name']) ?>
-                                        <?php if (!empty($request['registrant_name_2'])): ?>
-                                            <br><span class="meta"><?= e($request['registrant_name_2']) ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td data-label="Lienholder"><?= e($request['company_name']) ?></td>
-                                    <td data-label="Status"><?= e(ucfirst($request['status'])) ?></td>
-                                    <td data-label="Actions">
-                                        <div class="table-actions">
-                                            <a class="icon-link" href="<?= e(url('departments/dmv/title-request-detail.php?id=' . $request['id'])) ?>" title="View details" aria-label="View title request details">&#9636;</a>
-                                            <a class="icon-link" href="<?= e(url('departments/dmv/title-request-edit.php?id=' . $request['id'])) ?>" title="Edit title request" aria-label="Edit title request">&#9998;</a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
             </section>
         <?php elseif ($department['slug'] === 'dare'): ?>
             <section class="panel" style="margin-top: 18px;">
@@ -238,45 +179,6 @@ page_header('Dashboard');
                     <?php dashboard_start_preference_control('dare', $startDepartmentSlug); ?>
                 </div>
                 <?php page_actions($dareActions); ?>
-
-                <?php if ($nextDareLessons): ?>
-                    <h2 style="margin-top: 24px;">Next Lessons</h2>
-                    <table class="table mobile-card-table">
-                        <thead>
-                            <tr>
-                                <th>School</th>
-                                <th>School Year</th>
-                                <th>Semester</th>
-                                <th>Period</th>
-                                <th>Teacher</th>
-                                <th>Next Lesson</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($nextDareLessons as $lesson): ?>
-                                <tr>
-                                    <td data-label="School"><?= e($lesson['school_name']) ?></td>
-                                    <td data-label="School Year"><?= e($lesson['school_year'] ?: 'Not set') ?></td>
-                                    <td data-label="Semester"><?= e($lesson['semester'] ?: 'Not set') ?></td>
-                                    <td data-label="Period"><?= e($lesson['period'] ?: 'Not set') ?></td>
-                                    <td data-label="Teacher"><?= e(trim(($lesson['teacher_first_name'] ?? '') . ' ' . ($lesson['teacher_last_name'] ?? '')) ?: 'Not assigned') ?></td>
-                                    <td data-label="Next Lesson"><?= e($lesson['lesson_title']) ?></td>
-                                    <td data-label="Actions">
-                                        <div class="table-actions">
-                                            <form method="post" action="<?= e(url('departments/dare/lesson-complete.php')) ?>">
-                                                <input type="hidden" name="class_lesson_id" value="<?= e((string) $lesson['class_lesson_id']) ?>">
-                                                <input type="hidden" name="return_to" value="main_dashboard">
-                                                <button type="submit" class="secondary compact-button">Mark taught</button>
-                                            </form>
-                                            <a class="icon-link" href="<?= e(url('departments/dare/class-detail.php?id=' . $lesson['class_id'])) ?>" title="View class" aria-label="View DARE class">&#9636;</a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
             </section>
         <?php elseif ($department['slug'] === 'election'): ?>
             <section class="panel" style="margin-top: 18px;">
