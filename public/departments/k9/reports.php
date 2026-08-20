@@ -7,6 +7,19 @@ $startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
 $endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
 $teamId = (int) ($_GET['team_id'] ?? 0);
 $expenseCategoryId = (int) ($_GET['expense_category_id'] ?? 0);
+$reportTypes = [
+    'summary' => 'Summary',
+    'training' => 'Training by Team',
+    'training_area' => 'Training by Area',
+    'deployments' => 'Deployments by Outcome',
+    'expenses' => 'Expenses by Category',
+    'expense_detail' => 'Expense Detail',
+    'shots' => 'Shot Expirations',
+];
+$reportType = $_GET['report_type'] ?? 'summary';
+if (!isset($reportTypes[$reportType])) {
+    $reportType = 'summary';
+}
 
 $teamSql = 'SELECT k9_teams.id, k9_dogs.dog_name, k9_handlers.handler_name
             FROM k9_teams
@@ -59,7 +72,8 @@ if ($expenseCategoryId > 0) {
     $expenseWhere .= ' AND k9_expenses.expense_category_id = :expense_category_id';
     $expenseParams['expense_category_id'] = $expenseCategoryId;
 }
-$filterQuery = http_build_query([
+$printQuery = http_build_query([
+    'section' => $reportType,
     'start_date' => $startDate,
     'end_date' => $endDate,
     'team_id' => $teamId,
@@ -118,6 +132,23 @@ $trainingByTeamSql = "SELECT k9_dogs.dog_name,
 $statement = db()->prepare($trainingByTeamSql);
 $statement->execute($params);
 $trainingByTeam = $statement->fetchAll();
+
+$trainingByAreaSql = "SELECT COALESCE(k9_training_areas.name, 'Not set') AS training_area,
+                             COUNT(*) AS training_count,
+                             COALESCE(SUM(k9_activity_logs.training_hours), 0) AS training_hours,
+                             COALESCE(SUM(CASE WHEN k9_activity_logs.is_post_training = 1 THEN k9_activity_logs.training_hours ELSE 0 END), 0) AS post_hours,
+                             MAX(k9_activity_logs.activity_date) AS latest_training
+                      FROM k9_activity_logs
+                      INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
+                      LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
+                      LEFT JOIN k9_training_areas ON k9_training_areas.id = k9_activity_logs.training_area_id
+                      $activityWhere
+                        AND k9_activity_types.name = 'Training'
+                      GROUP BY COALESCE(k9_training_areas.name, 'Not set')
+                      ORDER BY training_hours DESC, training_area";
+$statement = db()->prepare($trainingByAreaSql);
+$statement->execute($params);
+$trainingByArea = $statement->fetchAll();
 
 $deploymentOutcomeSql = "SELECT COALESCE(k9_deployment_outcomes.name, 'Not set') AS outcome,
                                 COUNT(*) AS deployment_count
@@ -201,6 +232,14 @@ page_header('K-9 Reports');
         <h1>Report Filters</h1>
         <form class="form compact-form" method="get">
             <label>
+                Report type
+                <select name="report_type">
+                    <?php foreach ($reportTypes as $typeKey => $typeLabel): ?>
+                        <option value="<?= e($typeKey) ?>" <?= $reportType === $typeKey ? 'selected' : '' ?>><?= e($typeLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
                 Start date
                 <input type="date" name="start_date" value="<?= e($startDate) ?>">
             </label>
@@ -227,16 +266,17 @@ page_header('K-9 Reports');
                 </select>
             </label>
             <div class="actions">
-                <button type="submit">Run reports</button>
+                <button type="submit">Run report</button>
                 <a class="button secondary" href="<?= e(url('departments/k9/reports.php')) ?>">Clear</a>
             </div>
         </form>
     </section>
 
+    <?php if ($reportType === 'summary'): ?>
     <section class="dashboard-stat-group summary-stat-group" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h2><?= e(format_display_date($startDate)) ?> to <?= e(format_display_date($endDate)) ?></h2>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?section=summary&' . $filterQuery)) ?>">Print PDF</a>
+            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
         </div>
         <div class="grid dashboard-stat-grid sheriff-budget-grid">
             <article class="card dashboard-stat-card">
@@ -265,11 +305,13 @@ page_header('K-9 Reports');
             </article>
         </div>
     </section>
+    <?php endif; ?>
 
+    <?php if ($reportType === 'training'): ?>
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Training by Team</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?section=training&' . $filterQuery)) ?>">Print PDF</a>
+            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
         </div>
         <table class="table mobile-card-table">
             <thead>
@@ -297,11 +339,47 @@ page_header('K-9 Reports');
             </tbody>
         </table>
     </section>
+    <?php endif; ?>
 
+    <?php if ($reportType === 'training_area'): ?>
+    <section class="panel" style="margin-top: 18px;">
+        <div class="section-heading-row">
+            <h1>Training by Area</h1>
+            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+        </div>
+        <table class="table mobile-card-table">
+            <thead>
+                <tr>
+                    <th>Training Area</th>
+                    <th>Training Logs</th>
+                    <th>Training Hours</th>
+                    <th>POST Hours</th>
+                    <th>Latest Training</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($trainingByArea as $row): ?>
+                    <tr>
+                        <td data-label="Training Area"><?= e($row['training_area']) ?></td>
+                        <td data-label="Training Logs"><?= e((string) (int) $row['training_count']) ?></td>
+                        <td data-label="Training Hours"><?= e(number_format((float) $row['training_hours'], 2)) ?></td>
+                        <td data-label="POST Hours"><?= e(number_format((float) $row['post_hours'], 2)) ?></td>
+                        <td data-label="Latest Training"><?= e($row['latest_training'] ? format_display_date($row['latest_training']) : '') ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$trainingByArea): ?>
+                    <tr><td colspan="5">No training records matched the selected filters.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($reportType === 'deployments'): ?>
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Deployments by Outcome</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?section=deployments&' . $filterQuery)) ?>">Print PDF</a>
+            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
         </div>
         <table class="table mobile-card-table">
             <thead>
@@ -323,11 +401,13 @@ page_header('K-9 Reports');
             </tbody>
         </table>
     </section>
+    <?php endif; ?>
 
+    <?php if ($reportType === 'expenses'): ?>
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Expenses by Category</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?section=expenses&' . $filterQuery)) ?>">Print PDF</a>
+            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
         </div>
         <table class="table mobile-card-table">
             <thead>
@@ -351,11 +431,13 @@ page_header('K-9 Reports');
             </tbody>
         </table>
     </section>
+    <?php endif; ?>
 
+    <?php if ($reportType === 'expense_detail'): ?>
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Expense Detail</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?section=expense_detail&' . $filterQuery)) ?>">Print PDF</a>
+            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
         </div>
         <table class="table mobile-card-table">
             <thead>
@@ -385,11 +467,13 @@ page_header('K-9 Reports');
             </tbody>
         </table>
     </section>
+    <?php endif; ?>
 
+    <?php if ($reportType === 'shots'): ?>
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Shot Expirations</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?section=shots&' . $filterQuery)) ?>">Print PDF</a>
+            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
         </div>
         <table class="table mobile-card-table">
             <thead>
@@ -413,5 +497,6 @@ page_header('K-9 Reports');
             </tbody>
         </table>
     </section>
+    <?php endif; ?>
 </main>
 <?php page_footer(); ?>

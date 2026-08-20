@@ -5,6 +5,7 @@ require_k9_access();
 $sections = [
     'summary' => 'K-9 Summary',
     'training' => 'Training by Team',
+    'training_area' => 'Training by Area',
     'deployments' => 'Deployments by Outcome',
     'expenses' => 'Expenses by Category',
     'expense_detail' => 'Expense Detail',
@@ -125,6 +126,23 @@ $statement = db()->prepare($trainingByTeamSql);
 $statement->execute($params);
 $trainingByTeam = $statement->fetchAll();
 
+$trainingByAreaSql = "SELECT COALESCE(k9_training_areas.name, 'Not set') AS training_area,
+                             COUNT(*) AS training_count,
+                             COALESCE(SUM(k9_activity_logs.training_hours), 0) AS training_hours,
+                             COALESCE(SUM(CASE WHEN k9_activity_logs.is_post_training = 1 THEN k9_activity_logs.training_hours ELSE 0 END), 0) AS post_hours,
+                             MAX(k9_activity_logs.activity_date) AS latest_training
+                      FROM k9_activity_logs
+                      INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
+                      LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
+                      LEFT JOIN k9_training_areas ON k9_training_areas.id = k9_activity_logs.training_area_id
+                      $activityWhere
+                        AND k9_activity_types.name = 'Training'
+                      GROUP BY COALESCE(k9_training_areas.name, 'Not set')
+                      ORDER BY training_hours DESC, training_area";
+$statement = db()->prepare($trainingByAreaSql);
+$statement->execute($params);
+$trainingByArea = $statement->fetchAll();
+
 $deploymentOutcomeSql = "SELECT COALESCE(k9_deployment_outcomes.name, 'Not set') AS outcome,
                                 COUNT(*) AS deployment_count
                          FROM k9_activity_logs
@@ -195,6 +213,7 @@ $statement->execute($shotParams);
 $shotExpirations = $statement->fetchAll();
 
 $backQuery = http_build_query([
+    'report_type' => $section,
     'start_date' => $startDate,
     'end_date' => $endDate,
     'team_id' => $teamId,
@@ -264,6 +283,32 @@ page_header($sections[$section] . ' Print');
                         </tr>
                     <?php endforeach; ?>
                     <?php if (!$trainingByTeam): ?>
+                        <tr><td colspan="5">No training records matched the selected filters.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        <?php elseif ($section === 'training_area'): ?>
+            <table class="table roster-table">
+                <thead>
+                    <tr>
+                        <th>Training Area</th>
+                        <th>Training Logs</th>
+                        <th>Training Hours</th>
+                        <th>POST Hours</th>
+                        <th>Latest Training</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($trainingByArea as $row): ?>
+                        <tr>
+                            <td><?= e($row['training_area']) ?></td>
+                            <td><?= e((string) (int) $row['training_count']) ?></td>
+                            <td><?= e(number_format((float) $row['training_hours'], 2)) ?></td>
+                            <td><?= e(number_format((float) $row['post_hours'], 2)) ?></td>
+                            <td><?= e($row['latest_training'] ? format_display_date($row['latest_training']) : '') ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$trainingByArea): ?>
                         <tr><td colspan="5">No training records matched the selected filters.</td></tr>
                     <?php endif; ?>
                 </tbody>
