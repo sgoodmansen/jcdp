@@ -1193,6 +1193,10 @@ button:focus {
     margin-bottom: 0;
 }
 
+.k9-activity-print-heading {
+    display: none !important;
+}
+
 .k9-activity-action-groups {
     align-items: flex-start;
     display: flex;
@@ -3733,6 +3737,10 @@ textarea {
 }
 
 @media print {
+    .k9-activity-print-heading {
+        display: grid !important;
+    }
+
     .k9-activity-table,
     .k9-activity-table thead,
     .k9-activity-table tbody,

@@ -250,6 +250,7 @@ if ($selectedExpenseCategory) {
     $filterSummary[] = 'Expense category: ' . $selectedExpenseCategory['name'];
     $screenSummary[] = $selectedExpenseCategory['name'];
 }
+$screenSummaryText = implode(' | ', $screenSummary);
 
 if (($_GET['format'] ?? '') === 'csv') {
     $filename = 'k9-activity-log-' . preg_replace('/[^0-9a-z-]+/i', '-', $startDate . '-to-' . $endDate) . '.csv';
@@ -288,7 +289,7 @@ page_header('K-9 Activity Log');
     <details class="panel k9-filter-panel print-hidden" style="margin-top: 18px;">
         <summary>
             <span>Filters</span>
-            <span class="meta"><?= e(implode(' - ', $screenSummary)) ?></span>
+            <span class="meta"><?= e($screenSummaryText) ?></span>
         </summary>
         <form class="form compact-form" method="get">
             <label>
@@ -350,7 +351,7 @@ page_header('K-9 Activity Log');
     </details>
 
     <section class="panel printable-roster" style="margin-top: 18px;">
-        <div class="print-only roster-header">
+        <div class="k9-activity-print-heading roster-header">
             <div>
                 <p class="meta"><?= e(format_display_date(date('Y-m-d'))) ?></p>
                 <h1>K-9 Activity Log</h1>
@@ -360,7 +361,7 @@ page_header('K-9 Activity Log');
         <div class="k9-activity-log-header print-hidden">
             <div>
                 <h1>Activity Log</h1>
-                <p class="muted"><?= e(implode(' · ', $screenSummary)) ?></p>
+                <p class="muted"><?= e($screenSummaryText) ?></p>
             </div>
             <div class="k9-activity-action-groups">
                 <div class="actions k9-activity-actions">
@@ -368,7 +369,7 @@ page_header('K-9 Activity Log');
                     <a class="button secondary compact-button" href="<?= e(url('departments/k9/activity.php?' . $filterQuery . '&format=csv')) ?>">Export CSV</a>
                 </div>
                 <div class="actions k9-activity-actions">
-                    <a class="button compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
                     <a class="button secondary compact-button" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">Add deployment</a>
                     <a class="button secondary compact-button" href="<?= e(url('departments/k9/medical-edit.php')) ?>">Add medical</a>
                     <a class="button secondary compact-button" href="<?= e(url('departments/k9/expense-edit.php')) ?>">Add expense</a>
