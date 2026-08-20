@@ -222,16 +222,62 @@ $statement = db()->prepare($sql);
 $statement->execute($params);
 $activities = $statement->fetchAll();
 
+$filterQuery = http_build_query([
+    'period' => $period,
+    'start_date' => $startDate,
+    'end_date' => $endDate,
+    'record_type' => $recordType,
+    'team_id' => $teamId,
+    'training_area_id' => $trainingAreaId,
+    'expense_category_id' => $expenseCategoryId,
+]);
+$filterSummary = [
+    format_display_date($startDate) . ' to ' . format_display_date($endDate),
+    $recordTypeOptions[$recordType] ?? 'All records',
+    $selectedTeam ? $selectedTeam['dog_name'] . ' - ' . $selectedTeam['handler_name'] : 'All teams',
+];
+if ($selectedTrainingArea) {
+    $filterSummary[] = 'Training area: ' . $selectedTrainingArea['name'];
+}
+if ($selectedExpenseCategory) {
+    $filterSummary[] = 'Expense category: ' . $selectedExpenseCategory['name'];
+}
+
+if (($_GET['format'] ?? '') === 'csv') {
+    $filename = 'k9-activity-log-' . preg_replace('/[^0-9a-z-]+/i', '-', $startDate . '-to-' . $endDate) . '.csv';
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['Date', 'Team', 'Record', 'Incident Number', 'Details', 'Secondary Detail', 'Hours', 'Cost', 'POST', 'Notes']);
+    foreach ($activities as $activity) {
+        fputcsv($output, [
+            format_display_date($activity['record_date']),
+            $activity['dog_name'] . ' / ' . $activity['handler_name'],
+            $activity['record_title'],
+            $activity['incident_number'] ?? '',
+            $activity['detail'] ?: 'Not set',
+            $activity['secondary_detail'] ?? '',
+            $activity['record_type'] === 'expense' ? '' : ($activity['training_hours'] !== null ? number_format((float) $activity['training_hours'], 2) : ''),
+            $activity['record_type'] === 'expense' ? k9_money($activity['amount']) : '',
+            (int) $activity['is_post_training'] === 1 ? 'Yes' : ($activity['record_type'] === 'training' ? 'No' : ''),
+            $activity['notes'] ?? '',
+        ]);
+    }
+    fclose($output);
+    exit;
+}
+
 page_header('K-9 Activity Log');
 ?>
 <main class="shell">
-    <section class="panel">
+    <section class="panel print-hidden">
         <h1>Activity Log</h1>
         <p>Review K-9 training, deployments, medical visits, and expenses.</p>
         <?php k9_navigation('activity'); ?>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
+    <section class="panel print-hidden" style="margin-top: 18px;">
         <h1>Filters</h1>
         <form class="form compact-form" method="get">
             <label>
@@ -292,13 +338,22 @@ page_header('K-9 Activity Log');
         </form>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
-        <div class="section-heading-row">
+    <section class="panel printable-roster" style="margin-top: 18px;">
+        <div class="print-only roster-header">
+            <div>
+                <p class="meta"><?= e(format_display_date(date('Y-m-d'))) ?></p>
+                <h1>K-9 Activity Log</h1>
+                <p><?= e(implode(' - ', $filterSummary)) ?></p>
+            </div>
+        </div>
+        <div class="section-heading-row print-hidden">
             <div>
                 <h1>Activity</h1>
                 <p class="muted"><?= e((string) count($activities)) ?> records shown.</p>
             </div>
             <div class="actions k9-activity-actions">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/activity.php?' . $filterQuery . '&format=csv')) ?>">Export CSV</a>
                 <a class="button compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
                 <a class="button secondary compact-button" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">Add deployment</a>
                 <a class="button secondary compact-button" href="<?= e(url('departments/k9/medical-edit.php')) ?>">Add medical</a>
