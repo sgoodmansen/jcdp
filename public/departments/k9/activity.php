@@ -2,13 +2,40 @@
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_k9_access();
 
-$startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
-$endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
+$period = $_GET['period'] ?? 'this_year';
+if (!in_array($period, ['this_week', 'this_month', 'this_year', 'custom'], true)) {
+    $period = 'this_year';
+}
+
+$periodOptions = [
+    'this_week' => 'This Week',
+    'this_month' => 'This Month',
+    'this_year' => 'This Year',
+    'custom' => 'Custom Dates',
+];
+
+if ($period === 'this_week') {
+    $startDate = date('Y-m-d', strtotime('monday this week'));
+    $endDate = date('Y-m-d');
+} elseif ($period === 'this_month') {
+    $startDate = date('Y-m-01');
+    $endDate = date('Y-m-d');
+} elseif ($period === 'this_year') {
+    $startDate = date('Y-01-01');
+    $endDate = date('Y-m-d');
+} else {
+    $startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
+    $endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
+}
+
 $recordType = $_GET['record_type'] ?? '';
 if (!in_array($recordType, ['', 'training', 'deployment', 'medical', 'expense'], true)) {
     $recordType = '';
 }
 [$teamWhere, $teamParams] = k9_visible_team_sql('k9_teams');
+$teamId = (int) ($_GET['team_id'] ?? 0);
+$trainingAreaId = (int) ($_GET['training_area_id'] ?? 0);
+$expenseCategoryId = (int) ($_GET['expense_category_id'] ?? 0);
 
 $recordTypeOptions = [
     '' => 'All records',
@@ -17,6 +44,51 @@ $recordTypeOptions = [
     'medical' => 'Medical',
     'expense' => 'Expense',
 ];
+
+$teamSql = 'SELECT k9_teams.id, k9_dogs.dog_name, k9_handlers.handler_name
+            FROM k9_teams
+            INNER JOIN k9_dogs ON k9_dogs.id = k9_teams.dog_id
+            INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+            WHERE 1 = 1' . $teamWhere . '
+            ORDER BY k9_dogs.dog_name, k9_handlers.handler_name';
+$statement = db()->prepare($teamSql);
+$statement->execute($teamParams);
+$teams = $statement->fetchAll();
+
+$selectedTeam = null;
+foreach ($teams as $team) {
+    if ((int) $team['id'] === $teamId) {
+        $selectedTeam = $team;
+        break;
+    }
+}
+if (!$selectedTeam) {
+    $teamId = 0;
+}
+
+$trainingAreas = k9_lookup_options('k9_training_areas');
+$selectedTrainingArea = null;
+foreach ($trainingAreas as $trainingArea) {
+    if ((int) $trainingArea['id'] === $trainingAreaId) {
+        $selectedTrainingArea = $trainingArea;
+        break;
+    }
+}
+if (!$selectedTrainingArea) {
+    $trainingAreaId = 0;
+}
+
+$expenseCategories = k9_lookup_options('k9_expense_categories');
+$selectedExpenseCategory = null;
+foreach ($expenseCategories as $expenseCategory) {
+    if ((int) $expenseCategory['id'] === $expenseCategoryId) {
+        $selectedExpenseCategory = $expenseCategory;
+        break;
+    }
+}
+if (!$selectedExpenseCategory) {
+    $expenseCategoryId = 0;
+}
 
 $params = [];
 $activityWhere = 'WHERE 1 = 1' . $teamWhere;
@@ -36,6 +108,24 @@ if ($endDate !== '') {
     $medicalWhere .= ' AND k9_medical_visits.visit_date <= :end_date';
     $expenseWhere .= ' AND k9_expenses.expense_date <= :end_date';
     $params['end_date'] = $endDate;
+}
+if ($teamId > 0) {
+    $activityWhere .= ' AND k9_teams.id = :team_id';
+    $medicalWhere .= ' AND k9_teams.id = :team_id';
+    $expenseWhere .= ' AND k9_teams.id = :team_id';
+    $params['team_id'] = $teamId;
+}
+if ($trainingAreaId > 0) {
+    $activityWhere .= ' AND k9_activity_logs.training_area_id = :training_area_id';
+    $medicalWhere .= ' AND 1 = 0';
+    $expenseWhere .= ' AND 1 = 0';
+    $params['training_area_id'] = $trainingAreaId;
+}
+if ($expenseCategoryId > 0) {
+    $activityWhere .= ' AND 1 = 0';
+    $medicalWhere .= ' AND 1 = 0';
+    $expenseWhere .= ' AND k9_expenses.expense_category_id = :expense_category_id';
+    $params['expense_category_id'] = $expenseCategoryId;
 }
 if ($recordType === 'training') {
     $activityWhere .= ' AND k9_activity_types.name = "Training"';
@@ -145,18 +235,53 @@ page_header('K-9 Activity Log');
         <h1>Filters</h1>
         <form class="form compact-form" method="get">
             <label>
+                Period
+                <select name="period" id="k9-activity-period">
+                    <?php foreach ($periodOptions as $periodKey => $periodLabel): ?>
+                        <option value="<?= e($periodKey) ?>" <?= $period === $periodKey ? 'selected' : '' ?>><?= e($periodLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
                 Start date
-                <input type="date" name="start_date" value="<?= e($startDate) ?>">
+                <input type="date" name="start_date" value="<?= e($startDate) ?>" data-k9-custom-date>
             </label>
             <label>
                 End date
-                <input type="date" name="end_date" value="<?= e($endDate) ?>">
+                <input type="date" name="end_date" value="<?= e($endDate) ?>" data-k9-custom-date>
             </label>
             <label>
                 Record type
                 <select name="record_type">
                     <?php foreach ($recordTypeOptions as $typeKey => $typeLabel): ?>
                         <option value="<?= e($typeKey) ?>" <?= $recordType === $typeKey ? 'selected' : '' ?>><?= e($typeLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                K-9 team
+                <select name="team_id">
+                    <option value="">All teams</option>
+                    <?php foreach ($teams as $team): ?>
+                        <option value="<?= e((string) $team['id']) ?>" <?= $teamId === (int) $team['id'] ? 'selected' : '' ?>><?= e($team['dog_name'] . ' - ' . $team['handler_name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                Training area
+                <select name="training_area_id">
+                    <option value="">All training areas</option>
+                    <?php foreach ($trainingAreas as $trainingArea): ?>
+                        <option value="<?= e((string) $trainingArea['id']) ?>" <?= $trainingAreaId === (int) $trainingArea['id'] ? 'selected' : '' ?>><?= e($trainingArea['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                Expense category
+                <select name="expense_category_id">
+                    <option value="">All expense categories</option>
+                    <?php foreach ($expenseCategories as $expenseCategory): ?>
+                        <option value="<?= e((string) $expenseCategory['id']) ?>" <?= $expenseCategoryId === (int) $expenseCategory['id'] ? 'selected' : '' ?>><?= e($expenseCategory['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -236,4 +361,18 @@ page_header('K-9 Activity Log');
         </table>
     </section>
 </main>
+<script>
+    (function () {
+        const periodSelect = document.getElementById('k9-activity-period');
+        if (!periodSelect) {
+            return;
+        }
+
+        document.querySelectorAll('[data-k9-custom-date]').forEach(function (dateInput) {
+            dateInput.addEventListener('change', function () {
+                periodSelect.value = 'custom';
+            });
+        });
+    })();
+</script>
 <?php page_footer(); ?>
