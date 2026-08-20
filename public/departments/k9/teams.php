@@ -186,7 +186,7 @@ page_header('K-9 Teams');
 
     <section class="panel" style="margin-top: 18px;">
         <h1>Teams</h1>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table k9-teams-table">
             <thead>
                 <tr>
                     <th>K-9</th>
@@ -224,17 +224,17 @@ page_header('K-9 Teams');
                         <td data-label="Reminder"><?= e((string) $team['reminder_days']) ?> days</td>
                         <td data-label="Status"><?= (int) $team['is_active'] === 1 ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Ended</span>' ?></td>
                         <td data-label="Actions">
-                            <div class="table-actions">
+                            <div class="table-actions k9-team-actions">
                                 <a class="button secondary compact-button" href="<?= e(url('departments/k9/team-edit.php?id=' . (int) $team['id'])) ?>">Edit</a>
-                            </div>
                             <?php if ((int) $team['is_active'] === 1): ?>
-                                <form class="table-actions" method="post">
+                                <form method="post">
                                     <input type="hidden" name="action" value="end_team">
                                     <input type="hidden" name="team_id" value="<?= e((string) $team['id']) ?>">
                                     <input type="hidden" name="end_date" value="<?= e(date('Y-m-d')) ?>">
                                     <button type="submit" class="secondary compact-button">End team</button>
                                 </form>
                             <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>

@@ -2278,6 +2278,21 @@ textarea {
     flex-wrap: nowrap;
 }
 
+.k9-team-actions {
+    flex-wrap: nowrap;
+}
+
+.k9-team-actions form {
+    margin: 0;
+}
+
+.k9-team-actions .button,
+.k9-team-actions button {
+    min-width: 74px;
+    text-align: center;
+    white-space: nowrap;
+}
+
 .student-status-table select {
     min-width: 124px;
 }
@@ -3709,6 +3724,17 @@ textarea {
 
     .mobile-card-table .table-actions {
         justify-content: flex-start;
+    }
+
+    .k9-team-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .k9-team-actions .button,
+    .k9-team-actions button {
+        width: 100%;
     }
 
     .k9-activity-actions {
