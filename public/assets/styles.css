@@ -1122,6 +1122,10 @@ button:focus {
     overflow-wrap: anywhere;
 }
 
+.k9-team-inline {
+    display: inline;
+}
+
 .field-warning {
     color: var(--danger);
     display: none;
@@ -3412,6 +3416,39 @@ textarea {
 
     .mobile-card-table .table-actions {
         justify-content: flex-start;
+    }
+
+    .k9-activity-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .k9-activity-actions .button {
+        text-align: center;
+    }
+
+    .k9-activity-table tr {
+        padding: 9px 12px;
+    }
+
+    .k9-activity-table td {
+        gap: 10px;
+        grid-template-columns: 94px minmax(0, 1fr);
+        padding: 6px 0;
+    }
+
+    .k9-activity-table td::before {
+        font-size: 12px;
+    }
+
+    .k9-activity-table .k9-activity-secondary-detail,
+    .k9-activity-table .k9-activity-notes-preview {
+        display: none;
+    }
+
+    .k9-activity-table td[data-label="POST"]:empty {
+        display: none;
     }
 
     .staffing-add-extra-panel {

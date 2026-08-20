@@ -173,14 +173,14 @@ page_header('K-9 Activity Log');
                 <h1>Activity</h1>
                 <p class="muted"><?= e((string) count($activities)) ?> records shown.</p>
             </div>
-            <div class="actions">
+            <div class="actions k9-activity-actions">
                 <a class="button compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
                 <a class="button secondary compact-button" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">Add deployment</a>
                 <a class="button secondary compact-button" href="<?= e(url('departments/k9/medical-edit.php')) ?>">Add medical</a>
                 <a class="button secondary compact-button" href="<?= e(url('departments/k9/expense-edit.php')) ?>">Add expense</a>
             </div>
         </div>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table k9-activity-table">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -196,7 +196,9 @@ page_header('K-9 Activity Log');
                 <?php foreach ($activities as $activity): ?>
                     <tr>
                         <td data-label="Date"><?= e(format_display_date($activity['record_date'])) ?></td>
-                        <td data-label="Team"><?= e($activity['dog_name']) ?><br><span class="meta"><?= e($activity['handler_name']) ?></span></td>
+                        <td data-label="Team">
+                            <span class="k9-team-inline"><?= e($activity['dog_name']) ?> <span aria-hidden="true">/</span> <?= e($activity['handler_name']) ?></span>
+                        </td>
                         <td data-label="Record">
                             <?= e($activity['record_title']) ?>
                             <?php if ($activity['incident_number']): ?>
@@ -206,10 +208,10 @@ page_header('K-9 Activity Log');
                         <td data-label="Details">
                             <?= e($activity['detail'] ?: 'Not set') ?>
                             <?php if ($activity['secondary_detail']): ?>
-                                <br><span class="meta"><?= e($activity['secondary_detail']) ?></span>
+                                <br><span class="meta k9-activity-secondary-detail"><?= e($activity['secondary_detail']) ?></span>
                             <?php endif; ?>
                             <?php if ($activity['notes']): ?>
-                                <br><span class="meta"><?= e($activity['notes']) ?></span>
+                                <br><span class="meta k9-activity-notes-preview"><?= e($activity['notes']) ?></span>
                             <?php endif; ?>
                         </td>
                         <td data-label="Hours / Amount">
