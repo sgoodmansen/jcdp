@@ -78,6 +78,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         'assisting_agency_id' => null,
         'arrest_made' => 0,
         'deployment_outcome_id' => null,
+        'packaging' => trim($_POST['packaging'] ?? ''),
+        'location_of_hide' => trim($_POST['location_of_hide'] ?? ''),
+        'delay_description' => trim($_POST['delay_description'] ?? ''),
+        'search_time' => trim($_POST['search_time'] ?? ''),
+        'dog_performance' => trim($_POST['dog_performance'] ?? ''),
+        'problems_corrections' => trim($_POST['problems_corrections'] ?? ''),
         'notes' => trim($_POST['notes'] ?? ''),
         'created_by_user_id' => current_user()['id'] ?? null,
     ];
@@ -88,6 +94,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
              SET team_id = :team_id, dog_id = :dog_id, handler_id = :handler_id, activity_date = :activity_date,
                  activity_type_id = :activity_type_id, location_id = :location_id, training_area_id = :training_area_id,
                  indication_id = :indication_id, training_hours = :training_hours, is_post_training = :is_post_training,
+                 packaging = :packaging, location_of_hide = :location_of_hide, delay_description = :delay_description,
+                 search_time = :search_time, dog_performance = :dog_performance, problems_corrections = :problems_corrections,
                  notes = :notes
              WHERE id = :id'
         );
@@ -102,6 +110,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             'indication_id' => $saveParams['indication_id'],
             'training_hours' => $saveParams['training_hours'],
             'is_post_training' => $saveParams['is_post_training'],
+            'packaging' => $saveParams['packaging'],
+            'location_of_hide' => $saveParams['location_of_hide'],
+            'delay_description' => $saveParams['delay_description'],
+            'search_time' => $saveParams['search_time'],
+            'dog_performance' => $saveParams['dog_performance'],
+            'problems_corrections' => $saveParams['problems_corrections'],
             'notes' => $saveParams['notes'],
             'id' => $id,
         ]);
@@ -112,11 +126,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             'INSERT INTO k9_activity_logs (
                 team_id, dog_id, handler_id, activity_date, activity_type_id, location_id, training_area_id, indication_id,
                 training_hours, is_post_training, incident_number, incident_type_id, assisting_agency_id, arrest_made,
-                deployment_outcome_id, notes, created_by_user_id
+                deployment_outcome_id, packaging, location_of_hide, delay_description, search_time, dog_performance,
+                problems_corrections, notes, created_by_user_id
             ) VALUES (
                 :team_id, :dog_id, :handler_id, :activity_date, :activity_type_id, :location_id, :training_area_id, :indication_id,
                 :training_hours, :is_post_training, :incident_number, :incident_type_id, :assisting_agency_id, :arrest_made,
-                :deployment_outcome_id, :notes, :created_by_user_id
+                :deployment_outcome_id, :packaging, :location_of_hide, :delay_description, :search_time, :dog_performance,
+                :problems_corrections, :notes, :created_by_user_id
             )'
         );
         $statement->execute($saveParams);
@@ -239,8 +255,38 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
                 <button type="button" class="secondary compact-button" id="k9-add-aid">Add another aid</button>
             </fieldset>
 
+            <fieldset class="span-2">
+                <legend>Training details</legend>
+                <div class="k9-training-detail-grid">
+                    <label>
+                        Packaging
+                        <textarea name="packaging"><?= e($record['packaging'] ?? '') ?></textarea>
+                    </label>
+                    <label>
+                        Location of hide
+                        <textarea name="location_of_hide"><?= e($record['location_of_hide'] ?? '') ?></textarea>
+                    </label>
+                    <label>
+                        Delay
+                        <input name="delay_description" value="<?= e($record['delay_description'] ?? '') ?>" placeholder="15 min">
+                    </label>
+                    <label>
+                        Search time
+                        <input name="search_time" value="<?= e($record['search_time'] ?? '') ?>" placeholder="2 min">
+                    </label>
+                    <label>
+                        Dog's performance
+                        <textarea name="dog_performance"><?= e($record['dog_performance'] ?? '') ?></textarea>
+                    </label>
+                    <label>
+                        Problems / corrections
+                        <textarea name="problems_corrections"><?= e($record['problems_corrections'] ?? '') ?></textarea>
+                    </label>
+                </div>
+            </fieldset>
+
             <label class="span-2">
-                Notes
+                Additional notes
                 <textarea name="notes"><?= e($record['notes'] ?? '') ?></textarea>
             </label>
             <div class="actions span-2">

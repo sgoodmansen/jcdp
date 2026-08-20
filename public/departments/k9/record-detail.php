@@ -101,6 +101,15 @@ if ($type === 'medical') {
     $shots = $shotStatement->fetchAll();
 }
 
+$detailRow = static function (string $label, string $value): void {
+    ?>
+    <div class="k9-detail-item">
+        <dt><?= e($label) ?></dt>
+        <dd><?= nl2br(e($value)) ?></dd>
+    </div>
+    <?php
+};
+
 page_header($title);
 ?>
 <main class="shell">
@@ -119,42 +128,46 @@ page_header($title);
     </section>
 
     <section class="panel" style="margin-top: 18px;">
-        <table class="table mobile-card-table">
-            <tbody>
+        <dl class="k9-detail-list">
                 <?php if ($type === 'training'): ?>
-                    <tr><th>Date</th><td><?= e(format_display_date($record['activity_date'])) ?></td></tr>
-                    <tr><th>Training area</th><td><?= e($record['training_area'] ?: 'Not set') ?></td></tr>
-                    <tr><th>Location</th><td><?= e($record['location_name'] ?: 'Not set') ?></td></tr>
-                    <tr><th>Indication</th><td><?= e($record['indication'] ?: 'Not set') ?></td></tr>
-                    <tr><th>Hours</th><td><?= e(number_format((float) $record['training_hours'], 2)) ?></td></tr>
-                    <tr><th>POST training</th><td><?= (int) $record['is_post_training'] === 1 ? 'Yes' : 'No' ?></td></tr>
-                    <tr><th>Notes</th><td><?= e($record['notes'] ?: '') ?></td></tr>
+                    <?php $detailRow('Date', format_display_date($record['activity_date'])); ?>
+                    <?php $detailRow('Training area', $record['training_area'] ?: 'Not set'); ?>
+                    <?php $detailRow('Location', $record['location_name'] ?: 'Not set'); ?>
+                    <?php $detailRow('Indication', $record['indication'] ?: 'Not set'); ?>
+                    <?php $detailRow('Hours', number_format((float) $record['training_hours'], 2)); ?>
+                    <?php $detailRow('POST training', (int) $record['is_post_training'] === 1 ? 'Yes' : 'No'); ?>
+                    <?php $detailRow('Packaging', $record['packaging'] ?: ''); ?>
+                    <?php $detailRow('Location of hide', $record['location_of_hide'] ?: ''); ?>
+                    <?php $detailRow('Delay', $record['delay_description'] ?: ''); ?>
+                    <?php $detailRow('Search time', $record['search_time'] ?: ''); ?>
+                    <?php $detailRow("Dog's performance", $record['dog_performance'] ?: ''); ?>
+                    <?php $detailRow('Problems / corrections', $record['problems_corrections'] ?: ''); ?>
+                    <?php $detailRow('Additional notes', $record['notes'] ?: ''); ?>
                 <?php elseif ($type === 'deployment'): ?>
-                    <tr><th>Date</th><td><?= e(format_display_date($record['activity_date'])) ?></td></tr>
-                    <tr><th>Incident number</th><td><?= e($record['incident_number'] ?: '') ?></td></tr>
-                    <tr><th>Incident type</th><td><?= e($record['incident_type'] ?: 'Not set') ?></td></tr>
-                    <tr><th>Assisting agency</th><td><?= e($record['assisting_agency'] ?: 'Not set') ?></td></tr>
-                    <tr><th>K-9 indication</th><td><?= e($record['indication'] ?: 'Not set') ?></td></tr>
-                    <tr><th>Outcome</th><td><?= e($record['deployment_outcome'] ?: 'Not set') ?></td></tr>
-                    <tr><th>Hours</th><td><?= e(number_format((float) $record['training_hours'], 2)) ?></td></tr>
-                    <tr><th>Narrative / notes</th><td><?= e($record['notes'] ?: '') ?></td></tr>
+                    <?php $detailRow('Date', format_display_date($record['activity_date'])); ?>
+                    <?php $detailRow('Incident number', $record['incident_number'] ?: ''); ?>
+                    <?php $detailRow('Incident type', $record['incident_type'] ?: 'Not set'); ?>
+                    <?php $detailRow('Assisting agency', $record['assisting_agency'] ?: 'Not set'); ?>
+                    <?php $detailRow('K-9 indication', $record['indication'] ?: 'Not set'); ?>
+                    <?php $detailRow('Outcome', $record['deployment_outcome'] ?: 'Not set'); ?>
+                    <?php $detailRow('Hours', number_format((float) $record['training_hours'], 2)); ?>
+                    <?php $detailRow('Narrative / notes', $record['notes'] ?: ''); ?>
                 <?php elseif ($type === 'medical'): ?>
-                    <tr><th>Visit date</th><td><?= e(format_display_date($record['visit_date'])) ?></td></tr>
-                    <tr><th>Vet office</th><td><?= e($record['vet_office_name'] ?: '') ?></td></tr>
-                    <tr><th>Doctor</th><td><?= e($record['doctor_name'] ?: '') ?></td></tr>
-                    <tr><th>Reason</th><td><?= e($record['reason_for_visit'] ?: '') ?></td></tr>
-                    <tr><th>Next appointment</th><td><?= e($record['next_appointment_date'] ? format_display_date($record['next_appointment_date']) : '') ?> <?= e($record['next_appointment_time'] ?: '') ?></td></tr>
-                    <tr><th>Next appointment status</th><td><?= e($record['next_appointment_scheduled'] ?: '') ?></td></tr>
-                    <tr><th>Notes</th><td><?= e($record['notes'] ?: '') ?></td></tr>
+                    <?php $detailRow('Visit date', format_display_date($record['visit_date'])); ?>
+                    <?php $detailRow('Vet office', $record['vet_office_name'] ?: ''); ?>
+                    <?php $detailRow('Doctor', $record['doctor_name'] ?: ''); ?>
+                    <?php $detailRow('Reason', $record['reason_for_visit'] ?: ''); ?>
+                    <?php $detailRow('Next appointment', trim(($record['next_appointment_date'] ? format_display_date($record['next_appointment_date']) : '') . ' ' . ($record['next_appointment_time'] ?: ''))); ?>
+                    <?php $detailRow('Next appointment status', $record['next_appointment_scheduled'] ?: ''); ?>
+                    <?php $detailRow('Notes', $record['notes'] ?: ''); ?>
                 <?php else: ?>
-                    <tr><th>Expense date</th><td><?= e(format_display_date($record['expense_date'])) ?></td></tr>
-                    <tr><th>Category</th><td><?= e($record['expense_category'] ?: 'Not set') ?></td></tr>
-                    <tr><th>Amount</th><td><?= e(k9_money($record['amount'])) ?></td></tr>
-                    <tr><th>Vendor</th><td><?= e($record['vendor'] ?: '') ?></td></tr>
-                    <tr><th>Notes</th><td><?= e($record['notes'] ?: '') ?></td></tr>
+                    <?php $detailRow('Expense date', format_display_date($record['expense_date'])); ?>
+                    <?php $detailRow('Category', $record['expense_category'] ?: 'Not set'); ?>
+                    <?php $detailRow('Amount', k9_money($record['amount'])); ?>
+                    <?php $detailRow('Vendor', $record['vendor'] ?: ''); ?>
+                    <?php $detailRow('Notes', $record['notes'] ?: ''); ?>
                 <?php endif; ?>
-            </tbody>
-        </table>
+        </dl>
     </section>
 
     <?php if ($type === 'medical'): ?>

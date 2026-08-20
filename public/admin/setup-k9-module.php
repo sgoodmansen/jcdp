@@ -155,6 +155,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             assisting_agency_id INT UNSIGNED NULL,
             arrest_made TINYINT(1) NOT NULL DEFAULT 0,
             deployment_outcome_id INT UNSIGNED NULL,
+            packaging TEXT NULL,
+            location_of_hide TEXT NULL,
+            delay_description VARCHAR(120) NULL,
+            search_time VARCHAR(120) NULL,
+            dog_performance TEXT NULL,
+            problems_corrections TEXT NULL,
             notes TEXT NULL,
             created_by_user_id INT UNSIGNED NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -253,6 +259,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $statement->execute(['table_name' => $tableName]);
         if ((int) $statement->fetchColumn() === 0) {
             db()->exec("ALTER TABLE $tableName ADD COLUMN legacy_access_id INT UNSIGNED NULL AFTER id");
+        }
+    }
+
+    $trainingDetailColumns = [
+        'packaging' => 'TEXT NULL AFTER deployment_outcome_id',
+        'location_of_hide' => 'TEXT NULL AFTER packaging',
+        'delay_description' => 'VARCHAR(120) NULL AFTER location_of_hide',
+        'search_time' => 'VARCHAR(120) NULL AFTER delay_description',
+        'dog_performance' => 'TEXT NULL AFTER search_time',
+        'problems_corrections' => 'TEXT NULL AFTER dog_performance',
+    ];
+    foreach ($trainingDetailColumns as $columnName => $definition) {
+        $statement = db()->prepare(
+            'SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = "k9_activity_logs"
+               AND COLUMN_NAME = :column_name'
+        );
+        $statement->execute(['column_name' => $columnName]);
+        if ((int) $statement->fetchColumn() === 0) {
+            db()->exec("ALTER TABLE k9_activity_logs ADD COLUMN $columnName $definition");
         }
     }
 
