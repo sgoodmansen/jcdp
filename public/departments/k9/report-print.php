@@ -7,6 +7,7 @@ $sections = [
     'training' => 'Training by Team',
     'deployments' => 'Deployments by Outcome',
     'expenses' => 'Expenses by Category',
+    'expense_detail' => 'Expense Detail',
     'shots' => 'Shot Expirations',
 ];
 $section = $_GET['section'] ?? 'summary';
@@ -18,6 +19,7 @@ if (!isset($sections[$section])) {
 $startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
 $endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
 $teamId = (int) ($_GET['team_id'] ?? 0);
+$expenseCategoryId = (int) ($_GET['expense_category_id'] ?? 0);
 
 $teamSql = 'SELECT k9_teams.id, k9_dogs.dog_name, k9_handlers.handler_name
             FROM k9_teams
@@ -40,6 +42,18 @@ if (!$selectedTeam) {
     $teamId = 0;
 }
 
+$expenseCategories = k9_lookup_options('k9_expense_categories');
+$selectedExpenseCategory = null;
+foreach ($expenseCategories as $expenseCategory) {
+    if ((int) $expenseCategory['id'] === $expenseCategoryId) {
+        $selectedExpenseCategory = $expenseCategory;
+        break;
+    }
+}
+if (!$selectedExpenseCategory) {
+    $expenseCategoryId = 0;
+}
+
 $activityWhere = 'WHERE k9_activity_logs.activity_date BETWEEN :start_date AND :end_date' . $teamWhere;
 $medicalWhere = 'WHERE k9_medical_visits.visit_date BETWEEN :start_date AND :end_date' . $teamWhere;
 $expenseWhere = 'WHERE k9_expenses.expense_date BETWEEN :start_date AND :end_date' . $teamWhere;
@@ -52,6 +66,11 @@ if ($teamId > 0) {
     $medicalWhere .= ' AND k9_teams.id = :team_id';
     $expenseWhere .= ' AND k9_teams.id = :team_id';
     $params['team_id'] = $teamId;
+}
+$expenseParams = $params;
+if ($expenseCategoryId > 0) {
+    $expenseWhere .= ' AND k9_expenses.expense_category_id = :expense_category_id';
+    $expenseParams['expense_category_id'] = $expenseCategoryId;
 }
 
 $summarySql = "SELECT
@@ -84,7 +103,7 @@ $expenseStatement = db()->prepare(
      INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
      $expenseWhere"
 );
-$expenseStatement->execute($params);
+$expenseStatement->execute($expenseParams);
 $expenseTotal = (float) ($expenseStatement->fetchColumn() ?: 0);
 
 $trainingByTeamSql = "SELECT k9_dogs.dog_name,
@@ -131,8 +150,28 @@ $expenseByCategorySql = "SELECT COALESCE(k9_expense_categories.name, 'Not set') 
                          GROUP BY COALESCE(k9_expense_categories.name, 'Not set')
                          ORDER BY expense_total DESC, category";
 $statement = db()->prepare($expenseByCategorySql);
-$statement->execute($params);
+$statement->execute($expenseParams);
 $expenseByCategory = $statement->fetchAll();
+
+$expenseDetailSql = "SELECT k9_expenses.id,
+                            k9_expenses.expense_date,
+                            k9_dogs.dog_name,
+                            k9_handlers.handler_name,
+                            COALESCE(k9_expense_categories.name, 'Not set') AS category,
+                            k9_expenses.vendor,
+                            k9_expenses.amount,
+                            k9_expenses.notes
+                     FROM k9_expenses
+                     INNER JOIN k9_dogs ON k9_dogs.id = k9_expenses.dog_id
+                     INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+                     INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+                     LEFT JOIN k9_expense_categories ON k9_expense_categories.id = k9_expenses.expense_category_id
+                     $expenseWhere
+                     ORDER BY k9_expenses.expense_date DESC, k9_expenses.id DESC
+                     LIMIT 300";
+$statement = db()->prepare($expenseDetailSql);
+$statement->execute($expenseParams);
+$expenseDetails = $statement->fetchAll();
 
 $shotParams = $teamParams;
 $shotWhere = 'WHERE k9_medical_shots.shot_expiration IS NOT NULL' . $teamWhere;
@@ -159,9 +198,16 @@ $backQuery = http_build_query([
     'start_date' => $startDate,
     'end_date' => $endDate,
     'team_id' => $teamId,
+    'expense_category_id' => $expenseCategoryId,
 ]);
 $dateRange = format_display_date($startDate) . ' to ' . format_display_date($endDate);
-$teamLabel = $selectedTeam ? $selectedTeam['dog_name'] . ' - ' . $selectedTeam['handler_name'] : 'All teams';
+$reportFilters = [
+    $dateRange,
+    $selectedTeam ? $selectedTeam['dog_name'] . ' - ' . $selectedTeam['handler_name'] : 'All teams',
+];
+if ($selectedExpenseCategory) {
+    $reportFilters[] = 'Expense category: ' . $selectedExpenseCategory['name'];
+}
 
 page_header($sections[$section] . ' Print');
 ?>
@@ -181,7 +227,7 @@ page_header($sections[$section] . ' Print');
             <div>
                 <p class="meta"><?= e(format_display_date(date('Y-m-d'))) ?></p>
                 <h1><?= e($sections[$section]) ?></h1>
-                <p><?= e($dateRange) ?> - <?= e($teamLabel) ?></p>
+                <p><?= e(implode(' - ', $reportFilters)) ?></p>
             </div>
         </div>
 
@@ -247,6 +293,34 @@ page_header($sections[$section] . ' Print');
                     <?php endforeach; ?>
                     <?php if (!$expenseByCategory): ?>
                         <tr><td colspan="3">No expense records matched the selected filters.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        <?php elseif ($section === 'expense_detail'): ?>
+            <table class="table roster-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Team</th>
+                        <th>Category</th>
+                        <th>Vendor</th>
+                        <th>Amount</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($expenseDetails as $row): ?>
+                        <tr>
+                            <td><?= e(format_display_date($row['expense_date'])) ?></td>
+                            <td><?= e($row['dog_name']) ?><br><span class="meta"><?= e($row['handler_name']) ?></span></td>
+                            <td><?= e($row['category']) ?></td>
+                            <td><?= e($row['vendor'] ?: '') ?></td>
+                            <td><?= e(k9_money($row['amount'])) ?></td>
+                            <td><?= e($row['notes'] ?: '') ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$expenseDetails): ?>
+                        <tr><td colspan="6">No expense detail records matched the selected filters.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
