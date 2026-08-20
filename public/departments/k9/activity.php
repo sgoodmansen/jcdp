@@ -2,9 +2,9 @@
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_k9_access();
 
-$period = $_GET['period'] ?? 'this_year';
+$period = $_GET['period'] ?? 'this_month';
 if (!in_array($period, ['this_week', 'this_month', 'this_year', 'custom'], true)) {
-    $period = 'this_year';
+    $period = 'this_month';
 }
 
 $periodOptions = [
@@ -236,11 +236,19 @@ $filterSummary = [
     $recordTypeOptions[$recordType] ?? 'All records',
     $selectedTeam ? $selectedTeam['dog_name'] . ' - ' . $selectedTeam['handler_name'] : 'All teams',
 ];
+$screenSummary = [
+    $period === 'custom' ? format_display_date($startDate) . ' to ' . format_display_date($endDate) : ($periodOptions[$period] ?? 'This Month'),
+    $recordTypeOptions[$recordType] ?? 'All records',
+    $selectedTeam ? $selectedTeam['dog_name'] . ' - ' . $selectedTeam['handler_name'] : 'All teams',
+    count($activities) . ' records shown',
+];
 if ($selectedTrainingArea) {
     $filterSummary[] = 'Training area: ' . $selectedTrainingArea['name'];
+    $screenSummary[] = $selectedTrainingArea['name'];
 }
 if ($selectedExpenseCategory) {
     $filterSummary[] = 'Expense category: ' . $selectedExpenseCategory['name'];
+    $screenSummary[] = $selectedExpenseCategory['name'];
 }
 
 if (($_GET['format'] ?? '') === 'csv') {
@@ -277,8 +285,11 @@ page_header('K-9 Activity Log');
         <?php k9_navigation('activity'); ?>
     </section>
 
-    <section class="panel print-hidden" style="margin-top: 18px;">
-        <h1>Filters</h1>
+    <details class="panel k9-filter-panel print-hidden" style="margin-top: 18px;">
+        <summary>
+            <span>Filters</span>
+            <span class="meta"><?= e(implode(' - ', $screenSummary)) ?></span>
+        </summary>
         <form class="form compact-form" method="get">
             <label>
                 Period
@@ -288,11 +299,11 @@ page_header('K-9 Activity Log');
                     <?php endforeach; ?>
                 </select>
             </label>
-            <label>
+            <label data-k9-date-field <?= $period !== 'custom' ? 'hidden' : '' ?>>
                 Start date
                 <input type="date" name="start_date" value="<?= e($startDate) ?>" data-k9-custom-date>
             </label>
-            <label>
+            <label data-k9-date-field <?= $period !== 'custom' ? 'hidden' : '' ?>>
                 End date
                 <input type="date" name="end_date" value="<?= e($endDate) ?>" data-k9-custom-date>
             </label>
@@ -336,7 +347,7 @@ page_header('K-9 Activity Log');
                 <a class="button secondary" href="<?= e(url('departments/k9/activity.php')) ?>">Clear</a>
             </div>
         </form>
-    </section>
+    </details>
 
     <section class="panel printable-roster" style="margin-top: 18px;">
         <div class="print-only roster-header">
@@ -346,18 +357,22 @@ page_header('K-9 Activity Log');
                 <p><?= e(implode(' - ', $filterSummary)) ?></p>
             </div>
         </div>
-        <div class="section-heading-row print-hidden">
+        <div class="k9-activity-log-header print-hidden">
             <div>
-                <h1>Activity</h1>
-                <p class="muted"><?= e((string) count($activities)) ?> records shown.</p>
+                <h1>Activity Log</h1>
+                <p class="muted"><?= e(implode(' · ', $screenSummary)) ?></p>
             </div>
-            <div class="actions k9-activity-actions">
-                <button type="button" class="secondary compact-button" onclick="window.print()">Print</button>
-                <a class="button secondary compact-button" href="<?= e(url('departments/k9/activity.php?' . $filterQuery . '&format=csv')) ?>">Export CSV</a>
-                <a class="button compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
-                <a class="button secondary compact-button" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">Add deployment</a>
-                <a class="button secondary compact-button" href="<?= e(url('departments/k9/medical-edit.php')) ?>">Add medical</a>
-                <a class="button secondary compact-button" href="<?= e(url('departments/k9/expense-edit.php')) ?>">Add expense</a>
+            <div class="k9-activity-action-groups">
+                <div class="actions k9-activity-actions">
+                    <button type="button" class="secondary compact-button" onclick="window.print()">Print</button>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/k9/activity.php?' . $filterQuery . '&format=csv')) ?>">Export CSV</a>
+                </div>
+                <div class="actions k9-activity-actions">
+                    <a class="button compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">Add deployment</a>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/k9/medical-edit.php')) ?>">Add medical</a>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/k9/expense-edit.php')) ?>">Add expense</a>
+                </div>
             </div>
         </div>
         <table class="table mobile-card-table k9-activity-table">
@@ -423,9 +438,20 @@ page_header('K-9 Activity Log');
             return;
         }
 
+        const dateFields = Array.from(document.querySelectorAll('[data-k9-date-field]'));
+        const syncDateFields = function () {
+            dateFields.forEach(function (field) {
+                field.hidden = periodSelect.value !== 'custom';
+            });
+        };
+
+        periodSelect.addEventListener('change', syncDateFields);
+        syncDateFields();
+
         document.querySelectorAll('[data-k9-custom-date]').forEach(function (dateInput) {
             dateInput.addEventListener('change', function () {
                 periodSelect.value = 'custom';
+                syncDateFields();
             });
         });
     })();

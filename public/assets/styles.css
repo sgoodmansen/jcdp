@@ -1138,6 +1138,79 @@ button:focus {
     display: none !important;
 }
 
+.k9-filter-panel summary {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    list-style: none;
+}
+
+.k9-filter-panel summary::-webkit-details-marker {
+    display: none;
+}
+
+.k9-filter-panel summary::after {
+    color: var(--primary-dark);
+    content: "Show";
+    font-weight: 800;
+}
+
+.k9-filter-panel[open] summary {
+    margin-bottom: 16px;
+}
+
+.k9-filter-panel[open] summary::after {
+    content: "Hide";
+}
+
+.k9-filter-panel summary span:first-child {
+    color: var(--ink);
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.k9-filter-panel summary .meta {
+    margin: 0;
+    text-align: right;
+}
+
+.k9-activity-log-header {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.k9-activity-log-header h1 {
+    margin-bottom: 4px;
+}
+
+.k9-activity-log-header p {
+    margin-bottom: 0;
+}
+
+.k9-activity-action-groups {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    justify-content: flex-end;
+}
+
+.k9-activity-action-groups .actions {
+    border-left: 1px solid var(--line);
+    padding-left: 18px;
+}
+
+.k9-activity-action-groups .actions:first-child {
+    border-left: 0;
+    padding-left: 0;
+}
+
 .k9-training-detail-grid {
     display: grid;
     gap: 12px 16px;
@@ -3431,6 +3504,35 @@ textarea {
         grid-template-columns: 1fr;
     }
 
+    .k9-filter-panel summary {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .k9-filter-panel summary::after {
+        align-self: flex-start;
+    }
+
+    .k9-filter-panel summary .meta {
+        text-align: left;
+    }
+
+    .k9-activity-log-header {
+        display: grid;
+        gap: 12px;
+    }
+
+    .k9-activity-action-groups {
+        justify-content: stretch;
+    }
+
+    .k9-activity-action-groups .actions {
+        border-left: 0;
+        padding-left: 0;
+        width: 100%;
+    }
+
     .k9-aid-row {
         grid-template-columns: 1fr;
     }
@@ -3631,6 +3733,85 @@ textarea {
 }
 
 @media print {
+    .k9-activity-table,
+    .k9-activity-table thead,
+    .k9-activity-table tbody,
+    .k9-activity-table tr,
+    .k9-activity-table th,
+    .k9-activity-table td {
+        width: auto;
+    }
+
+    .k9-activity-table {
+        border-collapse: collapse;
+        display: table !important;
+        table-layout: fixed;
+        width: 100% !important;
+    }
+
+    .k9-activity-table thead {
+        display: table-header-group !important;
+    }
+
+    .k9-activity-table tbody {
+        display: table-row-group !important;
+    }
+
+    .k9-activity-table tr {
+        border: 0;
+        display: table-row !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    .k9-activity-table th,
+    .k9-activity-table td {
+        border: 1px solid #9ca3af;
+        color: #111827;
+        display: table-cell !important;
+        font-size: 8.5pt;
+        line-height: 1.2;
+        padding: 5px 6px;
+        vertical-align: top;
+    }
+
+    .k9-activity-table td::before {
+        content: none !important;
+        display: none !important;
+    }
+
+    .k9-activity-table .k9-activity-secondary-detail,
+    .k9-activity-table .k9-activity-notes-preview {
+        display: inline !important;
+    }
+
+    .k9-activity-table th:nth-child(1),
+    .k9-activity-table td:nth-child(1) {
+        width: 0.75in;
+    }
+
+    .k9-activity-table th:nth-child(2),
+    .k9-activity-table td:nth-child(2) {
+        width: 1.15in;
+    }
+
+    .k9-activity-table th:nth-child(3),
+    .k9-activity-table td:nth-child(3) {
+        width: 0.9in;
+    }
+
+    .k9-activity-table th:nth-child(5),
+    .k9-activity-table td:nth-child(5),
+    .k9-activity-table th:nth-child(6),
+    .k9-activity-table td:nth-child(6) {
+        width: 0.65in;
+    }
+
+    .k9-activity-table th:nth-child(7),
+    .k9-activity-table td:nth-child(7) {
+        display: none !important;
+    }
+
     .election-attendance-table,
     .election-attendance-table thead,
     .election-attendance-table tbody,
