@@ -249,6 +249,7 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
                             Grams used
                             <input name="aid_grams[]" inputmode="decimal" value="<?= e(isset($aidRow['amount_grams']) ? number_format((float) $aidRow['amount_grams'], 2, '.', '') : '') ?>" placeholder="0.00">
                         </label>
+                        <button type="button" class="button secondary compact-button k9-remove-aid" data-k9-remove-aid>Remove</button>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -316,11 +317,27 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
 
     const wireAidRow = (row) => {
         const select = row.querySelector('[data-k9-aid-select]');
+        const removeButton = row.querySelector('[data-k9-remove-aid]');
         select?.addEventListener('change', () => updateAidRow(row));
+        removeButton?.addEventListener('click', () => {
+            row.remove();
+            updateAidRemoveButtons();
+        });
         updateAidRow(row);
     };
 
+    const updateAidRemoveButtons = () => {
+        const rows = Array.from(aidList?.querySelectorAll('.k9-aid-row') || []);
+        rows.forEach((row) => {
+            const removeButton = row.querySelector('[data-k9-remove-aid]');
+            if (removeButton) {
+                removeButton.hidden = rows.length <= 1;
+            }
+        });
+    };
+
     aidList?.querySelectorAll('.k9-aid-row').forEach(wireAidRow);
+    updateAidRemoveButtons();
 
     addAidButton?.addEventListener('click', () => {
         const firstRow = aidList?.querySelector('.k9-aid-row');
@@ -334,6 +351,7 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
         });
         aidList.appendChild(nextRow);
         wireAidRow(nextRow);
+        updateAidRemoveButtons();
     });
 </script>
 <?php page_footer(); ?>

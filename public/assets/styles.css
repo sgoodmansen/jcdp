@@ -1139,11 +1139,15 @@ button:focus {
     align-items: end;
     display: grid;
     gap: 12px;
-    grid-template-columns: minmax(220px, 1fr) minmax(140px, 220px);
+    grid-template-columns: minmax(220px, 1fr) minmax(140px, 220px) auto;
 }
 
 .k9-aid-row label[hidden] {
     display: none !important;
+}
+
+.k9-remove-aid {
+    margin-bottom: 0;
 }
 
 .k9-filter-panel summary {
