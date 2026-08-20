@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../../app/bootstrap.php';
-require_k9_manager();
+require_k9_access();
 
 $lookupConfigs = [
     'activity_types' => ['label' => 'Activity Types', 'table' => 'k9_activity_types'],
@@ -16,6 +16,20 @@ $lookupConfigs = [
     'deployment_outcomes' => ['label' => 'Deployment Outcomes', 'table' => 'k9_deployment_outcomes'],
 ];
 $trainingAidCategories = ['Bite suit', 'Toy', 'Treat', 'Drug', 'Other'];
+$isManager = k9_user_can_manage();
+$canManageHandlerLists = k9_user_can_manage_handler_lists();
+
+if (!$canManageHandlerLists) {
+    http_response_code(403);
+    page_header('K-9 Setup Unavailable');
+    echo '<main class="shell"><section class="panel"><h1>K-9 Setup Unavailable</h1><p>Your account is not connected to an active K-9 team.</p></section></main>';
+    page_footer();
+    exit;
+}
+
+if (!$isManager) {
+    $lookupConfigs = array_intersect_key($lookupConfigs, array_flip(['locations', 'training_aids']));
+}
 
 $selectedLookup = $_GET['list'] ?? 'locations';
 if (!isset($lookupConfigs[$selectedLookup])) {
@@ -181,7 +195,7 @@ page_header('K-9 Setup');
 <main class="shell">
     <section class="panel">
         <h1>K-9 Setup</h1>
-        <p>Manage dropdown lists used by K-9 handlers and supervisors.</p>
+        <p><?= $isManager ? 'Manage dropdown lists used by K-9 handlers and supervisors.' : 'Manage the location and training aid lists used when adding K-9 training records.' ?></p>
         <?php k9_navigation('setup'); ?>
 
         <?php if ($message = flash('success')): ?>

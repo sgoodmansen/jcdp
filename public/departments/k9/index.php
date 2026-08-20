@@ -54,7 +54,7 @@ $activitySql = 'SELECT k9_activity_logs.*, k9_dogs.dog_name, k9_handlers.handler
                 LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
                 WHERE 1 = 1' . $teamWhere . '
                 ORDER BY k9_activity_logs.activity_date DESC, k9_activity_logs.id DESC
-                LIMIT 8';
+                LIMIT 5';
 $statement = db()->prepare($activitySql);
 $statement->execute($teamParams);
 $recentActivity = $statement->fetchAll();
@@ -114,6 +114,7 @@ $appointmentSql = 'SELECT k9_medical_visits.id, k9_medical_visits.next_appointme
 $statement = db()->prepare($appointmentSql);
 $statement->execute($teamParams);
 $nextAppointments = $statement->fetchAll();
+$hasMedicalAlerts = $expiredShots || $dueSoonShots || $nextAppointments;
 
 page_header('K-9 Activity & Records');
 ?>
@@ -190,80 +191,78 @@ page_header('K-9 Activity & Records');
         </div>
     </section>
 
-    <section class="k9-reminder-row" style="margin-top: 18px;">
-        <article class="card k9-reminder-card">
+    <?php if ($hasMedicalAlerts): ?>
+        <section class="panel k9-medical-alert-panel" style="margin-top: 18px;">
             <div class="section-heading-row">
-                <h2>Expired</h2>
+                <div>
+                    <h1>Medical Alerts</h1>
+                    <p class="muted">Items needing attention or follow-up.</p>
+                </div>
+            </div>
+            <div class="k9-reminder-row">
                 <?php if ($expiredShots): ?>
-                    <span class="badge badge-warning"><?= e((string) count($expiredShots)) ?></span>
+                    <article class="card k9-reminder-card k9-alert-card k9-alert-danger">
+                        <div class="section-heading-row">
+                            <h2>Expired Shots</h2>
+                            <span class="badge badge-warning"><?= e((string) count($expiredShots)) ?></span>
+                        </div>
+                        <div class="k9-reminder-list">
+                            <?php foreach ($expiredShots as $shot): ?>
+                                <p>
+                                    <strong><?= e($shot['dog_name']) ?></strong> - <?= e($shot['shot_description']) ?>
+                                    <br><span class="meta"><?= e($shot['handler_name']) ?> | Expired <?= e(format_display_date($shot['shot_expiration'])) ?><?= (int) $shot['days_overdue'] > 0 ? ' | ' . e((string) (int) $shot['days_overdue']) . ' days overdue' : '' ?></span>
+                                </p>
+                            <?php endforeach; ?>
+                        </div>
+                    </article>
                 <?php endif; ?>
-            </div>
-            <?php if (!$expiredShots): ?>
-                <p class="muted">No expired shots.</p>
-            <?php else: ?>
-                <div class="k9-reminder-list">
-                    <?php foreach ($expiredShots as $shot): ?>
-                        <p>
-                            <strong><?= e($shot['dog_name']) ?></strong> - <?= e($shot['shot_description']) ?>
-                            <br><span class="meta"><?= e($shot['handler_name']) ?> | Expired <?= e(format_display_date($shot['shot_expiration'])) ?><?= (int) $shot['days_overdue'] > 0 ? ' | ' . e((string) (int) $shot['days_overdue']) . ' days overdue' : '' ?></span>
-                        </p>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </article>
 
-        <article class="card k9-reminder-card">
-            <div class="section-heading-row">
-                <h2>Due Soon</h2>
                 <?php if ($dueSoonShots): ?>
-                    <span class="badge"><?= e((string) count($dueSoonShots)) ?></span>
+                    <article class="card k9-reminder-card k9-alert-card">
+                        <div class="section-heading-row">
+                            <h2>Shots Due Soon</h2>
+                            <span class="badge"><?= e((string) count($dueSoonShots)) ?></span>
+                        </div>
+                        <div class="k9-reminder-list">
+                            <?php foreach ($dueSoonShots as $shot): ?>
+                                <p>
+                                    <strong><?= e($shot['dog_name']) ?></strong> - <?= e($shot['shot_description']) ?>
+                                    <br><span class="meta"><?= e($shot['handler_name']) ?> | Due <?= e(format_display_date($shot['shot_expiration'])) ?><?= (int) $shot['days_until_due'] === 0 ? ' | Due today' : ' | In ' . e((string) (int) $shot['days_until_due']) . ' days' ?></span>
+                                </p>
+                            <?php endforeach; ?>
+                        </div>
+                    </article>
                 <?php endif; ?>
-            </div>
-            <?php if (!$dueSoonShots): ?>
-                <p class="muted">No shots are due soon.</p>
-            <?php else: ?>
-                <div class="k9-reminder-list">
-                    <?php foreach ($dueSoonShots as $shot): ?>
-                        <p>
-                            <strong><?= e($shot['dog_name']) ?></strong> - <?= e($shot['shot_description']) ?>
-                            <br><span class="meta"><?= e($shot['handler_name']) ?> | Due <?= e(format_display_date($shot['shot_expiration'])) ?><?= (int) $shot['days_until_due'] === 0 ? ' | Due today' : ' | In ' . e((string) (int) $shot['days_until_due']) . ' days' ?></span>
-                        </p>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </article>
 
-        <article class="card k9-reminder-card">
-            <div class="section-heading-row">
-                <h2>Next Vet Appointment</h2>
                 <?php if ($nextAppointments): ?>
-                    <span class="badge"><?= e((string) count($nextAppointments)) ?></span>
+                    <article class="card k9-reminder-card k9-alert-card">
+                        <div class="section-heading-row">
+                            <h2>Next Vet Appointment</h2>
+                            <span class="badge"><?= e((string) count($nextAppointments)) ?></span>
+                        </div>
+                        <div class="k9-reminder-list">
+                            <?php foreach ($nextAppointments as $appointment): ?>
+                                <p>
+                                    <strong><?= e($appointment['dog_name']) ?></strong><?= $appointment['reason_for_visit'] ? ' - ' . e($appointment['reason_for_visit']) : '' ?>
+                                    <br><span class="meta">
+                                        <?= e($appointment['handler_name']) ?> |
+                                        <?= e(format_display_date($appointment['next_appointment_date'])) ?><?= $appointment['next_appointment_time'] ? ' at ' . e(date('g:i A', strtotime($appointment['next_appointment_time']))) : '' ?>
+                                        <?= $appointment['next_appointment_scheduled'] ? ' | ' . e($appointment['next_appointment_scheduled']) : '' ?>
+                                    </span>
+                                </p>
+                            <?php endforeach; ?>
+                        </div>
+                    </article>
                 <?php endif; ?>
             </div>
-            <?php if (!$nextAppointments): ?>
-                <p class="muted">No upcoming vet appointments listed.</p>
-            <?php else: ?>
-                <div class="k9-reminder-list">
-                    <?php foreach ($nextAppointments as $appointment): ?>
-                        <p>
-                            <strong><?= e($appointment['dog_name']) ?></strong><?= $appointment['reason_for_visit'] ? ' - ' . e($appointment['reason_for_visit']) : '' ?>
-                            <br><span class="meta">
-                                <?= e($appointment['handler_name']) ?> |
-                                <?= e(format_display_date($appointment['next_appointment_date'])) ?><?= $appointment['next_appointment_time'] ? ' at ' . e(date('g:i A', strtotime($appointment['next_appointment_time']))) : '' ?>
-                                <?= $appointment['next_appointment_scheduled'] ? ' | ' . e($appointment['next_appointment_scheduled']) : '' ?>
-                            </span>
-                        </p>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </article>
-    </section>
+        </section>
+    <?php endif; ?>
 
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <div>
                 <h1>Recent Activity</h1>
-                <p class="muted">Latest K-9 training and deployment records.</p>
+                <p class="muted">Latest 5 K-9 training and deployment records.</p>
             </div>
         </div>
         <table class="table mobile-card-table">

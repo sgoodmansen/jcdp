@@ -434,6 +434,20 @@ a {
     gap: 12px;
 }
 
+.k9-medical-alert-panel .section-heading-row {
+    margin-bottom: 14px;
+}
+
+.k9-alert-card {
+    border-color: var(--primary);
+    box-shadow: inset 4px 0 0 var(--primary);
+}
+
+.k9-alert-danger {
+    border-color: var(--danger);
+    box-shadow: inset 4px 0 0 var(--danger);
+}
+
 .k9-quick-actions {
     display: grid;
     gap: 14px;

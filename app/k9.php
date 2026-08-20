@@ -70,9 +70,15 @@ function k9_user_can_manage(): bool
     return can_manage_department(K9_DEPARTMENT_SLUG);
 }
 
+function k9_user_can_manage_handler_lists(): bool
+{
+    return k9_user_can_manage() || current_k9_handler() !== null;
+}
+
 function k9_navigation(string $activeKey): void
 {
     $isManager = k9_user_can_manage();
+    $canManageHandlerLists = k9_user_can_manage_handler_lists();
     $activityKeys = ['activity', 'activity-edit', 'deployment-edit', 'medical-edit', 'expense-edit'];
     $activityItems = [
         ['key' => 'activity', 'label' => 'View Activity Log', 'href' => url('departments/k9/activity.php')],
@@ -99,6 +105,8 @@ function k9_navigation(string $activeKey): void
 
         <?php if ($isManager): ?>
             <a class="button<?= $activeKey === 'teams' ? '' : ' secondary' ?>" href="<?= e(url('departments/k9/teams.php')) ?>">Teams</a>
+        <?php endif; ?>
+        <?php if ($canManageHandlerLists): ?>
             <a class="button<?= $activeKey === 'setup' ? '' : ' secondary' ?>" href="<?= e(url('departments/k9/setup.php')) ?>">Setup</a>
         <?php endif; ?>
     </div>
