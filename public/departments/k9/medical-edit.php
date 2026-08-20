@@ -13,6 +13,32 @@ $teamSql = 'SELECT k9_teams.*, k9_dogs.dog_name, k9_handlers.handler_name
 $statement = db()->prepare($teamSql);
 $statement->execute($teamParams);
 $teams = $statement->fetchAll();
+$id = (int) ($_GET['id'] ?? 0);
+$record = null;
+$existingShots = [];
+
+if ($id > 0) {
+    $recordStatement = db()->prepare(
+        'SELECT k9_medical_visits.*
+         FROM k9_medical_visits
+         INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_visits.dog_id
+         INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+         WHERE k9_medical_visits.id = :id' . $teamWhere
+    );
+    $recordStatement->execute(array_merge($teamParams, ['id' => $id]));
+    $record = $recordStatement->fetch();
+    if (!$record) {
+        http_response_code(404);
+        page_header('Medical Visit Not Found');
+        echo '<main class="shell"><section class="panel"><h1>Medical visit not found</h1><p>The selected medical visit could not be found.</p></section></main>';
+        page_footer();
+        exit;
+    }
+
+    $shotStatement = db()->prepare('SELECT * FROM k9_medical_shots WHERE medical_visit_id = :id ORDER BY id');
+    $shotStatement->execute(['id' => $id]);
+    $existingShots = $shotStatement->fetchAll();
+}
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $teamId = (int) ($_POST['team_id'] ?? 0);
@@ -26,19 +52,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (!$selectedTeam) {
         flash('error', 'Select a valid K-9 team.');
-        redirect_to('departments/k9/medical-edit.php');
+        redirect_to('departments/k9/medical-edit.php' . ($id > 0 ? '?id=' . $id : ''));
     }
 
-    $statement = db()->prepare(
-        'INSERT INTO k9_medical_visits (
-            dog_id, visit_date, vet_office_name, doctor_name, reason_for_visit, notes,
-            next_appointment_date, next_appointment_time, next_appointment_scheduled
-        ) VALUES (
-            :dog_id, :visit_date, :vet_office_name, :doctor_name, :reason_for_visit, :notes,
-            :next_appointment_date, :next_appointment_time, :next_appointment_scheduled
-        )'
-    );
-    $statement->execute([
+    $saveParams = [
         'dog_id' => (int) $selectedTeam['dog_id'],
         'visit_date' => $_POST['visit_date'] ?? date('Y-m-d'),
         'vet_office_name' => trim($_POST['vet_office_name'] ?? '') ?: null,
@@ -48,9 +65,34 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         'next_appointment_date' => trim($_POST['next_appointment_date'] ?? '') ?: null,
         'next_appointment_time' => trim($_POST['next_appointment_time'] ?? '') ?: null,
         'next_appointment_scheduled' => trim($_POST['next_appointment_scheduled'] ?? '') ?: null,
-    ]);
+    ];
 
-    $visitId = (int) db()->lastInsertId();
+    if ($id > 0) {
+        $statement = db()->prepare(
+            'UPDATE k9_medical_visits
+             SET dog_id = :dog_id, visit_date = :visit_date, vet_office_name = :vet_office_name,
+                 doctor_name = :doctor_name, reason_for_visit = :reason_for_visit, notes = :notes,
+                 next_appointment_date = :next_appointment_date, next_appointment_time = :next_appointment_time,
+                 next_appointment_scheduled = :next_appointment_scheduled
+             WHERE id = :id'
+        );
+        $statement->execute(array_merge($saveParams, ['id' => $id]));
+        $visitId = $id;
+        db()->prepare('DELETE FROM k9_medical_shots WHERE medical_visit_id = :id')->execute(['id' => $id]);
+    } else {
+        $statement = db()->prepare(
+            'INSERT INTO k9_medical_visits (
+                dog_id, visit_date, vet_office_name, doctor_name, reason_for_visit, notes,
+                next_appointment_date, next_appointment_time, next_appointment_scheduled
+            ) VALUES (
+                :dog_id, :visit_date, :vet_office_name, :doctor_name, :reason_for_visit, :notes,
+                :next_appointment_date, :next_appointment_time, :next_appointment_scheduled
+            )'
+        );
+        $statement->execute($saveParams);
+        $visitId = (int) db()->lastInsertId();
+    }
+
     $shotStatement = db()->prepare(
         'INSERT INTO k9_medical_shots (medical_visit_id, dog_id, shot_description, shot_expiration)
          VALUES (:medical_visit_id, :dog_id, :shot_description, :shot_expiration)'
@@ -68,16 +110,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         ]);
     }
 
-    audit_event('created', 'k9_medical_visit', (string) $visitId);
-    flash('success', 'K-9 medical visit saved.');
-    redirect_to('departments/k9/activity.php?record_type=medical');
+    audit_event($id > 0 ? 'updated' : 'created', 'k9_medical_visit', (string) $visitId);
+    flash('success', $id > 0 ? 'K-9 medical visit updated.' : 'K-9 medical visit saved.');
+    redirect_to('departments/k9/record-detail.php?type=medical&id=' . $visitId);
 }
 
-page_header('Add K-9 Medical Visit');
+$shotRows = $existingShots ?: [['shot_description' => '', 'shot_expiration' => '']];
+page_header($id > 0 ? 'Edit K-9 Medical Visit' : 'Add K-9 Medical Visit');
 ?>
 <main class="shell">
     <section class="panel">
-        <h1>Add Medical Visit</h1>
+        <h1><?= $id > 0 ? 'Edit Medical Visit' : 'Add Medical Visit' ?></h1>
         <p>Record vet visits, care notes, follow-up appointments, and shot expirations.</p>
         <?php k9_navigation('medical-edit'); ?>
 
@@ -95,62 +138,64 @@ page_header('Add K-9 Medical Visit');
                 <select name="team_id" required>
                     <option value="">Select team</option>
                     <?php foreach ($teams as $team): ?>
-                        <option value="<?= e((string) $team['id']) ?>"><?= e($team['dog_name'] . ' - ' . $team['handler_name']) ?></option>
+                        <option value="<?= e((string) $team['id']) ?>" <?= (int) ($record['dog_id'] ?? 0) === (int) $team['dog_id'] ? 'selected' : '' ?>><?= e($team['dog_name'] . ' - ' . $team['handler_name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
             <label>
                 Visit date
-                <input type="date" name="visit_date" value="<?= e(date('Y-m-d')) ?>" required>
+                <input type="date" name="visit_date" value="<?= e($record['visit_date'] ?? date('Y-m-d')) ?>" required>
             </label>
             <label>
                 Vet office
-                <input name="vet_office_name">
+                <input name="vet_office_name" value="<?= e($record['vet_office_name'] ?? '') ?>">
             </label>
             <label>
                 Doctor
-                <input name="doctor_name">
+                <input name="doctor_name" value="<?= e($record['doctor_name'] ?? '') ?>">
             </label>
             <label class="span-2">
                 Reason for visit
-                <input name="reason_for_visit">
+                <input name="reason_for_visit" value="<?= e($record['reason_for_visit'] ?? '') ?>">
             </label>
             <label>
                 Next appointment date
-                <input type="date" name="next_appointment_date">
+                <input type="date" name="next_appointment_date" value="<?= e($record['next_appointment_date'] ?? '') ?>">
             </label>
             <label>
                 Next appointment time
-                <input type="time" name="next_appointment_time">
+                <input type="time" name="next_appointment_time" value="<?= e($record['next_appointment_time'] ?? '') ?>">
             </label>
             <label class="span-2">
                 Next appointment status
-                <input name="next_appointment_scheduled" placeholder="Scheduled, needed, not needed">
+                <input name="next_appointment_scheduled" value="<?= e($record['next_appointment_scheduled'] ?? '') ?>" placeholder="Scheduled, needed, not needed">
             </label>
 
             <fieldset class="span-2">
                 <legend>Shots / vaccinations</legend>
                 <div class="k9-shot-list" id="k9-shot-list">
+                    <?php foreach ($shotRows as $shotRow): ?>
                     <div class="k9-shot-row">
                         <label>
                             Description
-                            <input name="shot_descriptions[]" placeholder="Rabies, bordetella, etc.">
+                            <input name="shot_descriptions[]" value="<?= e($shotRow['shot_description'] ?? '') ?>" placeholder="Rabies, bordetella, etc.">
                         </label>
                         <label>
                             Expiration date
-                            <input type="date" name="shot_expirations[]">
+                            <input type="date" name="shot_expirations[]" value="<?= e($shotRow['shot_expiration'] ?? '') ?>">
                         </label>
                     </div>
+                    <?php endforeach; ?>
                 </div>
                 <button type="button" class="secondary compact-button" id="k9-add-shot">Add another shot</button>
             </fieldset>
 
             <label class="span-2">
                 Notes
-                <textarea name="notes"></textarea>
+                <textarea name="notes"><?= e($record['notes'] ?? '') ?></textarea>
             </label>
             <div class="actions span-2">
-                <button type="submit" <?= !$teams ? 'disabled' : '' ?>>Save medical visit</button>
+                <button type="submit" <?= !$teams ? 'disabled' : '' ?>><?= $id > 0 ? 'Save changes' : 'Save medical visit' ?></button>
                 <a class="button secondary" href="<?= e(url('departments/k9/activity.php')) ?>">Cancel</a>
             </div>
         </form>

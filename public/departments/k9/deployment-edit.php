@@ -19,6 +19,28 @@ $indications = k9_lookup_options('k9_indications');
 $incidentTypes = k9_lookup_options('k9_incident_types');
 $agencies = k9_lookup_options('k9_assisting_agencies');
 $outcomes = k9_lookup_options('k9_deployment_outcomes');
+$id = (int) ($_GET['id'] ?? 0);
+$record = null;
+
+if ($id > 0) {
+    $recordStatement = db()->prepare(
+        'SELECT k9_activity_logs.*
+         FROM k9_activity_logs
+         INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
+         LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
+         WHERE k9_activity_logs.id = :id
+           AND k9_activity_types.name = "Deployed"' . $teamWhere
+    );
+    $recordStatement->execute(array_merge($teamParams, ['id' => $id]));
+    $record = $recordStatement->fetch();
+    if (!$record) {
+        http_response_code(404);
+        page_header('Deployment Not Found');
+        echo '<main class="shell"><section class="panel"><h1>Deployment not found</h1><p>The selected deployment record could not be found.</p></section></main>';
+        page_footer();
+        exit;
+    }
+}
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $teamId = (int) ($_POST['team_id'] ?? 0);
@@ -32,21 +54,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (!$selectedTeam) {
         flash('error', 'Select a valid K-9 team.');
-        redirect_to('departments/k9/deployment-edit.php');
+        redirect_to('departments/k9/deployment-edit.php' . ($id > 0 ? '?id=' . $id : ''));
     }
 
-    $statement = db()->prepare(
-        'INSERT INTO k9_activity_logs (
-            team_id, dog_id, handler_id, activity_date, activity_type_id, location_id, training_area_id, indication_id,
-            training_hours, is_post_training, incident_number, incident_type_id, assisting_agency_id, arrest_made,
-            deployment_outcome_id, notes, created_by_user_id
-        ) VALUES (
-            :team_id, :dog_id, :handler_id, :activity_date, :activity_type_id, :location_id, NULL, :indication_id,
-            :training_hours, 0, :incident_number, :incident_type_id, :assisting_agency_id, :arrest_made,
-            :deployment_outcome_id, :notes, :created_by_user_id
-        )'
-    );
-    $statement->execute([
+    $saveParams = [
         'team_id' => $teamId,
         'dog_id' => (int) $selectedTeam['dog_id'],
         'handler_id' => (int) $selectedTeam['handler_id'],
@@ -62,19 +73,60 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         'deployment_outcome_id' => (int) ($_POST['deployment_outcome_id'] ?? 0) ?: null,
         'notes' => trim($_POST['notes'] ?? ''),
         'created_by_user_id' => current_user()['id'] ?? null,
-    ]);
+    ];
 
-    $activityId = (int) db()->lastInsertId();
-    audit_event('created', 'k9_deployment_log', (string) $activityId);
-    flash('success', 'K-9 deployment saved.');
-    redirect_to('departments/k9/activity.php');
+    if ($id > 0) {
+        $statement = db()->prepare(
+            'UPDATE k9_activity_logs
+             SET team_id = :team_id, dog_id = :dog_id, handler_id = :handler_id, activity_date = :activity_date,
+                 activity_type_id = :activity_type_id, indication_id = :indication_id, training_hours = :training_hours,
+                 incident_number = :incident_number, incident_type_id = :incident_type_id,
+                 assisting_agency_id = :assisting_agency_id, deployment_outcome_id = :deployment_outcome_id,
+                 notes = :notes
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'team_id' => $saveParams['team_id'],
+            'dog_id' => $saveParams['dog_id'],
+            'handler_id' => $saveParams['handler_id'],
+            'activity_date' => $saveParams['activity_date'],
+            'activity_type_id' => $saveParams['activity_type_id'],
+            'indication_id' => $saveParams['indication_id'],
+            'training_hours' => $saveParams['training_hours'],
+            'incident_number' => $saveParams['incident_number'],
+            'incident_type_id' => $saveParams['incident_type_id'],
+            'assisting_agency_id' => $saveParams['assisting_agency_id'],
+            'deployment_outcome_id' => $saveParams['deployment_outcome_id'],
+            'notes' => $saveParams['notes'],
+            'id' => $id,
+        ]);
+        $activityId = $id;
+    } else {
+        $statement = db()->prepare(
+            'INSERT INTO k9_activity_logs (
+                team_id, dog_id, handler_id, activity_date, activity_type_id, location_id, training_area_id, indication_id,
+                training_hours, is_post_training, incident_number, incident_type_id, assisting_agency_id, arrest_made,
+                deployment_outcome_id, notes, created_by_user_id
+            ) VALUES (
+                :team_id, :dog_id, :handler_id, :activity_date, :activity_type_id, :location_id, NULL, :indication_id,
+                :training_hours, 0, :incident_number, :incident_type_id, :assisting_agency_id, :arrest_made,
+                :deployment_outcome_id, :notes, :created_by_user_id
+            )'
+        );
+        $statement->execute($saveParams);
+        $activityId = (int) db()->lastInsertId();
+    }
+
+    audit_event($id > 0 ? 'updated' : 'created', 'k9_deployment_log', (string) $activityId);
+    flash('success', $id > 0 ? 'K-9 deployment updated.' : 'K-9 deployment saved.');
+    redirect_to('departments/k9/record-detail.php?type=deployment&id=' . $activityId);
 }
 
-page_header('Add K-9 Deployment');
+page_header($id > 0 ? 'Edit K-9 Deployment' : 'Add K-9 Deployment');
 ?>
 <main class="shell">
     <section class="panel">
-        <h1>Add Deployment</h1>
+        <h1><?= $id > 0 ? 'Edit Deployment' : 'Add Deployment' ?></h1>
         <p>Record K-9 deployment details separately from training activity.</p>
         <?php k9_navigation('deployment-edit'); ?>
 
@@ -92,24 +144,24 @@ page_header('Add K-9 Deployment');
                 <select name="team_id" required>
                     <option value="">Select team</option>
                     <?php foreach ($teams as $team): ?>
-                        <option value="<?= e((string) $team['id']) ?>"><?= e($team['dog_name'] . ' - ' . $team['handler_name']) ?></option>
+                        <option value="<?= e((string) $team['id']) ?>" <?= (int) ($record['team_id'] ?? 0) === (int) $team['id'] ? 'selected' : '' ?>><?= e($team['dog_name'] . ' - ' . $team['handler_name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
             <label>
                 Deployment date
-                <input type="date" name="activity_date" value="<?= e(date('Y-m-d')) ?>" required>
+                <input type="date" name="activity_date" value="<?= e($record['activity_date'] ?? date('Y-m-d')) ?>" required>
             </label>
             <label>
                 Incident number
-                <input name="incident_number">
+                <input name="incident_number" value="<?= e($record['incident_number'] ?? '') ?>">
             </label>
             <label>
                 Incident type
                 <select name="incident_type_id">
                     <option value="">Select incident type</option>
                     <?php foreach ($incidentTypes as $type): ?>
-                        <option value="<?= e((string) $type['id']) ?>"><?= e($type['name']) ?></option>
+                        <option value="<?= e((string) $type['id']) ?>" <?= (int) ($record['incident_type_id'] ?? 0) === (int) $type['id'] ? 'selected' : '' ?>><?= e($type['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -118,7 +170,7 @@ page_header('Add K-9 Deployment');
                 <select name="assisting_agency_id">
                     <option value="">Select agency</option>
                     <?php foreach ($agencies as $agency): ?>
-                        <option value="<?= e((string) $agency['id']) ?>"><?= e($agency['name']) ?></option>
+                        <option value="<?= e((string) $agency['id']) ?>" <?= (int) ($record['assisting_agency_id'] ?? 0) === (int) $agency['id'] ? 'selected' : '' ?>><?= e($agency['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -127,7 +179,7 @@ page_header('Add K-9 Deployment');
                 <select name="indication_id">
                     <option value="">Select indication</option>
                     <?php foreach ($indications as $indication): ?>
-                        <option value="<?= e((string) $indication['id']) ?>"><?= e($indication['name']) ?></option>
+                        <option value="<?= e((string) $indication['id']) ?>" <?= (int) ($record['indication_id'] ?? 0) === (int) $indication['id'] ? 'selected' : '' ?>><?= e($indication['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -136,20 +188,20 @@ page_header('Add K-9 Deployment');
                 <select name="deployment_outcome_id">
                     <option value="">Select outcome</option>
                     <?php foreach ($outcomes as $outcome): ?>
-                        <option value="<?= e((string) $outcome['id']) ?>"><?= e($outcome['name']) ?></option>
+                        <option value="<?= e((string) $outcome['id']) ?>" <?= (int) ($record['deployment_outcome_id'] ?? 0) === (int) $outcome['id'] ? 'selected' : '' ?>><?= e($outcome['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
             <label>
                 Deployment hours
-                <input name="deployment_hours" inputmode="decimal" placeholder="0.75">
+                <input name="deployment_hours" inputmode="decimal" value="<?= e(isset($record['training_hours']) ? number_format((float) $record['training_hours'], 2, '.', '') : '') ?>" placeholder="0.75">
             </label>
             <label class="span-2">
                 Narrative / notes
-                <textarea name="notes"></textarea>
+                <textarea name="notes"><?= e($record['notes'] ?? '') ?></textarea>
             </label>
             <div class="actions span-2">
-                <button type="submit" <?= !$teams ? 'disabled' : '' ?>>Save deployment</button>
+                <button type="submit" <?= !$teams ? 'disabled' : '' ?>><?= $id > 0 ? 'Save changes' : 'Save deployment' ?></button>
                 <a class="button secondary" href="<?= e(url('departments/k9/activity.php')) ?>">Cancel</a>
             </div>
         </form>

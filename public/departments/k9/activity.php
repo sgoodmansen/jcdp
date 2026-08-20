@@ -189,6 +189,7 @@ page_header('K-9 Activity Log');
                     <th>Details</th>
                     <th>Hours / Amount</th>
                     <th>POST</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -221,10 +222,13 @@ page_header('K-9 Activity Log');
                                 <span class="badge badge-muted">No</span>
                             <?php endif; ?>
                         </td>
+                        <td data-label="Actions">
+                            <a class="button secondary compact-button" href="<?= e(url('departments/k9/record-detail.php?type=' . urlencode($activity['record_type']) . '&id=' . (int) $activity['id'])) ?>">Open</a>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$activities): ?>
-                    <tr><td colspan="6">No activity matched the selected filters.</td></tr>
+                    <tr><td colspan="7">No activity matched the selected filters.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
