@@ -9,6 +9,7 @@ $sections = [
     'deployments' => 'Deployments by Outcome',
     'expenses' => 'Expenses by Category',
     'expense_detail' => 'Expense Detail',
+    'handler_monthly' => 'Handler Monthly Review',
     'shots' => 'Shot Expirations',
 ];
 $section = $_GET['section'] ?? 'summary';
@@ -191,6 +192,69 @@ $statement = db()->prepare($expenseDetailSql);
 $statement->execute($expenseParams);
 $expenseDetails = $statement->fetchAll();
 
+$handlerMonthlySql = "SELECT monthly.month_start,
+                             monthly.dog_name,
+                             monthly.handler_name,
+                             COALESCE(SUM(monthly.training_hours), 0) AS training_hours,
+                             COALESCE(SUM(monthly.post_hours), 0) AS post_hours,
+                             COALESCE(SUM(monthly.deployments), 0) AS deployments,
+                             COALESCE(SUM(monthly.medical_visits), 0) AS medical_visits,
+                             COALESCE(SUM(monthly.expense_total), 0) AS expense_total
+                      FROM (
+                          SELECT DATE_FORMAT(k9_activity_logs.activity_date, '%Y-%m-01') AS month_start,
+                                 k9_dogs.dog_name,
+                                 k9_handlers.handler_name,
+                                 CASE WHEN k9_activity_types.name = 'Training' THEN k9_activity_logs.training_hours ELSE 0 END AS training_hours,
+                                 CASE WHEN k9_activity_types.name = 'Training' AND k9_activity_logs.is_post_training = 1 THEN k9_activity_logs.training_hours ELSE 0 END AS post_hours,
+                                 CASE WHEN k9_activity_types.name = 'Deployed' THEN 1 ELSE 0 END AS deployments,
+                                 0 AS medical_visits,
+                                 0 AS expense_total
+                          FROM k9_activity_logs
+                          INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
+                          INNER JOIN k9_dogs ON k9_dogs.id = k9_activity_logs.dog_id
+                          INNER JOIN k9_handlers ON k9_handlers.id = k9_activity_logs.handler_id
+                          LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
+                          $activityWhere
+
+                          UNION ALL
+
+                          SELECT DATE_FORMAT(k9_medical_visits.visit_date, '%Y-%m-01') AS month_start,
+                                 k9_dogs.dog_name,
+                                 k9_handlers.handler_name,
+                                 0 AS training_hours,
+                                 0 AS post_hours,
+                                 0 AS deployments,
+                                 1 AS medical_visits,
+                                 0 AS expense_total
+                          FROM k9_medical_visits
+                          INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_visits.dog_id
+                          INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+                          INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+                          $medicalWhere
+
+                          UNION ALL
+
+                          SELECT DATE_FORMAT(k9_expenses.expense_date, '%Y-%m-01') AS month_start,
+                                 k9_dogs.dog_name,
+                                 k9_handlers.handler_name,
+                                 0 AS training_hours,
+                                 0 AS post_hours,
+                                 0 AS deployments,
+                                 0 AS medical_visits,
+                                 k9_expenses.amount AS expense_total
+                          FROM k9_expenses
+                          INNER JOIN k9_dogs ON k9_dogs.id = k9_expenses.dog_id
+                          INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+                          INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+                          $expenseWhere
+                      ) monthly
+                      GROUP BY monthly.month_start, monthly.dog_name, monthly.handler_name
+                      ORDER BY monthly.month_start DESC, monthly.handler_name, monthly.dog_name
+                      LIMIT 300";
+$statement = db()->prepare($handlerMonthlySql);
+$statement->execute($expenseParams);
+$handlerMonthly = $statement->fetchAll();
+
 $shotParams = $teamParams;
 $shotWhere = 'WHERE k9_medical_shots.shot_expiration IS NOT NULL' . $teamWhere;
 if ($teamId > 0) {
@@ -366,6 +430,36 @@ page_header($sections[$section] . ' Print');
                     <?php endforeach; ?>
                     <?php if (!$expenseDetails): ?>
                         <tr><td colspan="6">No expense detail records matched the selected filters.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        <?php elseif ($section === 'handler_monthly'): ?>
+            <table class="table roster-table">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Team</th>
+                        <th>Training Hours</th>
+                        <th>POST Hours</th>
+                        <th>Deployments</th>
+                        <th>Medical Visits</th>
+                        <th>Expenses</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($handlerMonthly as $row): ?>
+                        <tr>
+                            <td><?= e(date('M Y', strtotime($row['month_start']))) ?></td>
+                            <td><?= e($row['dog_name']) ?><br><span class="meta"><?= e($row['handler_name']) ?></span></td>
+                            <td><?= e(number_format((float) $row['training_hours'], 2)) ?></td>
+                            <td><?= e(number_format((float) $row['post_hours'], 2)) ?></td>
+                            <td><?= e((string) (int) $row['deployments']) ?></td>
+                            <td><?= e((string) (int) $row['medical_visits']) ?></td>
+                            <td><?= e(k9_money($row['expense_total'])) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$handlerMonthly): ?>
+                        <tr><td colspan="7">No handler monthly records matched the selected filters.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>

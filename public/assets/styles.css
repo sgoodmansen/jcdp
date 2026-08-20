@@ -397,6 +397,14 @@ a {
     min-width: 180px;
 }
 
+.k9-report-filter-form {
+    max-width: 860px;
+}
+
+.k9-report-type-field {
+    grid-column: 1 / -1;
+}
+
 .k9-reminder-row {
     display: grid;
     gap: 14px;
