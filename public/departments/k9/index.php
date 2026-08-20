@@ -73,17 +73,47 @@ $statement = db()->prepare($summarySql);
 $statement->execute($teamParams);
 $summary = $statement->fetch() ?: [];
 
-$shotSql = 'SELECT k9_medical_shots.*, k9_dogs.dog_name
+$expiredShotSql = 'SELECT k9_medical_shots.*, k9_dogs.dog_name, k9_handlers.handler_name, DATEDIFF(CURDATE(), k9_medical_shots.shot_expiration) AS days_overdue
             FROM k9_medical_shots
             INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_shots.dog_id
             INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+            INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
             WHERE k9_medical_shots.shot_expiration IS NOT NULL
-              AND k9_medical_shots.shot_expiration <= DATE_ADD(CURDATE(), INTERVAL COALESCE((SELECT reminder_days FROM k9_handlers WHERE id = k9_teams.handler_id), 30) DAY)' . $teamWhere . '
+              AND k9_medical_shots.shot_expiration < CURDATE()' . $teamWhere . '
             ORDER BY k9_medical_shots.shot_expiration
-            LIMIT 8';
-$statement = db()->prepare($shotSql);
+            LIMIT 6';
+$statement = db()->prepare($expiredShotSql);
 $statement->execute($teamParams);
-$shotReminders = $statement->fetchAll();
+$expiredShots = $statement->fetchAll();
+
+$dueSoonShotSql = 'SELECT k9_medical_shots.*, k9_dogs.dog_name, k9_handlers.handler_name, DATEDIFF(k9_medical_shots.shot_expiration, CURDATE()) AS days_until_due
+                   FROM k9_medical_shots
+                   INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_shots.dog_id
+                   INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+                   INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+                   WHERE k9_medical_shots.shot_expiration IS NOT NULL
+                     AND k9_medical_shots.shot_expiration >= CURDATE()
+                     AND k9_medical_shots.shot_expiration <= DATE_ADD(CURDATE(), INTERVAL COALESCE(k9_handlers.reminder_days, 30) DAY)' . $teamWhere . '
+                   ORDER BY k9_medical_shots.shot_expiration
+                   LIMIT 6';
+$statement = db()->prepare($dueSoonShotSql);
+$statement->execute($teamParams);
+$dueSoonShots = $statement->fetchAll();
+
+$appointmentSql = 'SELECT k9_medical_visits.id, k9_medical_visits.next_appointment_date, k9_medical_visits.next_appointment_time,
+                          k9_medical_visits.next_appointment_scheduled, k9_medical_visits.reason_for_visit,
+                          k9_dogs.dog_name, k9_handlers.handler_name
+                   FROM k9_medical_visits
+                   INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_visits.dog_id
+                   INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
+                   INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+                   WHERE k9_medical_visits.next_appointment_date IS NOT NULL
+                     AND k9_medical_visits.next_appointment_date >= CURDATE()' . $teamWhere . '
+                   ORDER BY k9_medical_visits.next_appointment_date, k9_medical_visits.next_appointment_time
+                   LIMIT 6';
+$statement = db()->prepare($appointmentSql);
+$statement->execute($teamParams);
+$nextAppointments = $statement->fetchAll();
 
 page_header('K-9 Activity & Records');
 ?>
@@ -161,14 +191,70 @@ page_header('K-9 Activity & Records');
     </section>
 
     <section class="k9-reminder-row" style="margin-top: 18px;">
-        <article class="card">
-            <h2>Shot Reminders</h2>
-            <?php if (!$shotReminders): ?>
-                <p class="muted">No shots are due in the current reminder window.</p>
+        <article class="card k9-reminder-card">
+            <div class="section-heading-row">
+                <h2>Expired</h2>
+                <?php if ($expiredShots): ?>
+                    <span class="badge badge-warning"><?= e((string) count($expiredShots)) ?></span>
+                <?php endif; ?>
+            </div>
+            <?php if (!$expiredShots): ?>
+                <p class="muted">No expired shots.</p>
             <?php else: ?>
-                <?php foreach ($shotReminders as $shot): ?>
-                    <p><strong><?= e($shot['dog_name']) ?></strong> - <?= e($shot['shot_description']) ?><br><span class="meta">Expires <?= e(format_display_date($shot['shot_expiration'])) ?></span></p>
-                <?php endforeach; ?>
+                <div class="k9-reminder-list">
+                    <?php foreach ($expiredShots as $shot): ?>
+                        <p>
+                            <strong><?= e($shot['dog_name']) ?></strong> - <?= e($shot['shot_description']) ?>
+                            <br><span class="meta"><?= e($shot['handler_name']) ?> | Expired <?= e(format_display_date($shot['shot_expiration'])) ?><?= (int) $shot['days_overdue'] > 0 ? ' | ' . e((string) (int) $shot['days_overdue']) . ' days overdue' : '' ?></span>
+                        </p>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </article>
+
+        <article class="card k9-reminder-card">
+            <div class="section-heading-row">
+                <h2>Due Soon</h2>
+                <?php if ($dueSoonShots): ?>
+                    <span class="badge"><?= e((string) count($dueSoonShots)) ?></span>
+                <?php endif; ?>
+            </div>
+            <?php if (!$dueSoonShots): ?>
+                <p class="muted">No shots are due soon.</p>
+            <?php else: ?>
+                <div class="k9-reminder-list">
+                    <?php foreach ($dueSoonShots as $shot): ?>
+                        <p>
+                            <strong><?= e($shot['dog_name']) ?></strong> - <?= e($shot['shot_description']) ?>
+                            <br><span class="meta"><?= e($shot['handler_name']) ?> | Due <?= e(format_display_date($shot['shot_expiration'])) ?><?= (int) $shot['days_until_due'] === 0 ? ' | Due today' : ' | In ' . e((string) (int) $shot['days_until_due']) . ' days' ?></span>
+                        </p>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </article>
+
+        <article class="card k9-reminder-card">
+            <div class="section-heading-row">
+                <h2>Next Vet Appointment</h2>
+                <?php if ($nextAppointments): ?>
+                    <span class="badge"><?= e((string) count($nextAppointments)) ?></span>
+                <?php endif; ?>
+            </div>
+            <?php if (!$nextAppointments): ?>
+                <p class="muted">No upcoming vet appointments listed.</p>
+            <?php else: ?>
+                <div class="k9-reminder-list">
+                    <?php foreach ($nextAppointments as $appointment): ?>
+                        <p>
+                            <strong><?= e($appointment['dog_name']) ?></strong><?= $appointment['reason_for_visit'] ? ' - ' . e($appointment['reason_for_visit']) : '' ?>
+                            <br><span class="meta">
+                                <?= e($appointment['handler_name']) ?> |
+                                <?= e(format_display_date($appointment['next_appointment_date'])) ?><?= $appointment['next_appointment_time'] ? ' at ' . e(date('g:i A', strtotime($appointment['next_appointment_time']))) : '' ?>
+                                <?= $appointment['next_appointment_scheduled'] ? ' | ' . e($appointment['next_appointment_scheduled']) : '' ?>
+                            </span>
+                        </p>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
         </article>
     </section>

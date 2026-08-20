@@ -399,7 +399,31 @@ a {
 
 .k9-reminder-row {
     display: grid;
-    grid-template-columns: minmax(280px, 430px);
+    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.k9-reminder-card {
+    align-content: start;
+    display: grid;
+    gap: 12px;
+}
+
+.k9-reminder-card .section-heading-row {
+    margin-bottom: 0;
+}
+
+.k9-reminder-card h2 {
+    margin: 0;
+}
+
+.k9-reminder-card p {
+    margin-bottom: 0;
+}
+
+.k9-reminder-list {
+    display: grid;
+    gap: 12px;
 }
 
 .k9-quick-actions {
