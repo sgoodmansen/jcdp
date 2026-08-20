@@ -13,12 +13,14 @@ $lookupConfigs = [
     'assisting_agencies' => ['label' => 'Assisting Agencies', 'table' => 'k9_assisting_agencies'],
     'deployment_outcomes' => ['label' => 'Deployment Outcomes', 'table' => 'k9_deployment_outcomes'],
 ];
+$trainingAidCategories = ['Bite suit', 'Toy', 'Treat', 'Drug', 'Other'];
 
 $selectedLookup = $_GET['list'] ?? 'locations';
 if (!isset($lookupConfigs[$selectedLookup])) {
     $selectedLookup = 'locations';
 }
 $selectedConfig = $lookupConfigs[$selectedLookup];
+$editId = max(0, (int) ($_GET['edit'] ?? 0));
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $postedLookup = $_POST['list'] ?? $selectedLookup;
@@ -27,6 +29,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
     $postedConfig = $lookupConfigs[$postedLookup];
     $table = $postedConfig['table'];
+    $postedEditId = max(0, (int) ($_POST['edit_id'] ?? 0));
     $name = trim($_POST['name'] ?? '');
     $sortOrder = max(0, (int) ($_POST['sort_order'] ?? 100));
     $isActive = isset($_POST['is_active']) ? 1 : 0;
@@ -36,41 +39,79 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         redirect_to('departments/k9/setup.php?list=' . urlencode($postedLookup));
     }
 
-    if ($postedLookup === 'locations') {
-        $statement = db()->prepare(
-            "INSERT INTO $table (name, address_description, sort_order, is_active)
-             VALUES (:name, :address_description, :sort_order, :is_active)
-             ON DUPLICATE KEY UPDATE address_description = VALUES(address_description), sort_order = VALUES(sort_order), is_active = VALUES(is_active)"
-        );
-        $statement->execute([
-            'name' => $name,
-            'address_description' => trim($_POST['address_description'] ?? ''),
-            'sort_order' => $sortOrder,
-            'is_active' => $isActive,
-        ]);
-    } elseif ($postedLookup === 'training_aids') {
-        $statement = db()->prepare(
-            "INSERT INTO $table (name, category, sort_order, is_active)
-             VALUES (:name, :category, :sort_order, :is_active)
-             ON DUPLICATE KEY UPDATE category = VALUES(category), sort_order = VALUES(sort_order), is_active = VALUES(is_active)"
-        );
-        $statement->execute([
-            'name' => $name,
-            'category' => trim($_POST['category'] ?? ''),
-            'sort_order' => $sortOrder,
-            'is_active' => $isActive,
-        ]);
-    } else {
-        $statement = db()->prepare(
-            "INSERT INTO $table (name, sort_order, is_active)
-             VALUES (:name, :sort_order, :is_active)
-             ON DUPLICATE KEY UPDATE sort_order = VALUES(sort_order), is_active = VALUES(is_active)"
-        );
-        $statement->execute([
-            'name' => $name,
-            'sort_order' => $sortOrder,
-            'is_active' => $isActive,
-        ]);
+    try {
+        if ($postedLookup === 'locations') {
+            $values = [
+                'name' => $name,
+                'address_description' => trim($_POST['address_description'] ?? ''),
+                'sort_order' => $sortOrder,
+                'is_active' => $isActive,
+            ];
+
+            if ($postedEditId > 0) {
+                $statement = db()->prepare(
+                    "UPDATE $table
+                     SET name = :name, address_description = :address_description, sort_order = :sort_order, is_active = :is_active
+                     WHERE id = :id"
+                );
+                $statement->execute($values + ['id' => $postedEditId]);
+            } else {
+                $statement = db()->prepare(
+                    "INSERT INTO $table (name, address_description, sort_order, is_active)
+                     VALUES (:name, :address_description, :sort_order, :is_active)
+                     ON DUPLICATE KEY UPDATE address_description = VALUES(address_description), sort_order = VALUES(sort_order), is_active = VALUES(is_active)"
+                );
+                $statement->execute($values);
+            }
+        } elseif ($postedLookup === 'training_aids') {
+            $values = [
+                'name' => $name,
+                'category' => trim($_POST['category'] ?? ''),
+                'sort_order' => $sortOrder,
+                'is_active' => $isActive,
+            ];
+
+            if ($postedEditId > 0) {
+                $statement = db()->prepare(
+                    "UPDATE $table
+                     SET name = :name, category = :category, sort_order = :sort_order, is_active = :is_active
+                     WHERE id = :id"
+                );
+                $statement->execute($values + ['id' => $postedEditId]);
+            } else {
+                $statement = db()->prepare(
+                    "INSERT INTO $table (name, category, sort_order, is_active)
+                     VALUES (:name, :category, :sort_order, :is_active)
+                     ON DUPLICATE KEY UPDATE category = VALUES(category), sort_order = VALUES(sort_order), is_active = VALUES(is_active)"
+                );
+                $statement->execute($values);
+            }
+        } else {
+            $values = [
+                'name' => $name,
+                'sort_order' => $sortOrder,
+                'is_active' => $isActive,
+            ];
+
+            if ($postedEditId > 0) {
+                $statement = db()->prepare(
+                    "UPDATE $table
+                     SET name = :name, sort_order = :sort_order, is_active = :is_active
+                     WHERE id = :id"
+                );
+                $statement->execute($values + ['id' => $postedEditId]);
+            } else {
+                $statement = db()->prepare(
+                    "INSERT INTO $table (name, sort_order, is_active)
+                     VALUES (:name, :sort_order, :is_active)
+                     ON DUPLICATE KEY UPDATE sort_order = VALUES(sort_order), is_active = VALUES(is_active)"
+                );
+                $statement->execute($values);
+            }
+        }
+    } catch (PDOException $exception) {
+        flash('error', 'That name is already being used. Choose a different name or edit the existing value.');
+        redirect_to('departments/k9/setup.php?list=' . urlencode($postedLookup) . ($postedEditId > 0 ? '&edit=' . $postedEditId : ''));
     }
 
     flash('success', $postedConfig['label'] . ' saved.');
@@ -78,6 +119,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 
 $rows = k9_lookup_options($selectedConfig['table'], 'name', false);
+$editRow = null;
+if ($editId > 0) {
+    foreach ($rows as $row) {
+        if ((int) $row['id'] === $editId) {
+            $editRow = $row;
+            break;
+        }
+    }
+
+    if (!$editRow) {
+        flash('error', 'The selected value could not be found.');
+        redirect_to('departments/k9/setup.php?list=' . urlencode($selectedLookup));
+    }
+}
 
 page_header('K-9 Setup');
 ?>
@@ -99,7 +154,7 @@ page_header('K-9 Setup');
         <div class="section-heading-row">
             <div>
                 <h1><?= e($selectedConfig['label']) ?></h1>
-                <p class="muted">Add values or reactivate existing values as the K-9 program changes.</p>
+                <p class="muted"><?= $editRow ? 'Edit this value and save your changes.' : 'Add values or reactivate existing values as the K-9 program changes.' ?></p>
             </div>
             <form method="get">
                 <label>
@@ -115,14 +170,15 @@ page_header('K-9 Setup');
 
         <form class="form compact-form" method="post">
             <input type="hidden" name="list" value="<?= e($selectedLookup) ?>">
+            <input type="hidden" name="edit_id" value="<?= e((string) ($editRow['id'] ?? 0)) ?>">
             <label>
                 Name
-                <input name="name" required>
+                <input name="name" value="<?= e($editRow['name'] ?? '') ?>" required>
             </label>
             <?php if ($selectedLookup === 'locations'): ?>
                 <label>
                     Address or description
-                    <input name="address_description">
+                    <input name="address_description" value="<?= e($editRow['address_description'] ?? '') ?>">
                 </label>
             <?php endif; ?>
             <?php if ($selectedLookup === 'training_aids'): ?>
@@ -130,25 +186,26 @@ page_header('K-9 Setup');
                     Category
                     <select name="category">
                         <option value="">Select category</option>
-                        <option value="Bite suit">Bite suit</option>
-                        <option value="Toy">Toy</option>
-                        <option value="Treat">Treat</option>
-                        <option value="Drug">Drug</option>
-                        <option value="Other">Other</option>
+                        <?php foreach ($trainingAidCategories as $category): ?>
+                            <option value="<?= e($category) ?>" <?= ($editRow['category'] ?? '') === $category ? 'selected' : '' ?>><?= e($category) ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </label>
             <?php endif; ?>
             <label>
                 Sort order
-                <input type="number" name="sort_order" min="0" value="100">
+                <input type="number" name="sort_order" min="0" value="<?= e((string) ($editRow['sort_order'] ?? 100)) ?>">
             </label>
             <label class="toggle-option">
-                <input type="checkbox" name="is_active" value="1" checked>
+                <input type="checkbox" name="is_active" value="1" <?= !$editRow || (int) $editRow['is_active'] === 1 ? 'checked' : '' ?>>
                 <span class="toggle-track" aria-hidden="true"></span>
                 <span>Active<small>Show this value in dropdown lists.</small></span>
             </label>
             <div class="actions span-2">
-                <button type="submit">Save value</button>
+                <button type="submit"><?= $editRow ? 'Save changes' : 'Save value' ?></button>
+                <?php if ($editRow): ?>
+                    <a class="button secondary" href="<?= e(url('departments/k9/setup.php?list=' . urlencode($selectedLookup))) ?>">Cancel</a>
+                <?php endif; ?>
             </div>
         </form>
     </section>
@@ -166,6 +223,7 @@ page_header('K-9 Setup');
                     <?php endif; ?>
                     <th>Sort</th>
                     <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -179,10 +237,13 @@ page_header('K-9 Setup');
                         <?php endif; ?>
                         <td data-label="Sort"><?= e((string) $row['sort_order']) ?></td>
                         <td data-label="Status"><?= (int) $row['is_active'] === 1 ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Inactive</span>' ?></td>
+                        <td data-label="Actions">
+                            <a class="button secondary compact-button" href="<?= e(url('departments/k9/setup.php?list=' . urlencode($selectedLookup) . '&edit=' . (int) $row['id'])) ?>">Edit</a>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$rows): ?>
-                    <tr><td colspan="<?= $selectedLookup === 'locations' || $selectedLookup === 'training_aids' ? '4' : '3' ?>">No values have been added yet.</td></tr>
+                    <tr><td colspan="<?= $selectedLookup === 'locations' || $selectedLookup === 'training_aids' ? '5' : '4' ?>">No values have been added yet.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
