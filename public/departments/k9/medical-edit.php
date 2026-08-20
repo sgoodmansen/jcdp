@@ -13,6 +13,15 @@ $teamSql = 'SELECT k9_teams.*, k9_dogs.dog_name, k9_handlers.handler_name
 $statement = db()->prepare($teamSql);
 $statement->execute($teamParams);
 $teams = $statement->fetchAll();
+$vetOffices = k9_lookup_options('k9_vet_offices');
+$doctorStatement = db()->query(
+    'SELECT k9_vet_doctors.id, k9_vet_doctors.vet_office_id, k9_vet_doctors.name, k9_vet_offices.name AS vet_office_name
+     FROM k9_vet_doctors
+     INNER JOIN k9_vet_offices ON k9_vet_offices.id = k9_vet_doctors.vet_office_id
+     WHERE k9_vet_doctors.is_active = 1 AND k9_vet_offices.is_active = 1
+     ORDER BY k9_vet_offices.sort_order, k9_vet_offices.name, k9_vet_doctors.sort_order, k9_vet_doctors.name'
+);
+$vetDoctors = $doctorStatement->fetchAll();
 $id = (int) ($_GET['id'] ?? 0);
 $record = null;
 $existingShots = [];
@@ -55,11 +64,31 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         redirect_to('departments/k9/medical-edit.php' . ($id > 0 ? '?id=' . $id : ''));
     }
 
+    $vetOfficeId = (int) ($_POST['vet_office_id'] ?? 0);
+    $selectedVetOffice = null;
+    foreach ($vetOffices as $office) {
+        if ((int) $office['id'] === $vetOfficeId) {
+            $selectedVetOffice = $office;
+            break;
+        }
+    }
+
+    $vetDoctorId = (int) ($_POST['vet_doctor_id'] ?? 0);
+    $selectedVetDoctor = null;
+    foreach ($vetDoctors as $doctor) {
+        if ((int) $doctor['id'] === $vetDoctorId && (!$selectedVetOffice || (int) $doctor['vet_office_id'] === (int) $selectedVetOffice['id'])) {
+            $selectedVetDoctor = $doctor;
+            break;
+        }
+    }
+
     $saveParams = [
         'dog_id' => (int) $selectedTeam['dog_id'],
+        'vet_office_id' => $selectedVetOffice ? (int) $selectedVetOffice['id'] : null,
+        'vet_doctor_id' => $selectedVetDoctor ? (int) $selectedVetDoctor['id'] : null,
         'visit_date' => $_POST['visit_date'] ?? date('Y-m-d'),
-        'vet_office_name' => trim($_POST['vet_office_name'] ?? '') ?: null,
-        'doctor_name' => trim($_POST['doctor_name'] ?? '') ?: null,
+        'vet_office_name' => $selectedVetOffice['name'] ?? null,
+        'doctor_name' => $selectedVetDoctor['name'] ?? null,
         'reason_for_visit' => trim($_POST['reason_for_visit'] ?? '') ?: null,
         'notes' => trim($_POST['notes'] ?? ''),
         'next_appointment_date' => trim($_POST['next_appointment_date'] ?? '') ?: null,
@@ -70,7 +99,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if ($id > 0) {
         $statement = db()->prepare(
             'UPDATE k9_medical_visits
-             SET dog_id = :dog_id, visit_date = :visit_date, vet_office_name = :vet_office_name,
+             SET dog_id = :dog_id, vet_office_id = :vet_office_id, vet_doctor_id = :vet_doctor_id,
+                 visit_date = :visit_date, vet_office_name = :vet_office_name,
                  doctor_name = :doctor_name, reason_for_visit = :reason_for_visit, notes = :notes,
                  next_appointment_date = :next_appointment_date, next_appointment_time = :next_appointment_time,
                  next_appointment_scheduled = :next_appointment_scheduled
@@ -82,10 +112,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     } else {
         $statement = db()->prepare(
             'INSERT INTO k9_medical_visits (
-                dog_id, visit_date, vet_office_name, doctor_name, reason_for_visit, notes,
+                dog_id, vet_office_id, vet_doctor_id, visit_date, vet_office_name, doctor_name, reason_for_visit, notes,
                 next_appointment_date, next_appointment_time, next_appointment_scheduled
             ) VALUES (
-                :dog_id, :visit_date, :vet_office_name, :doctor_name, :reason_for_visit, :notes,
+                :dog_id, :vet_office_id, :vet_doctor_id, :visit_date, :vet_office_name, :doctor_name, :reason_for_visit, :notes,
                 :next_appointment_date, :next_appointment_time, :next_appointment_scheduled
             )'
         );
@@ -116,6 +146,27 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 
 $shotRows = $existingShots ?: [['shot_description' => '', 'shot_expiration' => '']];
+$selectedVetOfficeId = (int) ($record['vet_office_id'] ?? 0);
+if ($selectedVetOfficeId === 0 && !empty($record['vet_office_name'])) {
+    foreach ($vetOffices as $office) {
+        if (strcasecmp((string) $office['name'], (string) $record['vet_office_name']) === 0) {
+            $selectedVetOfficeId = (int) $office['id'];
+            break;
+        }
+    }
+}
+$selectedVetDoctorId = (int) ($record['vet_doctor_id'] ?? 0);
+if ($selectedVetDoctorId === 0 && !empty($record['doctor_name'])) {
+    foreach ($vetDoctors as $doctor) {
+        if (
+            strcasecmp((string) $doctor['name'], (string) $record['doctor_name']) === 0
+            && ($selectedVetOfficeId === 0 || (int) $doctor['vet_office_id'] === $selectedVetOfficeId)
+        ) {
+            $selectedVetDoctorId = (int) $doctor['id'];
+            break;
+        }
+    }
+}
 page_header($id > 0 ? 'Edit K-9 Medical Visit' : 'Add K-9 Medical Visit');
 ?>
 <main class="shell">
@@ -148,11 +199,21 @@ page_header($id > 0 ? 'Edit K-9 Medical Visit' : 'Add K-9 Medical Visit');
             </label>
             <label>
                 Vet office
-                <input name="vet_office_name" value="<?= e($record['vet_office_name'] ?? '') ?>">
+                <select name="vet_office_id" id="k9-vet-office-select">
+                    <option value="">Select vet office</option>
+                    <?php foreach ($vetOffices as $office): ?>
+                        <option value="<?= e((string) $office['id']) ?>" <?= $selectedVetOfficeId === (int) $office['id'] ? 'selected' : '' ?>><?= e($office['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </label>
             <label>
                 Doctor
-                <input name="doctor_name" value="<?= e($record['doctor_name'] ?? '') ?>">
+                <select name="vet_doctor_id" id="k9-vet-doctor-select">
+                    <option value="">Select doctor</option>
+                    <?php foreach ($vetDoctors as $doctor): ?>
+                        <option value="<?= e((string) $doctor['id']) ?>" data-vet-office-id="<?= e((string) $doctor['vet_office_id']) ?>" <?= $selectedVetDoctorId === (int) $doctor['id'] ? 'selected' : '' ?>><?= e($doctor['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </label>
             <label class="span-2">
                 Reason for visit
@@ -204,6 +265,32 @@ page_header($id > 0 ? 'Edit K-9 Medical Visit' : 'Add K-9 Medical Visit');
 <script>
     const shotList = document.getElementById('k9-shot-list');
     const addShotButton = document.getElementById('k9-add-shot');
+    const vetOfficeSelect = document.getElementById('k9-vet-office-select');
+    const vetDoctorSelect = document.getElementById('k9-vet-doctor-select');
+
+    const syncDoctors = () => {
+        if (!vetOfficeSelect || !vetDoctorSelect) {
+            return;
+        }
+
+        const selectedOfficeId = vetOfficeSelect.value;
+        let selectedDoctorIsVisible = false;
+        vetDoctorSelect.querySelectorAll('option').forEach((option) => {
+            const officeId = option.dataset.vetOfficeId || '';
+            const isVisible = option.value === '' || (selectedOfficeId !== '' && officeId === selectedOfficeId);
+            option.hidden = !isVisible;
+            if (option.selected && isVisible) {
+                selectedDoctorIsVisible = true;
+            }
+        });
+
+        if (!selectedDoctorIsVisible) {
+            vetDoctorSelect.value = '';
+        }
+    };
+
+    vetOfficeSelect?.addEventListener('change', syncDoctors);
+    syncDoctors();
 
     addShotButton?.addEventListener('click', () => {
         const firstRow = shotList?.querySelector('.k9-shot-row');

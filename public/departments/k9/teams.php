@@ -224,6 +224,9 @@ page_header('K-9 Teams');
                         <td data-label="Reminder"><?= e((string) $team['reminder_days']) ?> days</td>
                         <td data-label="Status"><?= (int) $team['is_active'] === 1 ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Ended</span>' ?></td>
                         <td data-label="Actions">
+                            <div class="table-actions">
+                                <a class="button secondary compact-button" href="<?= e(url('departments/k9/team-edit.php?id=' . (int) $team['id'])) ?>">Edit</a>
+                            </div>
                             <?php if ((int) $team['is_active'] === 1): ?>
                                 <form class="table-actions" method="post">
                                     <input type="hidden" name="action" value="end_team">
@@ -231,8 +234,6 @@ page_header('K-9 Teams');
                                     <input type="hidden" name="end_date" value="<?= e(date('Y-m-d')) ?>">
                                     <button type="submit" class="secondary compact-button">End team</button>
                                 </form>
-                            <?php else: ?>
-                                <span class="meta">No actions</span>
                             <?php endif; ?>
                         </td>
                     </tr>

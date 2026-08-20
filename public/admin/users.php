@@ -42,7 +42,7 @@ $users = db()->query(
         INNER JOIN departments ON departments.id = user_departments.department_id
         GROUP BY user_departments.user_id
      ) AS user_department_summary ON user_department_summary.user_id = users.id
-     ORDER BY users.last_name, users.first_name'
+     ORDER BY users.first_name, users.last_name'
 )->fetchAll();
 
 $departments = db()->query('SELECT * FROM departments ORDER BY name')->fetchAll();

@@ -73,14 +73,6 @@ if ($expenseCategoryId > 0) {
     $expenseWhere .= ' AND k9_expenses.expense_category_id = :expense_category_id';
     $expenseParams['expense_category_id'] = $expenseCategoryId;
 }
-$printQuery = http_build_query([
-    'section' => $reportType,
-    'start_date' => $startDate,
-    'end_date' => $endDate,
-    'team_id' => $teamId,
-    'expense_category_id' => $expenseCategoryId,
-]);
-
 $summarySql = "SELECT
                    COUNT(*) AS total_logs,
                    COALESCE(SUM(k9_activity_logs.training_hours), 0) AS total_hours,
@@ -178,6 +170,7 @@ $expenseByCategorySql = "SELECT COALESCE(k9_expense_categories.name, 'Not set') 
 $statement = db()->prepare($expenseByCategorySql);
 $statement->execute($expenseParams);
 $expenseByCategory = $statement->fetchAll();
+$expenseEntryTotal = array_sum(array_map(static fn (array $row): int => (int) $row['expense_count'], $expenseByCategory));
 
 $expenseDetailSql = "SELECT k9_expenses.id,
                             k9_expenses.expense_date,
@@ -256,11 +249,23 @@ $handlerMonthlySql = "SELECT monthly.month_start,
                           $expenseWhere
                       ) monthly
                       GROUP BY monthly.month_start, monthly.dog_name, monthly.handler_name
-                      ORDER BY monthly.month_start DESC, monthly.handler_name, monthly.dog_name
+                      ORDER BY monthly.handler_name, monthly.dog_name, monthly.month_start DESC
                       LIMIT 300";
 $statement = db()->prepare($handlerMonthlySql);
 $statement->execute($expenseParams);
 $handlerMonthly = $statement->fetchAll();
+$handlerMonthlyByTeam = [];
+foreach ($handlerMonthly as $row) {
+    $teamKey = $row['dog_name'] . '|' . $row['handler_name'];
+    if (!isset($handlerMonthlyByTeam[$teamKey])) {
+        $handlerMonthlyByTeam[$teamKey] = [
+            'dog_name' => $row['dog_name'],
+            'handler_name' => $row['handler_name'],
+            'rows' => [],
+        ];
+    }
+    $handlerMonthlyByTeam[$teamKey]['rows'][] = $row;
+}
 
 $shotParams = $teamParams;
 $shotWhere = 'WHERE k9_medical_shots.shot_expiration IS NOT NULL' . $teamWhere;
@@ -286,13 +291,13 @@ $shotExpirations = $statement->fetchAll();
 page_header('K-9 Reports');
 ?>
 <main class="shell">
-    <section class="panel">
+    <section class="panel print-hidden">
         <h1>Reports</h1>
         <p>Review K-9 training totals, deployments, medical visits, shot expirations, and expenses.</p>
         <?php k9_navigation('reports'); ?>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
+    <section class="panel print-hidden" style="margin-top: 18px;">
         <h1>Report Filters</h1>
         <form class="form compact-form k9-report-filter-form" method="get">
             <label class="k9-report-type-field">
@@ -340,7 +345,7 @@ page_header('K-9 Reports');
     <section class="dashboard-stat-group summary-stat-group" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h2><?= e(format_display_date($startDate)) ?> to <?= e(format_display_date($endDate)) ?></h2>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
         </div>
         <div class="grid dashboard-stat-grid sheriff-budget-grid">
             <article class="card dashboard-stat-card">
@@ -375,9 +380,9 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Training by Team</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
         </div>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table k9-report-table">
             <thead>
                 <tr>
                     <th>Team</th>
@@ -409,9 +414,9 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Training by Area</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
         </div>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table k9-report-table">
             <thead>
                 <tr>
                     <th>Training Area</th>
@@ -443,9 +448,9 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Deployments by Outcome</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
         </div>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table k9-report-table">
             <thead>
                 <tr>
                     <th>Outcome</th>
@@ -471,9 +476,9 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Expenses by Category</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
         </div>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table k9-report-table">
             <thead>
                 <tr>
                     <th>Category</th>
@@ -489,6 +494,13 @@ page_header('K-9 Reports');
                         <td data-label="Total"><?= e(k9_money($row['expense_total'])) ?></td>
                     </tr>
                 <?php endforeach; ?>
+                <?php if ($expenseByCategory): ?>
+                    <tr class="report-total-row">
+                        <td data-label="Category">Grand Total</td>
+                        <td data-label="Entries"><?= e((string) $expenseEntryTotal) ?></td>
+                        <td data-label="Total"><?= e(k9_money($expenseTotal)) ?></td>
+                    </tr>
+                <?php endif; ?>
                 <?php if (!$expenseByCategory): ?>
                     <tr><td colspan="3">No expense records matched the selected filters.</td></tr>
                 <?php endif; ?>
@@ -501,9 +513,9 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Expense Detail</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
         </div>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table k9-report-table">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -525,6 +537,16 @@ page_header('K-9 Reports');
                         <td data-label="Notes"><?= e($row['notes'] ?: '') ?></td>
                     </tr>
                 <?php endforeach; ?>
+                <?php if ($expenseDetails): ?>
+                    <tr class="report-total-row">
+                        <td data-label="Date"></td>
+                        <td data-label="Team"></td>
+                        <td data-label="Category"></td>
+                        <td data-label="Vendor">Grand Total</td>
+                        <td data-label="Amount"><?= e(k9_money($expenseTotal)) ?></td>
+                        <td data-label="Notes"></td>
+                    </tr>
+                <?php endif; ?>
                 <?php if (!$expenseDetails): ?>
                     <tr><td colspan="6">No expense detail records matched the selected filters.</td></tr>
                 <?php endif; ?>
@@ -537,37 +559,40 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Handler Monthly Review</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
         </div>
-        <table class="table mobile-card-table">
-            <thead>
-                <tr>
-                    <th>Month</th>
-                    <th>Team</th>
-                    <th>Training Hours</th>
-                    <th>POST Hours</th>
-                    <th>Deployments</th>
-                    <th>Medical Visits</th>
-                    <th>Expenses</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($handlerMonthly as $row): ?>
-                    <tr>
-                        <td data-label="Month"><?= e(date('M Y', strtotime($row['month_start']))) ?></td>
-                        <td data-label="Team"><?= e($row['dog_name']) ?><br><span class="meta"><?= e($row['handler_name']) ?></span></td>
-                        <td data-label="Training Hours"><?= e(number_format((float) $row['training_hours'], 2)) ?></td>
-                        <td data-label="POST Hours"><?= e(number_format((float) $row['post_hours'], 2)) ?></td>
-                        <td data-label="Deployments"><?= e((string) (int) $row['deployments']) ?></td>
-                        <td data-label="Medical Visits"><?= e((string) (int) $row['medical_visits']) ?></td>
-                        <td data-label="Expenses"><?= e(k9_money($row['expense_total'])) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-                <?php if (!$handlerMonthly): ?>
-                    <tr><td colspan="7">No handler monthly records matched the selected filters.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+        <?php foreach ($handlerMonthlyByTeam as $teamGroup): ?>
+            <div class="k9-report-team-group">
+                <h2><?= e($teamGroup['dog_name']) ?> / <?= e($teamGroup['handler_name']) ?></h2>
+                <table class="table mobile-card-table k9-report-table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Training Hours</th>
+                            <th>POST Hours</th>
+                            <th>Deployments</th>
+                            <th>Medical Visits</th>
+                            <th>Expenses</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($teamGroup['rows'] as $row): ?>
+                            <tr>
+                                <td data-label="Month"><?= e(date('M Y', strtotime($row['month_start']))) ?></td>
+                                <td data-label="Training Hours"><?= e(number_format((float) $row['training_hours'], 2)) ?></td>
+                                <td data-label="POST Hours"><?= e(number_format((float) $row['post_hours'], 2)) ?></td>
+                                <td data-label="Deployments"><?= e((string) (int) $row['deployments']) ?></td>
+                                <td data-label="Medical Visits"><?= e((string) (int) $row['medical_visits']) ?></td>
+                                <td data-label="Expenses"><?= e(k9_money($row['expense_total'])) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endforeach; ?>
+        <?php if (!$handlerMonthlyByTeam): ?>
+            <p>No handler monthly records matched the selected filters.</p>
+        <?php endif; ?>
     </section>
     <?php endif; ?>
 
@@ -575,9 +600,9 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Shot Expirations</h1>
-            <a class="button secondary compact-button" href="<?= e(url('departments/k9/report-print.php?' . $printQuery)) ?>">Print PDF</a>
+            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
         </div>
-        <table class="table mobile-card-table">
+        <table class="table mobile-card-table k9-report-table">
             <thead>
                 <tr>
                     <th>Team</th>

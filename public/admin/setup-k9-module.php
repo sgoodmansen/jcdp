@@ -102,6 +102,29 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )",
 
+        "CREATE TABLE IF NOT EXISTS k9_vet_offices (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(190) NOT NULL UNIQUE,
+            sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            notes TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )",
+
+        "CREATE TABLE IF NOT EXISTS k9_vet_doctors (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            vet_office_id INT UNSIGNED NOT NULL,
+            name VARCHAR(160) NOT NULL,
+            sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            notes TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_k9_vet_doctor_office_name (vet_office_id, name),
+            CONSTRAINT fk_k9_vet_doctor_office FOREIGN KEY (vet_office_id) REFERENCES k9_vet_offices(id) ON DELETE RESTRICT
+        )",
+
         "CREATE TABLE IF NOT EXISTS k9_expense_categories (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(120) NOT NULL UNIQUE,
@@ -194,6 +217,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             legacy_access_id INT UNSIGNED NULL,
             dog_id INT UNSIGNED NOT NULL,
+            vet_office_id INT UNSIGNED NULL,
+            vet_doctor_id INT UNSIGNED NULL,
             visit_date DATE NOT NULL,
             vet_office_name VARCHAR(190) NULL,
             doctor_name VARCHAR(160) NULL,
@@ -204,7 +229,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             next_appointment_scheduled VARCHAR(80) NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            CONSTRAINT fk_k9_medical_dog FOREIGN KEY (dog_id) REFERENCES k9_dogs(id) ON DELETE RESTRICT
+            CONSTRAINT fk_k9_medical_dog FOREIGN KEY (dog_id) REFERENCES k9_dogs(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_k9_medical_vet_office FOREIGN KEY (vet_office_id) REFERENCES k9_vet_offices(id) ON DELETE SET NULL,
+            CONSTRAINT fk_k9_medical_vet_doctor FOREIGN KEY (vet_doctor_id) REFERENCES k9_vet_doctors(id) ON DELETE SET NULL
         )",
 
         "CREATE TABLE IF NOT EXISTS k9_medical_shots (
@@ -284,6 +311,42 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
     }
 
+    $medicalVisitColumns = [
+        'vet_office_id' => 'INT UNSIGNED NULL AFTER dog_id',
+        'vet_doctor_id' => 'INT UNSIGNED NULL AFTER vet_office_id',
+    ];
+    foreach ($medicalVisitColumns as $columnName => $definition) {
+        $statement = db()->prepare(
+            'SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = "k9_medical_visits"
+               AND COLUMN_NAME = :column_name'
+        );
+        $statement->execute(['column_name' => $columnName]);
+        if ((int) $statement->fetchColumn() === 0) {
+            db()->exec("ALTER TABLE k9_medical_visits ADD COLUMN $columnName $definition");
+        }
+    }
+
+    $medicalForeignKeys = [
+        'fk_k9_medical_vet_office' => 'ALTER TABLE k9_medical_visits ADD CONSTRAINT fk_k9_medical_vet_office FOREIGN KEY (vet_office_id) REFERENCES k9_vet_offices(id) ON DELETE SET NULL',
+        'fk_k9_medical_vet_doctor' => 'ALTER TABLE k9_medical_visits ADD CONSTRAINT fk_k9_medical_vet_doctor FOREIGN KEY (vet_doctor_id) REFERENCES k9_vet_doctors(id) ON DELETE SET NULL',
+    ];
+    foreach ($medicalForeignKeys as $constraintName => $sql) {
+        $statement = db()->prepare(
+            'SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = "k9_medical_visits"
+               AND CONSTRAINT_NAME = :constraint_name'
+        );
+        $statement->execute(['constraint_name' => $constraintName]);
+        if ((int) $statement->fetchColumn() === 0) {
+            db()->exec($sql);
+        }
+    }
+
     $seedGroups = [
         'k9_activity_types' => ['Training', 'Deployed'],
         'k9_training_areas' => ['Article Search', 'Building Search', 'Cadaver Training', 'Field Search', 'Narcotics Detection', 'Obedience', 'Patrol Training', 'Tracking'],
@@ -321,6 +384,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     ] as $index => $aid) {
         $aidStatement->execute(['name' => $aid[0], 'category' => $aid[1], 'sort_order' => ($index + 1) * 10]);
     }
+
+    db()->exec(
+        "INSERT IGNORE INTO k9_vet_offices (name, sort_order)
+         SELECT DISTINCT vet_office_name, 100
+         FROM k9_medical_visits
+         WHERE vet_office_name IS NOT NULL AND vet_office_name <> ''"
+    );
+    db()->exec(
+        "INSERT IGNORE INTO k9_vet_doctors (vet_office_id, name, sort_order)
+         SELECT DISTINCT k9_vet_offices.id, k9_medical_visits.doctor_name, 100
+         FROM k9_medical_visits
+         INNER JOIN k9_vet_offices ON k9_vet_offices.name = k9_medical_visits.vet_office_name
+         WHERE k9_medical_visits.doctor_name IS NOT NULL AND k9_medical_visits.doctor_name <> ''"
+    );
+    db()->exec(
+        "UPDATE k9_medical_visits
+         LEFT JOIN k9_vet_offices ON k9_vet_offices.name = k9_medical_visits.vet_office_name
+         LEFT JOIN k9_vet_doctors ON k9_vet_doctors.vet_office_id = k9_vet_offices.id
+             AND k9_vet_doctors.name = k9_medical_visits.doctor_name
+         SET k9_medical_visits.vet_office_id = COALESCE(k9_medical_visits.vet_office_id, k9_vet_offices.id),
+             k9_medical_visits.vet_doctor_id = COALESCE(k9_medical_visits.vet_doctor_id, k9_vet_doctors.id)"
+    );
 
     audit_event('setup', 'k9_module', 'schema');
     $ranSetup = true;

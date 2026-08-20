@@ -391,7 +391,6 @@ page_header('K-9 Activity Log');
             <thead>
                 <tr>
                     <th>Date</th>
-                    <th>Team</th>
                     <th>Record</th>
                     <th>Details</th>
                     <th>Hours</th>
@@ -403,9 +402,9 @@ page_header('K-9 Activity Log');
                 <?php foreach ($activities as $activity): ?>
                     <?php $notesPreview = $activityPreview($activity['notes'] ?? null); ?>
                     <tr>
-                        <td data-label="Date"><?= e(format_display_date($activity['record_date'])) ?></td>
-                        <td data-label="Team">
-                            <span class="k9-team-inline"><?= e($activity['dog_name']) ?> <span aria-hidden="true">/</span> <?= e($activity['handler_name']) ?></span>
+                        <td data-label="Date">
+                            <?= e(format_display_date($activity['record_date'])) ?>
+                            <br><span class="meta k9-team-inline"><?= e($activity['dog_name']) ?> <span aria-hidden="true">/</span> <?= e($activity['handler_name']) ?></span>
                         </td>
                         <td data-label="Record">
                             <?= e($activity['record_title']) ?>
@@ -437,7 +436,7 @@ page_header('K-9 Activity Log');
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$activities): ?>
-                    <tr><td colspan="7">No activity matched the selected filters.</td></tr>
+                    <tr><td colspan="6">No activity matched the selected filters.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

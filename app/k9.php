@@ -113,6 +113,8 @@ function k9_lookup_options(string $tableName, string $labelColumn = 'name', bool
         'k9_indications',
         'k9_locations',
         'k9_training_aids',
+        'k9_vet_offices',
+        'k9_vet_doctors',
         'k9_expense_categories',
         'k9_incident_types',
         'k9_assisting_agencies',

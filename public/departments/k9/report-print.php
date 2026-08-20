@@ -171,6 +171,7 @@ $expenseByCategorySql = "SELECT COALESCE(k9_expense_categories.name, 'Not set') 
 $statement = db()->prepare($expenseByCategorySql);
 $statement->execute($expenseParams);
 $expenseByCategory = $statement->fetchAll();
+$expenseEntryTotal = array_sum(array_map(static fn (array $row): int => (int) $row['expense_count'], $expenseByCategory));
 
 $expenseDetailSql = "SELECT k9_expenses.id,
                             k9_expenses.expense_date,
@@ -249,11 +250,23 @@ $handlerMonthlySql = "SELECT monthly.month_start,
                           $expenseWhere
                       ) monthly
                       GROUP BY monthly.month_start, monthly.dog_name, monthly.handler_name
-                      ORDER BY monthly.month_start DESC, monthly.handler_name, monthly.dog_name
+                      ORDER BY monthly.handler_name, monthly.dog_name, monthly.month_start DESC
                       LIMIT 300";
 $statement = db()->prepare($handlerMonthlySql);
 $statement->execute($expenseParams);
 $handlerMonthly = $statement->fetchAll();
+$handlerMonthlyByTeam = [];
+foreach ($handlerMonthly as $row) {
+    $teamKey = $row['dog_name'] . '|' . $row['handler_name'];
+    if (!isset($handlerMonthlyByTeam[$teamKey])) {
+        $handlerMonthlyByTeam[$teamKey] = [
+            'dog_name' => $row['dog_name'],
+            'handler_name' => $row['handler_name'],
+            'rows' => [],
+        ];
+    }
+    $handlerMonthlyByTeam[$teamKey]['rows'][] = $row;
+}
 
 $shotParams = $teamParams;
 $shotWhere = 'WHERE k9_medical_shots.shot_expiration IS NOT NULL' . $teamWhere;
@@ -400,6 +413,13 @@ page_header($sections[$section] . ' Print');
                             <td><?= e(k9_money($row['expense_total'])) ?></td>
                         </tr>
                     <?php endforeach; ?>
+                    <?php if ($expenseByCategory): ?>
+                        <tr class="report-total-row">
+                            <td>Grand Total</td>
+                            <td><?= e((string) $expenseEntryTotal) ?></td>
+                            <td><?= e(k9_money($expenseTotal)) ?></td>
+                        </tr>
+                    <?php endif; ?>
                     <?php if (!$expenseByCategory): ?>
                         <tr><td colspan="3">No expense records matched the selected filters.</td></tr>
                     <?php endif; ?>
@@ -428,41 +448,54 @@ page_header($sections[$section] . ' Print');
                             <td><?= e($row['notes'] ?: '') ?></td>
                         </tr>
                     <?php endforeach; ?>
+                    <?php if ($expenseDetails): ?>
+                        <tr class="report-total-row">
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>Grand Total</td>
+                            <td><?= e(k9_money($expenseTotal)) ?></td>
+                            <td></td>
+                        </tr>
+                    <?php endif; ?>
                     <?php if (!$expenseDetails): ?>
                         <tr><td colspan="6">No expense detail records matched the selected filters.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         <?php elseif ($section === 'handler_monthly'): ?>
-            <table class="table roster-table">
-                <thead>
-                    <tr>
-                        <th>Month</th>
-                        <th>Team</th>
-                        <th>Training Hours</th>
-                        <th>POST Hours</th>
-                        <th>Deployments</th>
-                        <th>Medical Visits</th>
-                        <th>Expenses</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($handlerMonthly as $row): ?>
-                        <tr>
-                            <td><?= e(date('M Y', strtotime($row['month_start']))) ?></td>
-                            <td><?= e($row['dog_name']) ?><br><span class="meta"><?= e($row['handler_name']) ?></span></td>
-                            <td><?= e(number_format((float) $row['training_hours'], 2)) ?></td>
-                            <td><?= e(number_format((float) $row['post_hours'], 2)) ?></td>
-                            <td><?= e((string) (int) $row['deployments']) ?></td>
-                            <td><?= e((string) (int) $row['medical_visits']) ?></td>
-                            <td><?= e(k9_money($row['expense_total'])) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    <?php if (!$handlerMonthly): ?>
-                        <tr><td colspan="7">No handler monthly records matched the selected filters.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+            <?php foreach ($handlerMonthlyByTeam as $teamGroup): ?>
+                <div class="k9-report-team-group">
+                    <h2><?= e($teamGroup['dog_name']) ?> / <?= e($teamGroup['handler_name']) ?></h2>
+                    <table class="table roster-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Training Hours</th>
+                                <th>POST Hours</th>
+                                <th>Deployments</th>
+                                <th>Medical Visits</th>
+                                <th>Expenses</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($teamGroup['rows'] as $row): ?>
+                                <tr>
+                                    <td><?= e(date('M Y', strtotime($row['month_start']))) ?></td>
+                                    <td><?= e(number_format((float) $row['training_hours'], 2)) ?></td>
+                                    <td><?= e(number_format((float) $row['post_hours'], 2)) ?></td>
+                                    <td><?= e((string) (int) $row['deployments']) ?></td>
+                                    <td><?= e((string) (int) $row['medical_visits']) ?></td>
+                                    <td><?= e(k9_money($row['expense_total'])) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endforeach; ?>
+            <?php if (!$handlerMonthlyByTeam): ?>
+                <p>No handler monthly records matched the selected filters.</p>
+            <?php endif; ?>
         <?php elseif ($section === 'shots'): ?>
             <table class="table roster-table">
                 <thead><tr><th>Team</th><th>Shot / Vaccination</th><th>Expiration</th></tr></thead>
