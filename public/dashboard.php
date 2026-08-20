@@ -12,6 +12,49 @@ if ($user['role'] === 'system_admin') {
     $departments = departments_for_user((int) $user['id']);
 }
 
+$startDepartmentSlug = trim((string) ($user['default_start_department_slug'] ?? ''));
+
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'save_start_department') {
+    $postedSlug = trim((string) ($_POST['department_slug'] ?? ''));
+    $checked = isset($_POST['start_here']);
+    $newStartSlug = null;
+
+    if ($checked && $postedSlug !== '') {
+        if (!can_start_in_department($postedSlug)) {
+            flash('error', 'That module is not available as a startup page for your account.');
+            redirect_to('dashboard.php');
+        }
+        $newStartSlug = $postedSlug;
+    }
+
+    $statement = db()->prepare('UPDATE users SET default_start_department_slug = :slug WHERE id = :id');
+    $statement->execute([
+        'slug' => $newStartSlug,
+        'id' => (int) $user['id'],
+    ]);
+
+    flash('success', $newStartSlug === null ? 'Dashboard startup restored.' : 'Startup module saved.');
+    redirect_to('dashboard.php');
+}
+
+function dashboard_start_preference_control(string $slug, string $currentStartSlug): void
+{
+    if (!can_start_in_department($slug)) {
+        return;
+    }
+
+    ?>
+    <form class="dashboard-start-form" method="post">
+        <input type="hidden" name="action" value="save_start_department">
+        <input type="hidden" name="department_slug" value="<?= e($slug) ?>">
+        <label class="check-option">
+            <input type="checkbox" name="start_here" value="1" <?= $currentStartSlug === $slug ? 'checked' : '' ?> onchange="this.form.submit()">
+            Start here when I sign in
+        </label>
+    </form>
+    <?php
+}
+
 $hasDmvAccess = can_access_department('dmv');
 $hasDareAccess = can_access_department('dare');
 $hasElectionAccess = can_access_department('election');
@@ -138,8 +181,13 @@ page_header('Dashboard');
     <?php foreach ($departments as $department): ?>
         <?php if ($department['slug'] === 'dmv'): ?>
             <section class="panel" style="margin-top: 18px;">
-                <h1>DMV</h1>
-                <p><?= e($department['description']) ?></p>
+                <div class="section-heading-row">
+                    <div>
+                        <h1>DMV</h1>
+                        <p><?= e($department['description']) ?></p>
+                    </div>
+                    <?php dashboard_start_preference_control('dmv', $startDepartmentSlug); ?>
+                </div>
                 <?php page_actions($dmvActions); ?>
 
                 <h2 style="margin-top: 24px;">My Recent Title Requests</h2>
@@ -182,8 +230,13 @@ page_header('Dashboard');
             </section>
         <?php elseif ($department['slug'] === 'dare'): ?>
             <section class="panel" style="margin-top: 18px;">
-                <h1>DARE</h1>
-                <p><?= e($department['description']) ?></p>
+                <div class="section-heading-row">
+                    <div>
+                        <h1>DARE</h1>
+                        <p><?= e($department['description']) ?></p>
+                    </div>
+                    <?php dashboard_start_preference_control('dare', $startDepartmentSlug); ?>
+                </div>
                 <?php page_actions($dareActions); ?>
 
                 <?php if ($nextDareLessons): ?>
@@ -227,20 +280,37 @@ page_header('Dashboard');
             </section>
         <?php elseif ($department['slug'] === 'election'): ?>
             <section class="panel" style="margin-top: 18px;">
-                <h1>Election Readiness</h1>
-                <p><?= e($department['description']) ?></p>
+                <div class="section-heading-row">
+                    <div>
+                        <h1>Election Readiness</h1>
+                        <p><?= e($department['description']) ?></p>
+                    </div>
+                    <?php dashboard_start_preference_control('election', $startDepartmentSlug); ?>
+                </div>
                 <?php page_actions($electionActions); ?>
             </section>
         <?php elseif ($department['slug'] === 'k9'): ?>
             <section class="panel" style="margin-top: 18px;">
-                <h1>K-9 Activity & Records</h1>
-                <p><?= e($department['description']) ?></p>
+                <div class="section-heading-row">
+                    <div>
+                        <h1>K-9 Activity & Records</h1>
+                        <p><?= e($department['description']) ?></p>
+                    </div>
+                    <?php dashboard_start_preference_control('k9', $startDepartmentSlug); ?>
+                </div>
                 <?php page_actions($k9Actions); ?>
             </section>
         <?php elseif ($department['slug'] === 'sheriff-training'): ?>
             <section class="panel" style="margin-top: 18px;">
-                <h1>Sheriff Training</h1>
-                <p><?= e($department['description']) ?></p>
+                <div class="section-heading-row">
+                    <div>
+                        <h1>Sheriff Training</h1>
+                        <p><?= e($department['description']) ?></p>
+                    </div>
+                    <?php if ($hasSheriffTrainingAccess): ?>
+                        <?php dashboard_start_preference_control('sheriff-training', $startDepartmentSlug); ?>
+                    <?php endif; ?>
+                </div>
                 <?php if ($hasSheriffTrainingAccess): ?>
                     <?php page_actions($sheriffTrainingActions); ?>
                 <?php else: ?>

@@ -171,6 +171,43 @@ function can_manage_department(string $slug): bool
     return $user['role'] === 'department_admin' && can_access_department($slug);
 }
 
+function department_home_path(string $slug): ?string
+{
+    return match ($slug) {
+        'dmv' => 'departments/dmv/index.php',
+        'dare' => 'departments/dare/index.php',
+        'election' => 'departments/election/index.php',
+        'k9' => 'departments/k9/index.php',
+        'sheriff-training' => 'departments/sheriff-training/index.php',
+        default => null,
+    };
+}
+
+function can_start_in_department(string $slug): bool
+{
+    if (department_home_path($slug) === null) {
+        return false;
+    }
+
+    if ($slug === 'sheriff-training') {
+        return can_manage_department($slug);
+    }
+
+    return can_access_department($slug);
+}
+
+function user_start_department_path(?array $user = null): ?string
+{
+    $user ??= current_user();
+    $slug = trim((string) ($user['default_start_department_slug'] ?? ''));
+
+    if ($slug === '' || !can_start_in_department($slug)) {
+        return null;
+    }
+
+    return department_home_path($slug);
+}
+
 function auth_client_ip(): ?string
 {
     return $_SERVER['REMOTE_ADDR'] ?? null;

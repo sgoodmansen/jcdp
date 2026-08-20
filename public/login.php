@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../app/bootstrap.php';
 
 if (is_logged_in()) {
-    redirect_to('dashboard.php');
+    redirect_to('start.php');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if (attempt_login($email, $password)) {
-        redirect_to('dashboard.php');
+        redirect_to('start.php');
     }
 
     flash('error', 'The email or password was not recognized.');

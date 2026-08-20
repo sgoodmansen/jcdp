@@ -448,6 +448,17 @@ a {
     box-shadow: inset 4px 0 0 var(--danger);
 }
 
+.dashboard-start-form {
+    align-self: start;
+}
+
+.dashboard-start-form .check-option {
+    background: var(--secondary-bg);
+    border-color: var(--line);
+    min-height: 42px;
+    white-space: nowrap;
+}
+
 .k9-quick-actions {
     display: grid;
     gap: 14px;
