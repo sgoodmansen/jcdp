@@ -104,6 +104,25 @@ page_header('K-9 Activity & Records');
         </section>
     <?php endif; ?>
 
+    <section class="k9-quick-actions" aria-label="K-9 quick actions" style="margin-top: 18px;">
+        <a class="k9-quick-action-card" href="<?= e(url('departments/k9/activity-edit.php')) ?>">
+            <strong>Add Training</strong>
+            <span>Record training hours, aids, and performance details.</span>
+        </a>
+        <a class="k9-quick-action-card" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">
+            <strong>Add Deployment</strong>
+            <span>Record a callout, incident, indication, and outcome.</span>
+        </a>
+        <a class="k9-quick-action-card" href="<?= e(url('departments/k9/medical-edit.php')) ?>">
+            <strong>Add Medical</strong>
+            <span>Record vet visits, shots, and follow-up reminders.</span>
+        </a>
+        <a class="k9-quick-action-card" href="<?= e(url('departments/k9/expense-edit.php')) ?>">
+            <strong>Add Expense</strong>
+            <span>Record food, vet, equipment, and other costs.</span>
+        </a>
+    </section>
+
     <section class="k9-dashboard-stat-row" style="margin-top: 18px;">
         <div class="dashboard-stat-group summary-stat-group">
             <div class="k9-summary-heading">
@@ -159,12 +178,6 @@ page_header('K-9 Activity & Records');
             <div>
                 <h1>Recent Activity</h1>
                 <p class="muted">Latest K-9 training and deployment records.</p>
-            </div>
-            <div class="actions">
-                <a class="button compact-button" href="<?= e(url('departments/k9/activity-edit.php')) ?>">Add training</a>
-                <a class="button secondary compact-button" href="<?= e(url('departments/k9/deployment-edit.php')) ?>">Add deployment</a>
-                <a class="button secondary compact-button" href="<?= e(url('departments/k9/medical-edit.php')) ?>">Add medical</a>
-                <a class="button secondary compact-button" href="<?= e(url('departments/k9/expense-edit.php')) ?>">Add expense</a>
             </div>
         </div>
         <table class="table mobile-card-table">
