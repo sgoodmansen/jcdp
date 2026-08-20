@@ -143,7 +143,7 @@ $detailRow = static function (string $label, string $value): void {
 page_header($title);
 ?>
 <main class="shell">
-    <section class="panel">
+    <section class="panel print-hidden">
         <div class="section-heading-row">
             <div>
                 <h1><?= e($title) ?></h1>
@@ -151,13 +151,18 @@ page_header($title);
             </div>
             <div class="actions">
                 <a class="button" href="<?= e($editUrl) ?>">Edit</a>
+                <button type="button" class="secondary" onclick="window.print()">Print</button>
                 <a class="button secondary" href="<?= e(url('departments/k9/activity.php?record_type=' . urlencode($type))) ?>">Back to log</a>
             </div>
         </div>
         <?php k9_navigation($type === 'training' ? 'activity-edit' : ($type === 'deployment' ? 'deployment-edit' : ($type === 'medical' ? 'medical-edit' : 'expense-edit'))); ?>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
+    <section class="panel k9-record-print-card" style="margin-top: 18px;">
+        <div class="print-only k9-record-print-heading">
+            <h1><?= e($title) ?></h1>
+            <p><?= e($record['dog_name']) ?> - <?= e($record['handler_name']) ?></p>
+        </div>
         <dl class="k9-detail-list">
                     <?php if ($type === 'training'): ?>
                     <?php $detailRow('Date', format_display_date($record['activity_date'])); ?>
@@ -202,7 +207,7 @@ page_header($title);
     </section>
 
     <?php if ($type === 'medical'): ?>
-        <section class="panel" style="margin-top: 18px;">
+        <section class="panel k9-record-print-card" style="margin-top: 18px;">
             <h1>Shots / Vaccinations</h1>
             <table class="table mobile-card-table">
                 <thead><tr><th>Description</th><th>Expiration</th></tr></thead>

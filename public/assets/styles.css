@@ -2798,6 +2798,44 @@ textarea {
         display: block;
     }
 
+    .k9-record-print-card {
+        border: 0;
+        color: #111827;
+        padding: 0;
+    }
+
+    .k9-record-print-heading {
+        border-bottom: 2px solid #111827;
+        margin-bottom: 0.18in;
+        padding-bottom: 0.12in;
+    }
+
+    .k9-record-print-heading h1 {
+        color: #111827;
+        font-size: 22pt;
+        margin: 0 0 0.04in;
+    }
+
+    .k9-record-print-heading p {
+        color: #111827;
+        font-size: 12pt;
+        margin: 0;
+    }
+
+    .k9-record-print-card .k9-detail-item {
+        border-bottom: 1px solid #9ca3af;
+        color: #111827;
+        grid-template-columns: 1.6in minmax(0, 1fr);
+        padding: 0.08in 0;
+    }
+
+    .k9-record-print-card .k9-detail-item dt,
+    .k9-record-print-card .k9-detail-item dd {
+        color: #111827;
+        font-size: 10.5pt;
+        line-height: 1.25;
+    }
+
     .election-attendance-print-header {
         display: grid;
         gap: 0.25in;
