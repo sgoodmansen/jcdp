@@ -9,8 +9,11 @@ $user = current_user();
 
 $periodOptions = [
     'week' => 'This Week',
+    'last_week' => 'Last Week',
     'month' => 'This Month',
+    'last_month' => 'Last Month',
     'year' => 'This Year',
+    'last_year' => 'Last Year',
 ];
 $preferenceStatement = db()->prepare('SELECT default_summary_period FROM k9_user_preferences WHERE user_id = :user_id');
 $preferenceStatement->execute(['user_id' => $user['id']]);
@@ -40,11 +43,33 @@ $summaryPeriod = $_GET['period'] ?? $defaultPeriod;
 if (!array_key_exists($summaryPeriod, $periodOptions)) {
     $summaryPeriod = $defaultPeriod;
 }
-$periodStartSql = match ($summaryPeriod) {
-    'week' => 'DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)',
-    'month' => 'DATE_FORMAT(CURDATE(), "%Y-%m-01")',
-    default => 'DATE_FORMAT(CURDATE(), "%Y-01-01")',
+$periodRangeSql = match ($summaryPeriod) {
+    'week' => [
+        'DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)',
+        'CURDATE()',
+    ],
+    'last_week' => [
+        'DATE_SUB(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), INTERVAL 7 DAY)',
+        'DATE_SUB(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), INTERVAL 1 DAY)',
+    ],
+    'month' => [
+        'DATE_FORMAT(CURDATE(), "%Y-%m-01")',
+        'CURDATE()',
+    ],
+    'last_month' => [
+        'DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-01")',
+        'LAST_DAY(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))',
+    ],
+    'last_year' => [
+        'DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 YEAR), "%Y-01-01")',
+        'DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 YEAR), "%Y-12-31")',
+    ],
+    default => [
+        'DATE_FORMAT(CURDATE(), "%Y-01-01")',
+        'CURDATE()',
+    ],
 };
+[$periodStartSql, $periodEndSql] = $periodRangeSql;
 
 $activitySql = 'SELECT k9_activity_logs.*, k9_dogs.dog_name, k9_handlers.handler_name, k9_activity_types.name AS activity_type
                 FROM k9_activity_logs
@@ -68,7 +93,7 @@ $summarySql = 'SELECT
                INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
                LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
                WHERE k9_activity_logs.activity_date >= ' . $periodStartSql . '
-                 AND k9_activity_logs.activity_date <= CURDATE()' . $teamWhere;
+                 AND k9_activity_logs.activity_date <= ' . $periodEndSql . $teamWhere;
 $statement = db()->prepare($summarySql);
 $statement->execute($teamParams);
 $summary = $statement->fetch() ?: [];

@@ -288,6 +288,110 @@ $statement = db()->prepare($shotSql);
 $statement->execute($shotParams);
 $shotExpirations = $statement->fetchAll();
 
+$csvQuery = http_build_query([
+    'report_type' => $reportType,
+    'start_date' => $startDate,
+    'end_date' => $endDate,
+    'team_id' => $teamId,
+    'expense_category_id' => $expenseCategoryId,
+    'format' => 'csv',
+]);
+
+if (($_GET['format'] ?? '') === 'csv') {
+    $filename = 'k9-' . preg_replace('/[^0-9a-z-]+/i', '-', $reportType . '-' . $startDate . '-to-' . $endDate) . '.csv';
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+    $output = fopen('php://output', 'w');
+    if ($reportType === 'summary') {
+        fputcsv($output, ['Metric', 'Value']);
+        fputcsv($output, ['Activity logs', (int) ($summary['total_logs'] ?? 0)]);
+        fputcsv($output, ['Training hours', number_format((float) ($summary['training_hours'] ?? 0), 2, '.', '')]);
+        fputcsv($output, ['Deployments', (int) ($summary['deployments'] ?? 0)]);
+        fputcsv($output, ['POST hours', number_format((float) ($summary['post_hours'] ?? 0), 2, '.', '')]);
+        fputcsv($output, ['Medical visits', $medicalCount]);
+        fputcsv($output, ['Expenses', k9_money($expenseTotal)]);
+    } elseif ($reportType === 'training') {
+        fputcsv($output, ['Dog', 'Handler', 'Training Logs', 'Training Hours', 'POST Hours', 'Latest Training']);
+        foreach ($trainingByTeam as $row) {
+            fputcsv($output, [
+                $row['dog_name'],
+                $row['handler_name'],
+                (int) $row['training_count'],
+                number_format((float) $row['training_hours'], 2, '.', ''),
+                number_format((float) $row['post_hours'], 2, '.', ''),
+                $row['latest_training'] ? format_display_date($row['latest_training']) : '',
+            ]);
+        }
+    } elseif ($reportType === 'training_area') {
+        fputcsv($output, ['Training Area', 'Training Logs', 'Training Hours', 'POST Hours', 'Latest Training']);
+        foreach ($trainingByArea as $row) {
+            fputcsv($output, [
+                $row['training_area'],
+                (int) $row['training_count'],
+                number_format((float) $row['training_hours'], 2, '.', ''),
+                number_format((float) $row['post_hours'], 2, '.', ''),
+                $row['latest_training'] ? format_display_date($row['latest_training']) : '',
+            ]);
+        }
+    } elseif ($reportType === 'deployments') {
+        fputcsv($output, ['Outcome', 'Deployments']);
+        foreach ($deploymentOutcomes as $row) {
+            fputcsv($output, [$row['outcome'], (int) $row['deployment_count']]);
+        }
+    } elseif ($reportType === 'expenses') {
+        fputcsv($output, ['Category', 'Entries', 'Total']);
+        foreach ($expenseByCategory as $row) {
+            fputcsv($output, [$row['category'], (int) $row['expense_count'], k9_money($row['expense_total'])]);
+        }
+        if ($expenseByCategory) {
+            fputcsv($output, ['Grand Total', $expenseEntryTotal, k9_money($expenseTotal)]);
+        }
+    } elseif ($reportType === 'expense_detail') {
+        fputcsv($output, ['Date', 'Dog', 'Handler', 'Category', 'Vendor', 'Amount', 'Notes']);
+        foreach ($expenseDetails as $row) {
+            fputcsv($output, [
+                format_display_date($row['expense_date']),
+                $row['dog_name'],
+                $row['handler_name'],
+                $row['category'],
+                $row['vendor'] ?: '',
+                k9_money($row['amount']),
+                $row['notes'] ?: '',
+            ]);
+        }
+        if ($expenseDetails) {
+            fputcsv($output, ['', '', '', '', 'Grand Total', k9_money($expenseTotal), '']);
+        }
+    } elseif ($reportType === 'handler_monthly') {
+        fputcsv($output, ['Dog', 'Handler', 'Month', 'Training Hours', 'POST Hours', 'Deployments', 'Medical Visits', 'Expenses']);
+        foreach ($handlerMonthly as $row) {
+            fputcsv($output, [
+                $row['dog_name'],
+                $row['handler_name'],
+                date('M Y', strtotime($row['month_start'])),
+                number_format((float) $row['training_hours'], 2, '.', ''),
+                number_format((float) $row['post_hours'], 2, '.', ''),
+                (int) $row['deployments'],
+                (int) $row['medical_visits'],
+                k9_money($row['expense_total']),
+            ]);
+        }
+    } elseif ($reportType === 'shots') {
+        fputcsv($output, ['Dog', 'Handler', 'Shot / Vaccination', 'Expiration']);
+        foreach ($shotExpirations as $row) {
+            fputcsv($output, [
+                $row['dog_name'],
+                $row['handler_name'],
+                $row['shot_description'],
+                format_display_date($row['shot_expiration']),
+            ]);
+        }
+    }
+    fclose($output);
+    exit;
+}
+
 page_header('K-9 Reports');
 ?>
 <main class="shell">
@@ -345,7 +449,10 @@ page_header('K-9 Reports');
     <section class="dashboard-stat-group summary-stat-group" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h2><?= e(format_display_date($startDate)) ?> to <?= e(format_display_date($endDate)) ?></h2>
-            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
         </div>
         <div class="grid dashboard-stat-grid sheriff-budget-grid">
             <article class="card dashboard-stat-card">
@@ -380,7 +487,10 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Training by Team</h1>
-            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
         </div>
         <table class="table mobile-card-table k9-report-table">
             <thead>
@@ -414,7 +524,10 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Training by Area</h1>
-            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
         </div>
         <table class="table mobile-card-table k9-report-table">
             <thead>
@@ -448,7 +561,10 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Deployments by Outcome</h1>
-            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
         </div>
         <table class="table mobile-card-table k9-report-table">
             <thead>
@@ -476,7 +592,10 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Expenses by Category</h1>
-            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
         </div>
         <table class="table mobile-card-table k9-report-table">
             <thead>
@@ -513,7 +632,10 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Expense Detail</h1>
-            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
         </div>
         <table class="table mobile-card-table k9-report-table">
             <thead>
@@ -559,7 +681,10 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Handler Monthly Review</h1>
-            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
         </div>
         <?php foreach ($handlerMonthlyByTeam as $teamGroup): ?>
             <div class="k9-report-team-group">
@@ -600,7 +725,10 @@ page_header('K-9 Reports');
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
             <h1>Shot Expirations</h1>
-            <button type="button" class="secondary compact-button print-hidden" onclick="window.print()">Print PDF</button>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/k9/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
         </div>
         <table class="table mobile-card-table k9-report-table">
             <thead>

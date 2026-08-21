@@ -3,26 +3,38 @@ require_once __DIR__ . '/../../../app/bootstrap.php';
 require_k9_access();
 
 $period = $_GET['period'] ?? 'this_month';
-if (!in_array($period, ['this_week', 'this_month', 'this_year', 'custom'], true)) {
+if (!in_array($period, ['this_week', 'last_week', 'this_month', 'last_month', 'this_year', 'last_year', 'custom'], true)) {
     $period = 'this_month';
 }
 
 $periodOptions = [
     'this_week' => 'This Week',
+    'last_week' => 'Last Week',
     'this_month' => 'This Month',
+    'last_month' => 'Last Month',
     'this_year' => 'This Year',
+    'last_year' => 'Last Year',
     'custom' => 'Custom Dates',
 ];
 
 if ($period === 'this_week') {
     $startDate = date('Y-m-d', strtotime('monday this week'));
     $endDate = date('Y-m-d');
+} elseif ($period === 'last_week') {
+    $startDate = date('Y-m-d', strtotime('monday last week'));
+    $endDate = date('Y-m-d', strtotime('sunday last week'));
 } elseif ($period === 'this_month') {
     $startDate = date('Y-m-01');
     $endDate = date('Y-m-d');
+} elseif ($period === 'last_month') {
+    $startDate = date('Y-m-01', strtotime('first day of last month'));
+    $endDate = date('Y-m-t', strtotime('last month'));
 } elseif ($period === 'this_year') {
     $startDate = date('Y-01-01');
     $endDate = date('Y-m-d');
+} elseif ($period === 'last_year') {
+    $startDate = date('Y-01-01', strtotime('last year'));
+    $endDate = date('Y-12-31', strtotime('last year'));
 } else {
     $startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
     $endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
