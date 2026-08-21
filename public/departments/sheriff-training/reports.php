@@ -105,16 +105,86 @@ $deniedRequests = db()->query(
      LIMIT 25'
 )->fetchAll();
 
+$reportQuery = http_build_query([
+    'report_type' => $reportType,
+    'fiscal_year_id' => $yearId,
+    'officer_summary_filter' => $officerSummaryFilter,
+]);
+$csvQuery = $reportQuery . '&format=csv';
+
+if (($_GET['format'] ?? '') === 'csv') {
+    $filename = 'sheriff-training-' . preg_replace('/[^0-9a-z-]+/i', '-', $reportType . '-' . $selectedYearLabel) . '.csv';
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+    $output = fopen('php://output', 'w');
+    if ($reportType === 'budget') {
+        fputcsv($output, ['Fiscal Year', $selectedYearLabel]);
+        fputcsv($output, []);
+        fputcsv($output, ['Category', 'Used', 'Budget', 'Remaining']);
+        if ($budget) {
+            fputcsv($output, ['Training', number_format((float) $budget['training_used'], 2, '.', ''), number_format((float) $budget['training_budget'], 2, '.', ''), number_format((float) $budget['training_remaining'], 2, '.', '')]);
+            fputcsv($output, ['Lodging', number_format((float) $budget['lodging_used'], 2, '.', ''), number_format((float) $budget['lodging_budget'], 2, '.', ''), number_format((float) $budget['lodging_remaining'], 2, '.', '')]);
+        }
+    } elseif ($reportType === 'approved') {
+        fputcsv($output, ['Officer', 'Training', 'Date', 'Training Cost', 'Lodging Cost', 'Status']);
+        foreach ($approvedRequests as $request) {
+            fputcsv($output, [
+                $request['last_name'] . ', ' . $request['first_name'],
+                $request['class_name'],
+                format_display_date($request['start_date']),
+                number_format(sheriff_training_effective_training_cost($request), 2, '.', ''),
+                number_format(sheriff_training_effective_lodging_cost($request), 2, '.', ''),
+                sheriff_training_status_label($request['status']),
+            ]);
+        }
+    } elseif ($reportType === 'officer_summary') {
+        fputcsv($output, ['Officer', 'Rank / Division', 'Completed', 'Total Requests', 'Approved Cost']);
+        foreach ($officerSummary as $officer) {
+            fputcsv($output, [
+                $officer['last_name'] . ', ' . $officer['first_name'],
+                trim(($officer['rank_title'] ?? '') . ' ' . ($officer['division'] ?? '')) ?: 'Not set',
+                (int) $officer['completed_trainings'],
+                (int) $officer['total_requests'],
+                number_format((float) $officer['approved_cost'], 2, '.', ''),
+            ]);
+        }
+    } elseif ($reportType === 'missing_actuals') {
+        fputcsv($output, ['Officer', 'Training', 'Payment FY', 'End Date']);
+        foreach ($missingActuals as $request) {
+            fputcsv($output, [
+                $request['last_name'] . ', ' . $request['first_name'],
+                $request['class_name'],
+                $request['fiscal_year_label'],
+                format_display_date($request['end_date']),
+            ]);
+        }
+    } elseif ($reportType === 'denied') {
+        fputcsv($output, ['Officer', 'Training', 'Payment FY', 'Reason / Comment']);
+        foreach ($deniedRequests as $request) {
+            fputcsv($output, [
+                $request['last_name'] . ', ' . $request['first_name'],
+                $request['class_name'],
+                $request['fiscal_year_label'],
+                $request['decision_comment'] ?: '',
+            ]);
+        }
+    }
+
+    fclose($output);
+    exit;
+}
+
 page_header('Sheriff Training Reports');
 ?>
 <main class="shell">
-    <section class="panel">
+    <section class="panel print-hidden">
         <h1>Reports</h1>
         <p>Review fiscal budget use, officer training history, missing actual costs, and denied requests.</p>
         <?php sheriff_training_navigation('reports'); ?>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
+    <section class="panel print-hidden" style="margin-top: 18px;">
         <h1>Report Filters</h1>
         <form class="form compact-form" method="get">
             <label>
@@ -150,7 +220,15 @@ page_header('Sheriff Training Reports');
 
     <?php if ($reportType === 'budget'): ?>
         <section class="panel" style="margin-top: 18px;">
-            <h1>Fiscal Year Budget Summary</h1>
+            <div class="page-toolbar">
+                <div>
+                    <h1>Fiscal Year Budget Summary</h1>
+                </div>
+                <div class="actions print-hidden">
+                    <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+                </div>
+            </div>
             <p class="meta"><?= e($selectedYearLabel) ?></p>
             <?php if ($budget): ?>
                 <div class="grid dashboard-stat-grid sheriff-budget-grid">
@@ -168,9 +246,17 @@ page_header('Sheriff Training Reports');
 
     <?php elseif ($reportType === 'approved'): ?>
         <section class="panel" style="margin-top: 18px;">
-            <h1>Approved / Completed Training</h1>
+            <div class="page-toolbar">
+                <div>
+                    <h1>Approved / Completed Training</h1>
+                </div>
+                <div class="actions print-hidden">
+                    <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                    <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+                </div>
+            </div>
             <p class="meta"><?= e($selectedYearLabel) ?></p>
-            <table class="table mobile-card-table" style="margin-top: 18px;">
+            <table class="table" style="margin-top: 18px;">
             <thead>
                 <tr>
                     <th>Officer</th>
@@ -201,8 +287,16 @@ page_header('Sheriff Training Reports');
 
     <?php elseif ($reportType === 'officer_summary'): ?>
     <section class="panel" style="margin-top: 18px;">
-        <h1>Officer Training Summary</h1>
-        <form class="form compact-form" method="get" style="margin-bottom: 18px;">
+        <div class="page-toolbar">
+            <div>
+                <h1>Officer Training Summary</h1>
+            </div>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
+        </div>
+        <form class="form compact-form print-hidden" method="get" style="margin-bottom: 18px;">
             <input type="hidden" name="report_type" value="officer_summary">
             <input type="hidden" name="fiscal_year_id" value="<?= e((string) $yearId) ?>">
             <label>
@@ -219,7 +313,7 @@ page_header('Sheriff Training Reports');
             </div>
         </form>
         <p class="meta"><?= e($officerSummaryFilterOptions[$officerSummaryFilter]) ?> | <?= e((string) count($officerSummary)) ?> officers shown</p>
-        <table class="table mobile-card-table">
+        <table class="table">
             <thead>
                 <tr>
                     <th>Officer</th>
@@ -227,7 +321,7 @@ page_header('Sheriff Training Reports');
                     <th>Completed</th>
                     <th>Total Requests</th>
                     <th>Approved Cost</th>
-                    <th>Actions</th>
+                    <th class="print-hidden">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -238,7 +332,7 @@ page_header('Sheriff Training Reports');
                         <td data-label="Completed"><?= e((string) (int) $officer['completed_trainings']) ?></td>
                         <td data-label="Total Requests"><?= e((string) (int) $officer['total_requests']) ?></td>
                         <td data-label="Approved Cost"><?= e(sheriff_training_money($officer['approved_cost'])) ?></td>
-                        <td data-label="Actions"><a class="button compact-button secondary" href="<?= e(url('departments/sheriff-training/officer-detail.php?id=' . $officer['id'])) ?>">History</a></td>
+                        <td class="print-hidden" data-label="Actions"><a class="button compact-button secondary" href="<?= e(url('departments/sheriff-training/officer-detail.php?id=' . $officer['id'])) ?>">History</a></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$officerSummary): ?>
@@ -250,15 +344,23 @@ page_header('Sheriff Training Reports');
 
     <?php elseif ($reportType === 'missing_actuals'): ?>
     <section class="panel" style="margin-top: 18px;">
-        <h1>Completed or Past Trainings Missing Actual Costs</h1>
-        <table class="table mobile-card-table">
+        <div class="page-toolbar">
+            <div>
+                <h1>Completed or Past Trainings Missing Actual Costs</h1>
+            </div>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
+        </div>
+        <table class="table">
             <thead>
                 <tr>
                     <th>Officer</th>
                     <th>Training</th>
                     <th>Payment FY</th>
                     <th>End Date</th>
-                    <th>Actions</th>
+                    <th class="print-hidden">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -268,7 +370,7 @@ page_header('Sheriff Training Reports');
                         <td data-label="Training"><?= e($request['class_name']) ?></td>
                         <td data-label="Payment FY"><?= e($request['fiscal_year_label']) ?></td>
                         <td data-label="End Date"><?= e(format_display_date($request['end_date'])) ?></td>
-                        <td data-label="Actions"><a class="button compact-button secondary" href="<?= e(url('departments/sheriff-training/request-edit.php?id=' . $request['id'])) ?>">Enter actuals</a></td>
+                        <td class="print-hidden" data-label="Actions"><a class="button compact-button secondary" href="<?= e(url('departments/sheriff-training/request-edit.php?id=' . $request['id'])) ?>">Enter actuals</a></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$missingActuals): ?>
@@ -280,15 +382,23 @@ page_header('Sheriff Training Reports');
 
     <?php elseif ($reportType === 'denied'): ?>
     <section class="panel" style="margin-top: 18px;">
-        <h1>Recent Denied Requests</h1>
-        <table class="table mobile-card-table">
+        <div class="page-toolbar">
+            <div>
+                <h1>Recent Denied Requests</h1>
+            </div>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
+        </div>
+        <table class="table">
             <thead>
                 <tr>
                     <th>Officer</th>
                     <th>Training</th>
                     <th>Payment FY</th>
                     <th>Reason / Comment</th>
-                    <th>Actions</th>
+                    <th class="print-hidden">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -298,7 +408,7 @@ page_header('Sheriff Training Reports');
                         <td data-label="Training"><?= e($request['class_name']) ?></td>
                         <td data-label="Payment FY"><?= e($request['fiscal_year_label']) ?></td>
                         <td data-label="Reason / Comment"><?= e($request['decision_comment'] ?: '') ?></td>
-                        <td data-label="Actions"><a class="button compact-button secondary" href="<?= e(url('departments/sheriff-training/request-detail.php?id=' . $request['id'])) ?>">Open</a></td>
+                        <td class="print-hidden" data-label="Actions"><a class="button compact-button secondary" href="<?= e(url('departments/sheriff-training/request-detail.php?id=' . $request['id'])) ?>">Open</a></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$deniedRequests): ?>
