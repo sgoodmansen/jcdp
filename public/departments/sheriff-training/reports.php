@@ -7,6 +7,24 @@ $years = db()->query('SELECT * FROM sheriff_training_fiscal_years ORDER BY fisca
 if ($yearId === 0 && $years) {
     $yearId = (int) $years[0]['id'];
 }
+$selectedYearLabel = 'Selected fiscal year';
+foreach ($years as $year) {
+    if ((int) $year['id'] === $yearId) {
+        $selectedYearLabel = (string) $year['label'];
+        break;
+    }
+}
+$reportType = $_GET['report_type'] ?? 'budget';
+if (!in_array($reportType, ['budget', 'approved', 'officer_summary', 'missing_actuals', 'denied'], true)) {
+    $reportType = 'budget';
+}
+$reportTypeOptions = [
+    'budget' => 'Budget Summary',
+    'approved' => 'Approved / Completed Training',
+    'officer_summary' => 'Officer Training Summary',
+    'missing_actuals' => 'Missing Actual Costs',
+    'denied' => 'Denied Requests',
+];
 $officerSummaryFilter = $_GET['officer_summary_filter'] ?? '';
 if (!in_array($officerSummaryFilter, ['', 'completed', 'not_completed'], true)) {
     $officerSummaryFilter = '';
@@ -97,8 +115,16 @@ page_header('Sheriff Training Reports');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
-        <h1>Fiscal Year Budget Summary</h1>
-        <form class="form compact-form" method="get" style="margin-bottom: 18px;">
+        <h1>Report Filters</h1>
+        <form class="form compact-form" method="get">
+            <label>
+                Report type
+                <select name="report_type">
+                    <?php foreach ($reportTypeOptions as $typeKey => $typeLabel): ?>
+                        <option value="<?= e($typeKey) ?>" <?= $reportType === $typeKey ? 'selected' : '' ?>><?= e($typeLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
             <label>
                 Fiscal year
                 <select name="fiscal_year_id">
@@ -107,25 +133,44 @@ page_header('Sheriff Training Reports');
                     <?php endforeach; ?>
                 </select>
             </label>
+            <label>
+                Officer summary
+                <select name="officer_summary_filter">
+                    <?php foreach ($officerSummaryFilterOptions as $filterKey => $filterLabel): ?>
+                        <option value="<?= e($filterKey) ?>" <?= $officerSummaryFilter === $filterKey ? 'selected' : '' ?>><?= e($filterLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
             <div class="actions">
                 <button type="submit">View</button>
+                <a class="button secondary" href="<?= e(url('departments/sheriff-training/reports.php')) ?>">Reset</a>
             </div>
         </form>
+    </section>
 
-        <?php if ($budget): ?>
-            <div class="grid dashboard-stat-grid sheriff-budget-grid">
-                <article class="card dashboard-stat-card">
-                    <h3><?= e(sheriff_training_money($budget['training_used'])) ?></h3>
-                    <p>Training used of <?= e(sheriff_training_money($budget['training_budget'])) ?></p>
-                </article>
-                <article class="card dashboard-stat-card">
-                    <h3><?= e(sheriff_training_money($budget['lodging_used'])) ?></h3>
-                    <p>Lodging used of <?= e(sheriff_training_money($budget['lodging_budget'])) ?></p>
-                </article>
-            </div>
-        <?php endif; ?>
+    <?php if ($reportType === 'budget'): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <h1>Fiscal Year Budget Summary</h1>
+            <p class="meta"><?= e($selectedYearLabel) ?></p>
+            <?php if ($budget): ?>
+                <div class="grid dashboard-stat-grid sheriff-budget-grid">
+                    <article class="card dashboard-stat-card">
+                        <h3><?= e(sheriff_training_money($budget['training_used'])) ?></h3>
+                        <p>Training used of <?= e(sheriff_training_money($budget['training_budget'])) ?></p>
+                    </article>
+                    <article class="card dashboard-stat-card">
+                        <h3><?= e(sheriff_training_money($budget['lodging_used'])) ?></h3>
+                        <p>Lodging used of <?= e(sheriff_training_money($budget['lodging_budget'])) ?></p>
+                    </article>
+                </div>
+            <?php endif; ?>
+        </section>
 
-        <table class="table mobile-card-table" style="margin-top: 18px;">
+    <?php elseif ($reportType === 'approved'): ?>
+        <section class="panel" style="margin-top: 18px;">
+            <h1>Approved / Completed Training</h1>
+            <p class="meta"><?= e($selectedYearLabel) ?></p>
+            <table class="table mobile-card-table" style="margin-top: 18px;">
             <thead>
                 <tr>
                     <th>Officer</th>
@@ -154,9 +199,11 @@ page_header('Sheriff Training Reports');
         </table>
     </section>
 
+    <?php elseif ($reportType === 'officer_summary'): ?>
     <section class="panel" style="margin-top: 18px;">
         <h1>Officer Training Summary</h1>
         <form class="form compact-form" method="get" style="margin-bottom: 18px;">
+            <input type="hidden" name="report_type" value="officer_summary">
             <input type="hidden" name="fiscal_year_id" value="<?= e((string) $yearId) ?>">
             <label>
                 Summary filter
@@ -168,7 +215,7 @@ page_header('Sheriff Training Reports');
             </label>
             <div class="actions">
                 <button type="submit">Apply</button>
-                <a class="button secondary" href="<?= e(url('departments/sheriff-training/reports.php?fiscal_year_id=' . $yearId)) ?>">Clear</a>
+                <a class="button secondary" href="<?= e(url('departments/sheriff-training/reports.php?report_type=officer_summary&fiscal_year_id=' . $yearId)) ?>">Clear</a>
             </div>
         </form>
         <p class="meta"><?= e($officerSummaryFilterOptions[$officerSummaryFilter]) ?> | <?= e((string) count($officerSummary)) ?> officers shown</p>
@@ -201,6 +248,7 @@ page_header('Sheriff Training Reports');
         </table>
     </section>
 
+    <?php elseif ($reportType === 'missing_actuals'): ?>
     <section class="panel" style="margin-top: 18px;">
         <h1>Completed or Past Trainings Missing Actual Costs</h1>
         <table class="table mobile-card-table">
@@ -230,6 +278,7 @@ page_header('Sheriff Training Reports');
         </table>
     </section>
 
+    <?php elseif ($reportType === 'denied'): ?>
     <section class="panel" style="margin-top: 18px;">
         <h1>Recent Denied Requests</h1>
         <table class="table mobile-card-table">
@@ -258,5 +307,6 @@ page_header('Sheriff Training Reports');
             </tbody>
         </table>
     </section>
+    <?php endif; ?>
 </main>
 <?php page_footer(); ?>
