@@ -48,6 +48,7 @@ $feedbackBaseQuery = array_filter(
     $feedbackBaseQuery,
     fn($value) => !($value === '' || $value === 0 || $value === 'all')
 );
+$hasActiveFeedbackFilters = $selectedPrecinctId > 0 || $categoryFilter !== '' || $statusFilter !== 'all' || $searchQuery !== '';
 
 $selectedPeriod = null;
 foreach ($periods as $period) {
@@ -106,11 +107,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save_feedback') {
-        $feedbackId = (int) ($_POST['feedback_id'] ?? 0);
         $precinctId = (int) ($_POST['precinct_id'] ?? 0);
         $category = (string) ($_POST['category'] ?? 'other');
         $messageText = trim($_POST['message_text'] ?? '');
-        $markAsNew = isset($_POST['mark_as_new']);
 
         if (!array_key_exists($category, $categories)) {
             $category = 'other';
@@ -121,63 +120,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect_to('departments/election/chief-feedback.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $precinctId);
         }
 
-        if ($feedbackId > 0) {
-            $statement = db()->prepare(
-                'UPDATE election_chief_feedback
-                 SET category = :category,
-                     message_text = :message_text,
-                     updated_by_user_id = :updated_by_user_id,
-                     acknowledged_at = CASE
-                         WHEN :mark_as_new = 1 THEN NULL
-                         ELSE acknowledged_at
-                     END
-                 WHERE id = :id
-                   AND election_period_id = :election_period_id'
-            );
-            $statement->execute([
-                'category' => $category,
-                'message_text' => $messageText,
-                'updated_by_user_id' => $portalUser['id'] ?? null,
-                'mark_as_new' => $markAsNew ? 1 : 0,
-                'id' => $feedbackId,
-                'election_period_id' => $selectedPeriodId,
-            ]);
-            audit_event('updated', 'election_chief_feedback', (string) $feedbackId, [
-                'election_period_id' => $selectedPeriodId,
-                'precinct_id' => $precinctId,
-                'marked_as_new' => $markAsNew ? 1 : 0,
-            ]);
-            flash('success', $markAsNew ? 'Chief Judge feedback updated and marked new.' : 'Chief Judge feedback updated.');
-        } else {
-            $chiefAssignment = election_feedback_chief_assignment($selectedPeriodId, $precinctId);
-            if (!$chiefAssignment) {
-                flash('error', 'No Chief Judge assignment was found for that precinct.');
-                redirect_to('departments/election/chief-feedback.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $precinctId);
-            }
-
-            $statement = db()->prepare(
-                'INSERT INTO election_chief_feedback (
-                    election_period_id, precinct_id, chief_assignment_id, category, message_text, created_by_user_id, updated_by_user_id
-                 ) VALUES (
-                    :election_period_id, :precinct_id, :chief_assignment_id, :category, :message_text, :created_by_user_id, :updated_by_user_id
-                 )'
-            );
-            $statement->execute([
-                'election_period_id' => $selectedPeriodId,
-                'precinct_id' => $precinctId,
-                'chief_assignment_id' => (int) $chiefAssignment['id'],
-                'category' => $category,
-                'message_text' => $messageText,
-                'created_by_user_id' => $portalUser['id'] ?? null,
-                'updated_by_user_id' => $portalUser['id'] ?? null,
-            ]);
-            $feedbackId = (int) db()->lastInsertId();
-            audit_event('created', 'election_chief_feedback', (string) $feedbackId, [
-                'election_period_id' => $selectedPeriodId,
-                'precinct_id' => $precinctId,
-            ]);
-            flash('success', 'Chief Judge feedback saved.');
+        $chiefAssignment = election_feedback_chief_assignment($selectedPeriodId, $precinctId);
+        if (!$chiefAssignment) {
+            flash('error', 'No Chief Judge assignment was found for that precinct.');
+            redirect_to('departments/election/chief-feedback.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $precinctId);
         }
+
+        $statement = db()->prepare(
+            'INSERT INTO election_chief_feedback (
+                election_period_id, precinct_id, chief_assignment_id, category, message_text, created_by_user_id, updated_by_user_id
+             ) VALUES (
+                :election_period_id, :precinct_id, :chief_assignment_id, :category, :message_text, :created_by_user_id, :updated_by_user_id
+             )'
+        );
+        $statement->execute([
+            'election_period_id' => $selectedPeriodId,
+            'precinct_id' => $precinctId,
+            'chief_assignment_id' => (int) $chiefAssignment['id'],
+            'category' => $category,
+            'message_text' => $messageText,
+            'created_by_user_id' => $portalUser['id'] ?? null,
+            'updated_by_user_id' => $portalUser['id'] ?? null,
+        ]);
+        $feedbackId = (int) db()->lastInsertId();
+        audit_event('created', 'election_chief_feedback', (string) $feedbackId, [
+            'election_period_id' => $selectedPeriodId,
+            'precinct_id' => $precinctId,
+        ]);
+        flash('success', 'Chief Judge feedback saved.');
 
         redirect_to('departments/election/chief-feedback.php?election_period_id=' . $selectedPeriodId . '&precinct_id=' . $precinctId);
     }
@@ -250,15 +220,10 @@ $statement = db()->prepare($feedbackSql);
 $statement->execute($feedbackParams);
 $feedbackMessages = $selectedPeriodId > 0 ? $statement->fetchAll() : [];
 
-$editFeedbackId = (int) ($_GET['edit_feedback'] ?? 0);
-$editFeedback = null;
 $unreadCount = 0;
 foreach ($feedbackMessages as $feedback) {
     if (empty($feedback['acknowledged_at'])) {
         $unreadCount++;
-    }
-    if ($editFeedbackId > 0 && (int) $feedback['id'] === $editFeedbackId) {
-        $editFeedback = $feedback;
     }
 }
 
@@ -313,8 +278,11 @@ page_header('Chief Feedback');
         </form>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
-        <h1>Filters</h1>
+    <details class="panel setup-section" style="margin-top: 18px;" <?= $hasActiveFeedbackFilters ? 'open' : '' ?>>
+        <summary class="section-heading-row">
+            <h1>Filters</h1>
+            <span class="button secondary compact-button"><?= $hasActiveFeedbackFilters ? 'Hide filters' : 'Show filters' ?></span>
+        </summary>
         <form class="form compact-form" method="get">
             <label>
                 Election
@@ -363,7 +331,7 @@ page_header('Chief Feedback');
                 <a class="button secondary" href="<?= e(url('departments/election/chief-feedback.php')) ?>">Clear</a>
             </div>
         </form>
-    </section>
+    </details>
 
     <section class="panel" style="margin-top: 18px;">
         <div class="section-heading-row">
@@ -373,40 +341,6 @@ page_header('Chief Feedback');
             </div>
             <span class="badge <?= $unreadCount > 0 ? 'badge-warning' : 'badge-success' ?>"><?= e((string) $unreadCount) ?> unacknowledged</span>
         </div>
-
-        <?php if ($editFeedback): ?>
-            <section class="card" style="margin-bottom: 18px;">
-                <h2>Edit Feedback</h2>
-                <p class="muted"><?= e($editFeedback['precinct_name']) ?> - <?= e(election_person_name($editFeedback)) ?></p>
-                <form method="post" class="form compact-form">
-                    <input type="hidden" name="action" value="save_feedback">
-                    <input type="hidden" name="feedback_id" value="<?= e((string) $editFeedback['id']) ?>">
-                    <input type="hidden" name="election_period_id" value="<?= e((string) $selectedPeriodId) ?>">
-                    <input type="hidden" name="precinct_id" value="<?= e((string) $editFeedback['precinct_id']) ?>">
-                    <label>
-                        Category
-                        <select name="category">
-                            <?php foreach ($categories as $key => $label): ?>
-                                <option value="<?= e($key) ?>" <?= $editFeedback['category'] === $key ? 'selected' : '' ?>><?= e($label) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </label>
-                    <label class="span-2">
-                        Message
-                        <textarea name="message_text" required><?= e($editFeedback['message_text']) ?></textarea>
-                    </label>
-                    <label class="check-label span-2">
-                        <input type="checkbox" name="mark_as_new">
-                        Mark as new for Chief Judge
-                    </label>
-                    <p class="muted span-2">Chief Judges cannot reply here. Ask them to call the Election Supervisor if they would like to discuss this feedback.</p>
-                    <div class="actions span-2">
-                        <button type="submit" class="secondary compact-button">Save edits</button>
-                        <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php?' . http_build_query($feedbackBaseQuery))) ?>">Cancel</a>
-                    </div>
-                </form>
-            </section>
-        <?php endif; ?>
 
         <table class="table mobile-card-table">
             <thead>
@@ -434,8 +368,8 @@ page_header('Chief Feedback');
                             <?php endif; ?>
                         </td>
                         <td data-label="Actions">
-                            <?php $editQuery = $feedbackBaseQuery + ['edit_feedback' => (int) $feedback['id']]; ?>
-                            <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php?' . http_build_query($editQuery))) ?>">Edit</a>
+                            <?php $editQuery = ['id' => (int) $feedback['id']] + $feedbackBaseQuery; ?>
+                            <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback-edit.php?' . http_build_query($editQuery))) ?>">Edit</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

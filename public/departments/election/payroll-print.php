@@ -21,9 +21,17 @@ $calculation = election_payroll_calculation($selectedPeriodId);
 $settings = $calculation['settings'];
 $summaryRows = $calculation['summary_rows'];
 $totalPayroll = array_sum(array_map(fn($row) => (float) $row['total_pay'], $summaryRows));
+$autoPrint = ($_GET['auto_print'] ?? '') === '1';
 
-page_header('Payroll Print');
+page_header((string) $selectedPeriod['name'] . ' Payroll Summary');
 ?>
+<?php if ($autoPrint): ?>
+    <script>
+        window.addEventListener('load', function () {
+            window.print();
+        });
+    </script>
+<?php endif; ?>
 <main class="shell">
     <section class="panel print-hidden">
         <h1>Payroll Print</h1>

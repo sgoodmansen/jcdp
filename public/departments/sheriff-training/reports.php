@@ -15,16 +15,18 @@ foreach ($years as $year) {
     }
 }
 $reportType = $_GET['report_type'] ?? 'budget';
-if (!in_array($reportType, ['budget', 'approved', 'officer_summary', 'missing_actuals', 'denied'], true)) {
+if (!in_array($reportType, ['budget', 'approved', 'officer_summary', 'division_summary', 'missing_actuals', 'denied'], true)) {
     $reportType = 'budget';
 }
 $reportTypeOptions = [
     'budget' => 'Budget Summary',
     'approved' => 'Approved / Completed Training',
     'officer_summary' => 'Officer Training Summary',
+    'division_summary' => 'Division Summary',
     'missing_actuals' => 'Missing Actual Costs',
     'denied' => 'Denied Requests',
 ];
+$reportTitle = $reportTypeOptions[$reportType];
 $officerSummaryFilter = $_GET['officer_summary_filter'] ?? '';
 if (!in_array($officerSummaryFilter, ['', 'completed', 'not_completed'], true)) {
     $officerSummaryFilter = '';
@@ -34,8 +36,23 @@ $officerSummaryFilterOptions = [
     'completed' => 'With completed training',
     'not_completed' => 'No completed training',
 ];
+$generatedAt = date('m/d/Y g:i A');
+$generatedDateSlug = date('Y-m-d');
+$reportContext = in_array($reportType, ['missing_actuals', 'denied'], true)
+    ? 'All payment fiscal years'
+    : $selectedYearLabel;
+$reportMeta = $reportContext . ' | Generated ' . $generatedAt;
+$filenameBase = strtolower(trim((string) preg_replace(
+    '/[^0-9a-z]+/i',
+    '-',
+    'sheriff-training-' . $reportTitle . '-' . $reportContext . '-' . $generatedDateSlug
+), '-'));
 
 $budget = $yearId > 0 ? sheriff_training_budget_summary($yearId) : null;
+$trainingUsedPercent = (float) ($budget['training_used_percent'] ?? 0);
+$lodgingUsedPercent = (float) ($budget['lodging_used_percent'] ?? 0);
+$trainingBudgetLevel = sheriff_training_budget_level_class($trainingUsedPercent);
+$lodgingBudgetLevel = sheriff_training_budget_level_class($lodgingUsedPercent);
 
 $approvedStatement = db()->prepare(
     'SELECT sheriff_training_requests.*,
@@ -92,6 +109,39 @@ $officerSummary = db()->query(
      ORDER BY completed_trainings DESC, approved_cost DESC, sheriff_training_officers.last_name'
 )->fetchAll();
 
+$divisionSummaryStatement = db()->prepare(
+    'SELECT divisions.division_name,
+            COALESCE(summary.total_requests, 0) AS total_requests,
+            COALESCE(summary.completed_trainings, 0) AS completed_trainings,
+            COALESCE(summary.approved_cost, 0) AS approved_cost,
+            COALESCE(summary.denied_count, 0) AS denied_count
+     FROM (
+        SELECT division_name, MIN(sort_order) AS sort_order
+        FROM (
+            SELECT name AS division_name, sort_order
+            FROM sheriff_training_divisions
+            UNION ALL
+            SELECT COALESCE(NULLIF(division, ""), "Not set") AS division_name, 9999 AS sort_order
+            FROM sheriff_training_officers
+        ) division_list
+        GROUP BY division_name
+     ) divisions
+     LEFT JOIN (
+        SELECT COALESCE(NULLIF(sheriff_training_officers.division, ""), "Not set") AS division_name,
+               COUNT(sheriff_training_requests.id) AS total_requests,
+               SUM(CASE WHEN sheriff_training_requests.status = "completed" THEN 1 ELSE 0 END) AS completed_trainings,
+               SUM(CASE WHEN sheriff_training_requests.status IN ("approved", "completed") THEN COALESCE(sheriff_training_requests.actual_training_cost, sheriff_training_requests.estimated_training_cost) + COALESCE(sheriff_training_requests.actual_lodging_cost, sheriff_training_requests.estimated_lodging_cost) ELSE 0 END) AS approved_cost,
+               SUM(CASE WHEN sheriff_training_requests.status = "denied" THEN 1 ELSE 0 END) AS denied_count
+        FROM sheriff_training_requests
+        INNER JOIN sheriff_training_officers ON sheriff_training_officers.id = sheriff_training_requests.officer_id
+        WHERE sheriff_training_requests.fiscal_year_id = :fiscal_year_id
+        GROUP BY COALESCE(NULLIF(sheriff_training_officers.division, ""), "Not set")
+     ) summary ON summary.division_name = divisions.division_name
+     ORDER BY divisions.sort_order, divisions.division_name'
+);
+$divisionSummaryStatement->execute(['fiscal_year_id' => $yearId]);
+$divisionSummary = $yearId > 0 ? $divisionSummaryStatement->fetchAll() : [];
+
 $deniedRequests = db()->query(
     'SELECT sheriff_training_requests.*,
             sheriff_training_officers.first_name,
@@ -113,18 +163,24 @@ $reportQuery = http_build_query([
 $csvQuery = $reportQuery . '&format=csv';
 
 if (($_GET['format'] ?? '') === 'csv') {
-    $filename = 'sheriff-training-' . preg_replace('/[^0-9a-z-]+/i', '-', $reportType . '-' . $selectedYearLabel) . '.csv';
+    $filename = $filenameBase . '.csv';
     header('Content-Type: text/csv; charset=UTF-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
 
     $output = fopen('php://output', 'w');
+    fputcsv($output, ['Report', $reportTitle]);
+    fputcsv($output, ['Generated', $generatedAt]);
+    fputcsv($output, ['Fiscal Year Scope', $reportContext]);
+    if ($reportType === 'officer_summary') {
+        fputcsv($output, ['Officer Summary Filter', $officerSummaryFilterOptions[$officerSummaryFilter]]);
+    }
+    fputcsv($output, []);
+
     if ($reportType === 'budget') {
-        fputcsv($output, ['Fiscal Year', $selectedYearLabel]);
-        fputcsv($output, []);
-        fputcsv($output, ['Category', 'Used', 'Budget', 'Remaining']);
+        fputcsv($output, ['Category', 'Used', 'Budget', 'Remaining', 'Percent Used']);
         if ($budget) {
-            fputcsv($output, ['Training', number_format((float) $budget['training_used'], 2, '.', ''), number_format((float) $budget['training_budget'], 2, '.', ''), number_format((float) $budget['training_remaining'], 2, '.', '')]);
-            fputcsv($output, ['Lodging', number_format((float) $budget['lodging_used'], 2, '.', ''), number_format((float) $budget['lodging_budget'], 2, '.', ''), number_format((float) $budget['lodging_remaining'], 2, '.', '')]);
+            fputcsv($output, ['Training', number_format((float) $budget['training_used'], 2, '.', ''), number_format((float) $budget['training_budget'], 2, '.', ''), number_format((float) $budget['training_remaining'], 2, '.', ''), number_format((float) $budget['training_used_percent'], 1, '.', '') . '%']);
+            fputcsv($output, ['Lodging', number_format((float) $budget['lodging_used'], 2, '.', ''), number_format((float) $budget['lodging_budget'], 2, '.', ''), number_format((float) $budget['lodging_remaining'], 2, '.', ''), number_format((float) $budget['lodging_used_percent'], 1, '.', '') . '%']);
         }
     } elseif ($reportType === 'approved') {
         fputcsv($output, ['Officer', 'Training', 'Date', 'Training Cost', 'Lodging Cost', 'Status']);
@@ -147,6 +203,17 @@ if (($_GET['format'] ?? '') === 'csv') {
                 (int) $officer['completed_trainings'],
                 (int) $officer['total_requests'],
                 number_format((float) $officer['approved_cost'], 2, '.', ''),
+            ]);
+        }
+    } elseif ($reportType === 'division_summary') {
+        fputcsv($output, ['Division', 'Total Requests', 'Completed Training', 'Approved Cost', 'Denied']);
+        foreach ($divisionSummary as $division) {
+            fputcsv($output, [
+                $division['division_name'],
+                (int) $division['total_requests'],
+                (int) $division['completed_trainings'],
+                number_format((float) $division['approved_cost'], 2, '.', ''),
+                (int) $division['denied_count'],
             ]);
         }
     } elseif ($reportType === 'missing_actuals') {
@@ -175,7 +242,7 @@ if (($_GET['format'] ?? '') === 'csv') {
     exit;
 }
 
-page_header('Sheriff Training Reports');
+page_header('Sheriff Training - ' . $reportTitle . ' - ' . $reportContext . ' - ' . $generatedDateSlug);
 ?>
 <main class="shell">
     <section class="panel print-hidden">
@@ -203,14 +270,16 @@ page_header('Sheriff Training Reports');
                     <?php endforeach; ?>
                 </select>
             </label>
-            <label>
-                Officer summary
-                <select name="officer_summary_filter">
-                    <?php foreach ($officerSummaryFilterOptions as $filterKey => $filterLabel): ?>
-                        <option value="<?= e($filterKey) ?>" <?= $officerSummaryFilter === $filterKey ? 'selected' : '' ?>><?= e($filterLabel) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
+            <?php if ($reportType === 'officer_summary'): ?>
+                <label>
+                    Officer summary
+                    <select name="officer_summary_filter">
+                        <?php foreach ($officerSummaryFilterOptions as $filterKey => $filterLabel): ?>
+                            <option value="<?= e($filterKey) ?>" <?= $officerSummaryFilter === $filterKey ? 'selected' : '' ?>><?= e($filterLabel) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            <?php endif; ?>
             <div class="actions">
                 <button type="submit">View</button>
                 <a class="button secondary" href="<?= e(url('departments/sheriff-training/reports.php')) ?>">Reset</a>
@@ -229,16 +298,24 @@ page_header('Sheriff Training Reports');
                     <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
                 </div>
             </div>
-            <p class="meta"><?= e($selectedYearLabel) ?></p>
+            <p class="meta"><?= e($reportMeta) ?></p>
             <?php if ($budget): ?>
                 <div class="grid dashboard-stat-grid sheriff-budget-grid">
                     <article class="card dashboard-stat-card">
                         <h3><?= e(sheriff_training_money($budget['training_used'])) ?></h3>
                         <p>Training used of <?= e(sheriff_training_money($budget['training_budget'])) ?></p>
+                        <div class="budget-meter budget-meter-<?= e($trainingBudgetLevel) ?>" aria-label="Training budget <?= e((string) $trainingUsedPercent) ?>% used">
+                            <span style="width: <?= e((string) min($trainingUsedPercent, 100)) ?>%;"></span>
+                        </div>
+                        <p class="meta"><?= e(number_format($trainingUsedPercent, 1)) ?>% used | <?= e(sheriff_training_money($budget['training_remaining'])) ?> remaining</p>
                     </article>
                     <article class="card dashboard-stat-card">
                         <h3><?= e(sheriff_training_money($budget['lodging_used'])) ?></h3>
                         <p>Lodging used of <?= e(sheriff_training_money($budget['lodging_budget'])) ?></p>
+                        <div class="budget-meter budget-meter-<?= e($lodgingBudgetLevel) ?>" aria-label="Lodging budget <?= e((string) $lodgingUsedPercent) ?>% used">
+                            <span style="width: <?= e((string) min($lodgingUsedPercent, 100)) ?>%;"></span>
+                        </div>
+                        <p class="meta"><?= e(number_format($lodgingUsedPercent, 1)) ?>% used | <?= e(sheriff_training_money($budget['lodging_remaining'])) ?> remaining</p>
                     </article>
                 </div>
             <?php endif; ?>
@@ -255,7 +332,7 @@ page_header('Sheriff Training Reports');
                     <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
                 </div>
             </div>
-            <p class="meta"><?= e($selectedYearLabel) ?></p>
+            <p class="meta"><?= e($reportMeta) ?></p>
             <table class="table sheriff-report-table" style="margin-top: 18px;">
             <thead>
                 <tr>
@@ -296,7 +373,7 @@ page_header('Sheriff Training Reports');
                 <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
             </div>
         </div>
-        <p class="meta"><?= e($officerSummaryFilterOptions[$officerSummaryFilter]) ?> | <?= e((string) count($officerSummary)) ?> officers shown</p>
+        <p class="meta"><?= e($reportMeta) ?> | <?= e($officerSummaryFilterOptions[$officerSummaryFilter]) ?> | <?= e((string) count($officerSummary)) ?> officers shown</p>
         <table class="table sheriff-report-table">
             <thead>
                 <tr>
@@ -326,6 +403,45 @@ page_header('Sheriff Training Reports');
         </table>
     </section>
 
+    <?php elseif ($reportType === 'division_summary'): ?>
+    <section class="panel sheriff-report-panel" style="margin-top: 18px;">
+        <div class="page-toolbar">
+            <div>
+                <h1>Division Summary</h1>
+            </div>
+            <div class="actions print-hidden">
+                <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
+                <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
+            </div>
+        </div>
+        <p class="meta"><?= e($reportMeta) ?> | <?= e((string) count($divisionSummary)) ?> divisions shown</p>
+        <table class="table sheriff-report-table">
+            <thead>
+                <tr>
+                    <th>Division</th>
+                    <th>Total Requests</th>
+                    <th>Completed Training</th>
+                    <th>Approved Cost</th>
+                    <th>Denied</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($divisionSummary as $division): ?>
+                    <tr>
+                        <td data-label="Division"><?= e($division['division_name']) ?></td>
+                        <td data-label="Total Requests"><?= e((string) (int) $division['total_requests']) ?></td>
+                        <td data-label="Completed Training"><?= e((string) (int) $division['completed_trainings']) ?></td>
+                        <td data-label="Approved Cost"><?= e(sheriff_training_money($division['approved_cost'])) ?></td>
+                        <td data-label="Denied"><?= e((string) (int) $division['denied_count']) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$divisionSummary): ?>
+                    <tr><td colspan="5">No divisions have been entered yet.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </section>
+
     <?php elseif ($reportType === 'missing_actuals'): ?>
     <section class="panel sheriff-report-panel" style="margin-top: 18px;">
         <div class="page-toolbar">
@@ -337,6 +453,7 @@ page_header('Sheriff Training Reports');
                 <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
             </div>
         </div>
+        <p class="meta"><?= e($reportMeta) ?></p>
         <table class="table sheriff-report-table">
             <thead>
                 <tr>
@@ -375,6 +492,7 @@ page_header('Sheriff Training Reports');
                 <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
             </div>
         </div>
+        <p class="meta"><?= e($reportMeta) ?></p>
         <table class="table sheriff-report-table">
             <thead>
                 <tr>

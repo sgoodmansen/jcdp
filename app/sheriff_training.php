@@ -178,8 +178,32 @@ function sheriff_training_budget_summary(int $fiscalYearId, ?int $excludeRequest
     $year['lodging_used'] = $usage['lodging_used'];
     $year['training_remaining'] = (float) $year['training_budget'] - $usage['training_used'];
     $year['lodging_remaining'] = (float) $year['lodging_budget'] - $usage['lodging_used'];
+    $year['training_used_percent'] = sheriff_training_budget_percent($usage['training_used'], (float) $year['training_budget']);
+    $year['lodging_used_percent'] = sheriff_training_budget_percent($usage['lodging_used'], (float) $year['lodging_budget']);
 
     return $year;
+}
+
+function sheriff_training_budget_percent(float $used, float $budget): float
+{
+    if ($budget <= 0) {
+        return $used > 0 ? 100.0 : 0.0;
+    }
+
+    return round(($used / $budget) * 100, 1);
+}
+
+function sheriff_training_budget_level_class(float $percent): string
+{
+    if ($percent >= 100) {
+        return 'danger';
+    }
+
+    if ($percent >= 85) {
+        return 'warning';
+    }
+
+    return 'ok';
 }
 
 function sheriff_training_request_by_id(int $id): ?array

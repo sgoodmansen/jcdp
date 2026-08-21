@@ -5,8 +5,12 @@ require_sheriff_training_manager();
 $query = trim($_GET['q'] ?? '');
 $status = $_GET['status'] ?? 'pending';
 $fiscalYearId = (int) ($_GET['fiscal_year_id'] ?? 0);
+$dateFilter = $_GET['date_filter'] ?? '';
 if (!array_key_exists($status, sheriff_training_status_options()) && $status !== 'all') {
     $status = 'pending';
+}
+if (!in_array($dateFilter, ['', 'upcoming_30'], true)) {
+    $dateFilter = '';
 }
 
 $years = db()->query('SELECT id, label FROM sheriff_training_fiscal_years ORDER BY fiscal_year DESC')->fetchAll();
@@ -34,6 +38,9 @@ if ($status !== 'all') {
 if ($fiscalYearId > 0) {
     $sql .= ' AND sheriff_training_requests.fiscal_year_id = :fiscal_year_id';
     $params['fiscal_year_id'] = $fiscalYearId;
+}
+if ($dateFilter === 'upcoming_30') {
+    $sql .= ' AND sheriff_training_requests.start_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)';
 }
 
 $sql .= ' ORDER BY sheriff_training_requests.start_date DESC, sheriff_training_requests.created_at DESC';
@@ -83,6 +90,13 @@ page_header('Sheriff Training Requests');
                     <?php foreach ($years as $year): ?>
                         <option value="<?= e((string) $year['id']) ?>" <?= $fiscalYearId === (int) $year['id'] ? 'selected' : '' ?>><?= e($year['label']) ?></option>
                     <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                Timing
+                <select name="date_filter">
+                    <option value="" <?= $dateFilter === '' ? 'selected' : '' ?>>All dates</option>
+                    <option value="upcoming_30" <?= $dateFilter === 'upcoming_30' ? 'selected' : '' ?>>Upcoming 30 days</option>
                 </select>
             </label>
             <div class="actions">

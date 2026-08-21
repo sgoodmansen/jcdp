@@ -70,7 +70,7 @@ if (($_GET['format'] ?? '') === 'csv') {
 }
 
 $exportUrl = url('departments/election/payroll.php?' . http_build_query(['election_period_id' => $selectedPeriodId, 'format' => 'csv']));
-$printUrl = url('departments/election/payroll-print.php?election_period_id=' . $selectedPeriodId);
+$printUrl = url('departments/election/payroll-print.php?election_period_id=' . $selectedPeriodId . '&auto_print=1');
 $setupUrl = url('departments/election/payroll-setup.php?election_period_id=' . $selectedPeriodId);
 $electionDayUrl = url('departments/election/payroll-election-day.php?election_period_id=' . $selectedPeriodId);
 $trainingUrl = url('departments/election/payroll-training.php?election_period_id=' . $selectedPeriodId);

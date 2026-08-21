@@ -61,6 +61,39 @@ $missingActuals = db()->query(
      LIMIT 8'
 )->fetchAll();
 
+$pendingReviewCount = $statusCounts['pending'] ?? 0;
+$approvedNotCompletedStatement = db()->prepare(
+    'SELECT COUNT(*) AS total
+     FROM sheriff_training_requests
+     WHERE fiscal_year_id = :fiscal_year_id
+       AND status = "approved"'
+);
+$approvedNotCompletedStatement->execute(['fiscal_year_id' => $yearId]);
+$approvedNotCompletedCount = (int) ($approvedNotCompletedStatement->fetch()['total'] ?? 0);
+
+$missingActualsCount = (int) (db()->query(
+    'SELECT COUNT(*) AS total
+     FROM sheriff_training_requests
+     WHERE status IN ("approved", "completed")
+       AND COALESCE(end_date, start_date) < CURDATE()
+       AND (actual_training_cost IS NULL OR actual_lodging_cost IS NULL)'
+)->fetch()['total'] ?? 0);
+
+$upcomingTrainingStatement = db()->prepare(
+    'SELECT COUNT(*) AS total
+     FROM sheriff_training_requests
+     WHERE fiscal_year_id = :fiscal_year_id
+       AND status = "approved"
+       AND start_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)'
+);
+$upcomingTrainingStatement->execute(['fiscal_year_id' => $yearId]);
+$upcomingTrainingCount = (int) ($upcomingTrainingStatement->fetch()['total'] ?? 0);
+
+$trainingUsedPercent = (float) ($budget['training_used_percent'] ?? 0);
+$lodgingUsedPercent = (float) ($budget['lodging_used_percent'] ?? 0);
+$trainingBudgetLevel = sheriff_training_budget_level_class($trainingUsedPercent);
+$lodgingBudgetLevel = sheriff_training_budget_level_class($lodgingUsedPercent);
+
 page_header('Sheriff Training');
 ?>
 <main class="shell">
@@ -77,6 +110,30 @@ page_header('Sheriff Training');
         <?php endif; ?>
     </section>
 
+    <section class="dashboard-stat-row sheriff-action-row" style="margin-top: 18px;">
+        <div class="dashboard-stat-group">
+            <h2>Needs Attention</h2>
+            <div class="grid dashboard-stat-grid">
+                <a class="card dashboard-stat-card status-card action-stat-card" href="<?= e(url('departments/sheriff-training/requests.php?status=pending')) ?>">
+                    <h3><?= e((string) $pendingReviewCount) ?></h3>
+                    <p>Pending Review</p>
+                </a>
+                <a class="card dashboard-stat-card status-card action-stat-card" href="<?= e(url('departments/sheriff-training/requests.php?status=approved&fiscal_year_id=' . $yearId . '&date_filter=upcoming_30')) ?>">
+                    <h3><?= e((string) $approvedNotCompletedCount) ?></h3>
+                    <p>Approved Not Completed</p>
+                </a>
+                <a class="card dashboard-stat-card status-card action-stat-card" href="<?= e(url('departments/sheriff-training/reports.php?report_type=missing_actuals&fiscal_year_id=' . $yearId)) ?>">
+                    <h3><?= e((string) $missingActualsCount) ?></h3>
+                    <p>Missing Actual Costs</p>
+                </a>
+                <a class="card dashboard-stat-card status-card action-stat-card" href="<?= e(url('departments/sheriff-training/requests.php?status=approved&fiscal_year_id=' . $yearId)) ?>">
+                    <h3><?= e((string) $upcomingTrainingCount) ?></h3>
+                    <p>Upcoming 30 Days</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
     <section class="dashboard-stat-row sheriff-stat-row" style="margin-top: 18px;">
         <div class="dashboard-stat-group status-summary-group">
             <h2><?= e($budget['label'] ?? 'Current FY') ?> Budget</h2>
@@ -84,10 +141,18 @@ page_header('Sheriff Training');
                 <article class="card dashboard-stat-card">
                     <h3><?= e(sheriff_training_money($budget['training_remaining'] ?? 0)) ?></h3>
                     <p>Training Remaining</p>
+                    <div class="budget-meter budget-meter-<?= e($trainingBudgetLevel) ?>" aria-label="Training budget <?= e((string) $trainingUsedPercent) ?>% used">
+                        <span style="width: <?= e((string) min($trainingUsedPercent, 100)) ?>%;"></span>
+                    </div>
+                    <p class="meta"><?= e(number_format($trainingUsedPercent, 1)) ?>% used</p>
                 </article>
                 <article class="card dashboard-stat-card">
                     <h3><?= e(sheriff_training_money($budget['lodging_remaining'] ?? 0)) ?></h3>
                     <p>Lodging Remaining</p>
+                    <div class="budget-meter budget-meter-<?= e($lodgingBudgetLevel) ?>" aria-label="Lodging budget <?= e((string) $lodgingUsedPercent) ?>% used">
+                        <span style="width: <?= e((string) min($lodgingUsedPercent, 100)) ?>%;"></span>
+                    </div>
+                    <p class="meta"><?= e(number_format($lodgingUsedPercent, 1)) ?>% used</p>
                 </article>
             </div>
         </div>

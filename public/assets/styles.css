@@ -355,7 +355,15 @@ a {
 }
 
 .sheriff-stat-row {
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.55fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sheriff-action-row {
+    grid-template-columns: 1fr;
+}
+
+.sheriff-action-row .dashboard-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .sheriff-stat-row .status-summary-group .dashboard-stat-grid,
@@ -364,15 +372,47 @@ a {
 }
 
 .sheriff-stat-row .dashboard-stat-card,
+.sheriff-action-row .dashboard-stat-card,
 .sheriff-budget-grid .dashboard-stat-card {
     min-width: 0;
 }
 
+.sheriff-stat-row .dashboard-stat-card {
+    min-height: 152px;
+}
+
 .sheriff-stat-row .dashboard-stat-card h3,
+.sheriff-action-row .dashboard-stat-card h3,
 .sheriff-budget-grid .dashboard-stat-card h3 {
     font-size: 28px;
     line-height: 1.15;
     overflow-wrap: anywhere;
+}
+
+.action-stat-card {
+    min-height: 104px;
+}
+
+.budget-meter {
+    background: rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    height: 8px;
+    margin-top: 12px;
+    overflow: hidden;
+}
+
+.budget-meter span {
+    background: var(--success);
+    display: block;
+    height: 100%;
+}
+
+.budget-meter-warning span {
+    background: var(--warning);
+}
+
+.budget-meter-danger span {
+    background: var(--danger);
 }
 
 .k9-dashboard-stat-row {
@@ -3555,7 +3595,8 @@ textarea {
     }
 
     .status-summary-group .dashboard-stat-grid,
-    .summary-stat-group .dashboard-stat-grid {
+    .summary-stat-group .dashboard-stat-grid,
+    .sheriff-action-row .dashboard-stat-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -3859,6 +3900,10 @@ textarea {
 }
 
 @media (max-width: 420px) {
+    .sheriff-action-row .dashboard-stat-grid {
+        grid-template-columns: 1fr;
+    }
+
     .k9-quick-actions {
         grid-template-columns: 1fr;
     }
