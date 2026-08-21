@@ -13,6 +13,25 @@ function k9_schema_ready(): bool
         }
     }
 
+    foreach (['k9_activity_logs', 'k9_medical_visits', 'k9_expenses'] as $tableName) {
+        foreach (['voided_at', 'voided_by_user_id', 'void_reason'] as $columnName) {
+            $statement = db()->prepare(
+                'SELECT COUNT(*)
+                 FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = :table_name
+                   AND COLUMN_NAME = :column_name'
+            );
+            $statement->execute([
+                'table_name' => $tableName,
+                'column_name' => $columnName,
+            ]);
+            if ((int) $statement->fetchColumn() === 0) {
+                return false;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -181,6 +200,11 @@ function k9_visible_team_sql(string $teamAlias = 'k9_teams'): array
     return [" AND $teamAlias.handler_id = :current_handler_id", ['current_handler_id' => $handler['id']]];
 }
 
+function k9_not_voided_sql(string $alias): string
+{
+    return " AND $alias.voided_at IS NULL";
+}
+
 function k9_decimal(?string $value): float
 {
     $value = trim((string) $value);
@@ -189,6 +213,34 @@ function k9_decimal(?string $value): float
     }
 
     return round((float) str_replace([','], '', $value), 2);
+}
+
+function k9_is_valid_date(?string $value): bool
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return false;
+    }
+
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    return $date instanceof DateTimeImmutable && $date->format('Y-m-d') === $value;
+}
+
+function k9_date_is_future(?string $value): bool
+{
+    if (!k9_is_valid_date($value)) {
+        return false;
+    }
+
+    return $value > date('Y-m-d');
+}
+
+function k9_flash_validation_errors(array $errors, string $redirectPath): void
+{
+    if ($errors) {
+        flash('error', implode(' ', $errors));
+        redirect_to($redirectPath);
+    }
 }
 
 function k9_money(float|int|string|null $amount): string

@@ -32,7 +32,7 @@ if ($id > 0) {
          FROM k9_medical_visits
          INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_visits.dog_id
          INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
-         WHERE k9_medical_visits.id = :id' . $teamWhere
+         WHERE k9_medical_visits.id = :id' . k9_not_voided_sql('k9_medical_visits') . $teamWhere
     );
     $recordStatement->execute(array_merge($teamParams, ['id' => $id]));
     $record = $recordStatement->fetch();
@@ -50,6 +50,7 @@ if ($id > 0) {
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $redirectPath = 'departments/k9/medical-edit.php' . ($id > 0 ? '?id=' . $id : '');
     $teamId = (int) ($_POST['team_id'] ?? 0);
     $selectedTeam = null;
     foreach ($teams as $team) {
@@ -61,7 +62,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (!$selectedTeam) {
         flash('error', 'Select a valid K-9 team.');
-        redirect_to('departments/k9/medical-edit.php' . ($id > 0 ? '?id=' . $id : ''));
+        redirect_to($redirectPath);
     }
 
     $vetOfficeId = (int) ($_POST['vet_office_id'] ?? 0);
@@ -82,11 +83,42 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
     }
 
+    $visitDate = trim($_POST['visit_date'] ?? '');
+    $validationErrors = [];
+
+    if (!k9_is_valid_date($visitDate)) {
+        $validationErrors[] = 'Enter a valid visit date.';
+    } elseif (k9_date_is_future($visitDate)) {
+        $validationErrors[] = 'Visit date cannot be in the future.';
+    }
+
+    foreach ($_POST['shot_descriptions'] ?? [] as $index => $description) {
+        $description = trim((string) $description);
+        $shotExpiration = trim($_POST['shot_expirations'][$index] ?? '');
+        if ($description === '' && $shotExpiration === '') {
+            continue;
+        }
+        if ($description === '') {
+            $validationErrors[] = 'Enter a shot description when adding a shot expiration.';
+            break;
+        }
+        if ($shotExpiration !== '' && !k9_is_valid_date($shotExpiration)) {
+            $validationErrors[] = 'Enter a valid shot expiration date.';
+            break;
+        }
+        if ($shotExpiration !== '' && k9_is_valid_date($visitDate) && $shotExpiration < $visitDate) {
+            $validationErrors[] = 'Shot expiration cannot be before the visit date.';
+            break;
+        }
+    }
+
+    k9_flash_validation_errors($validationErrors, $redirectPath);
+
     $saveParams = [
         'dog_id' => (int) $selectedTeam['dog_id'],
         'vet_office_id' => $selectedVetOffice ? (int) $selectedVetOffice['id'] : null,
         'vet_doctor_id' => $selectedVetDoctor ? (int) $selectedVetDoctor['id'] : null,
-        'visit_date' => $_POST['visit_date'] ?? date('Y-m-d'),
+        'visit_date' => $visitDate,
         'vet_office_name' => $selectedVetOffice['name'] ?? null,
         'doctor_name' => $selectedVetDoctor['name'] ?? null,
         'reason_for_visit' => trim($_POST['reason_for_visit'] ?? '') ?: null,
@@ -104,7 +136,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                  doctor_name = :doctor_name, reason_for_visit = :reason_for_visit, notes = :notes,
                  next_appointment_date = :next_appointment_date, next_appointment_time = :next_appointment_time,
                  next_appointment_scheduled = :next_appointment_scheduled
-             WHERE id = :id'
+             WHERE id = :id AND voided_at IS NULL'
         );
         $statement->execute(array_merge($saveParams, ['id' => $id]));
         $visitId = $id;
@@ -195,7 +227,7 @@ page_header($id > 0 ? 'Edit K-9 Medical Visit' : 'Add K-9 Medical Visit');
             </label>
             <label>
                 Visit date
-                <input type="date" name="visit_date" value="<?= e($record['visit_date'] ?? date('Y-m-d')) ?>" required>
+                <input type="date" name="visit_date" value="<?= e($record['visit_date'] ?? date('Y-m-d')) ?>" max="<?= e(date('Y-m-d')) ?>" required>
             </label>
             <label>
                 Vet office
@@ -243,7 +275,7 @@ page_header($id > 0 ? 'Edit K-9 Medical Visit' : 'Add K-9 Medical Visit');
                         </label>
                         <label>
                             Expiration date
-                            <input type="date" name="shot_expirations[]" value="<?= e($shotRow['shot_expiration'] ?? '') ?>">
+                            <input type="date" name="shot_expirations[]" value="<?= e($shotRow['shot_expiration'] ?? '') ?>" min="<?= e($record['visit_date'] ?? date('Y-m-d')) ?>">
                         </label>
                     </div>
                     <?php endforeach; ?>

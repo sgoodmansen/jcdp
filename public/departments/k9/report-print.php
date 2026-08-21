@@ -56,9 +56,9 @@ if (!$selectedExpenseCategory) {
     $expenseCategoryId = 0;
 }
 
-$activityWhere = 'WHERE k9_activity_logs.activity_date BETWEEN :start_date AND :end_date' . $teamWhere;
-$medicalWhere = 'WHERE k9_medical_visits.visit_date BETWEEN :start_date AND :end_date' . $teamWhere;
-$expenseWhere = 'WHERE k9_expenses.expense_date BETWEEN :start_date AND :end_date' . $teamWhere;
+$activityWhere = 'WHERE k9_activity_logs.activity_date BETWEEN :start_date AND :end_date' . k9_not_voided_sql('k9_activity_logs') . $teamWhere;
+$medicalWhere = 'WHERE k9_medical_visits.visit_date BETWEEN :start_date AND :end_date' . k9_not_voided_sql('k9_medical_visits') . $teamWhere;
+$expenseWhere = 'WHERE k9_expenses.expense_date BETWEEN :start_date AND :end_date' . k9_not_voided_sql('k9_expenses') . $teamWhere;
 $params = array_merge($teamParams, [
     'start_date' => $startDate,
     'end_date' => $endDate,
@@ -269,7 +269,8 @@ foreach ($handlerMonthly as $row) {
 }
 
 $shotParams = $teamParams;
-$shotWhere = 'WHERE k9_medical_shots.shot_expiration IS NOT NULL' . $teamWhere;
+$shotWhere = 'WHERE k9_medical_shots.shot_expiration IS NOT NULL
+                AND (k9_medical_shots.medical_visit_id IS NULL OR k9_medical_visits.voided_at IS NULL)' . $teamWhere;
 if ($teamId > 0) {
     $shotWhere .= ' AND k9_teams.id = :team_id';
     $shotParams['team_id'] = $teamId;
@@ -279,6 +280,7 @@ $shotSql = "SELECT k9_dogs.dog_name,
                    k9_medical_shots.shot_description,
                    k9_medical_shots.shot_expiration
             FROM k9_medical_shots
+            LEFT JOIN k9_medical_visits ON k9_medical_visits.id = k9_medical_shots.medical_visit_id
             INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_shots.dog_id
             INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
             INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id

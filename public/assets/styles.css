@@ -401,8 +401,13 @@ a {
     max-width: 860px;
 }
 
-.k9-report-type-field {
-    grid-column: 1 / -1;
+.k9-report-filter-form > label {
+    min-width: 0;
+}
+
+.k9-report-filter-form > label select,
+.k9-report-filter-form > label input {
+    width: 100%;
 }
 
 .k9-reminder-row {

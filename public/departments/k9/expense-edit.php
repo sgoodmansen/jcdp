@@ -23,7 +23,7 @@ if ($id > 0) {
          FROM k9_expenses
          INNER JOIN k9_dogs ON k9_dogs.id = k9_expenses.dog_id
          INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
-         WHERE k9_expenses.id = :id' . $teamWhere
+         WHERE k9_expenses.id = :id' . k9_not_voided_sql('k9_expenses') . $teamWhere
     );
     $recordStatement->execute(array_merge($teamParams, ['id' => $id]));
     $record = $recordStatement->fetch();
@@ -37,6 +37,7 @@ if ($id > 0) {
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $redirectPath = 'departments/k9/expense-edit.php' . ($id > 0 ? '?id=' . $id : '');
     $teamId = (int) ($_POST['team_id'] ?? 0);
     $selectedTeam = null;
     foreach ($teams as $team) {
@@ -48,14 +49,29 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (!$selectedTeam) {
         flash('error', 'Select a valid K-9 team.');
-        redirect_to('departments/k9/expense-edit.php' . ($id > 0 ? '?id=' . $id : ''));
+        redirect_to($redirectPath);
     }
+
+    $expenseDate = trim($_POST['expense_date'] ?? '');
+    $amount = k9_decimal($_POST['amount'] ?? '0');
+    $validationErrors = [];
+
+    if (!k9_is_valid_date($expenseDate)) {
+        $validationErrors[] = 'Enter a valid expense date.';
+    } elseif (k9_date_is_future($expenseDate)) {
+        $validationErrors[] = 'Expense date cannot be in the future.';
+    }
+    if ($amount < 0) {
+        $validationErrors[] = 'Expense amount cannot be negative.';
+    }
+
+    k9_flash_validation_errors($validationErrors, $redirectPath);
 
     $saveParams = [
         'dog_id' => (int) $selectedTeam['dog_id'],
-        'expense_date' => $_POST['expense_date'] ?? date('Y-m-d'),
+        'expense_date' => $expenseDate,
         'expense_category_id' => (int) ($_POST['expense_category_id'] ?? 0) ?: null,
-        'amount' => k9_decimal($_POST['amount'] ?? '0'),
+        'amount' => $amount,
         'vendor' => trim($_POST['vendor'] ?? '') ?: null,
         'notes' => trim($_POST['notes'] ?? ''),
     ];
@@ -65,7 +81,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             'UPDATE k9_expenses
              SET dog_id = :dog_id, expense_date = :expense_date, expense_category_id = :expense_category_id,
                  amount = :amount, vendor = :vendor, notes = :notes
-             WHERE id = :id'
+             WHERE id = :id AND voided_at IS NULL'
         );
         $statement->execute(array_merge($saveParams, ['id' => $id]));
         $expenseId = $id;
@@ -111,7 +127,7 @@ page_header($id > 0 ? 'Edit K-9 Expense' : 'Add K-9 Expense');
             </label>
             <label>
                 Expense date
-                <input type="date" name="expense_date" value="<?= e($record['expense_date'] ?? date('Y-m-d')) ?>" required>
+                <input type="date" name="expense_date" value="<?= e($record['expense_date'] ?? date('Y-m-d')) ?>" max="<?= e(date('Y-m-d')) ?>" required>
             </label>
             <label>
                 Category
@@ -124,7 +140,7 @@ page_header($id > 0 ? 'Edit K-9 Expense' : 'Add K-9 Expense');
             </label>
             <label>
                 Amount
-                <input name="amount" inputmode="decimal" value="<?= e(isset($record['amount']) ? number_format((float) $record['amount'], 2, '.', '') : '') ?>" placeholder="0.00">
+                <input type="number" name="amount" inputmode="decimal" min="0" step="0.01" value="<?= e(isset($record['amount']) ? number_format((float) $record['amount'], 2, '.', '') : '') ?>" placeholder="0.00">
             </label>
             <label class="span-2">
                 Vendor

@@ -30,7 +30,7 @@ if ($id > 0) {
          INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
          LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
          WHERE k9_activity_logs.id = :id
-           AND k9_activity_types.name = "Training"' . $teamWhere
+           AND k9_activity_types.name = "Training"' . k9_not_voided_sql('k9_activity_logs') . $teamWhere
     );
     $recordStatement->execute(array_merge($teamParams, ['id' => $id]));
     $record = $recordStatement->fetch();
@@ -48,6 +48,7 @@ if ($id > 0) {
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $redirectPath = 'departments/k9/activity-edit.php' . ($id > 0 ? '?id=' . $id : '');
     $teamId = (int) ($_POST['team_id'] ?? 0);
     $selectedTeam = null;
     foreach ($teams as $team) {
@@ -59,19 +60,43 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (!$selectedTeam) {
         flash('error', 'Select a valid K-9 team.');
-        redirect_to('departments/k9/activity-edit.php' . ($id > 0 ? '?id=' . $id : ''));
+        redirect_to($redirectPath);
     }
+
+    $activityDate = trim($_POST['activity_date'] ?? '');
+    $trainingHours = k9_decimal($_POST['training_hours'] ?? '0');
+    $validationErrors = [];
+
+    if (!$trainingActivityTypeId) {
+        $validationErrors[] = 'Training cannot be saved until the Training activity type exists in K-9 setup.';
+    }
+    if (!k9_is_valid_date($activityDate)) {
+        $validationErrors[] = 'Enter a valid training date.';
+    } elseif (k9_date_is_future($activityDate)) {
+        $validationErrors[] = 'Training date cannot be in the future.';
+    }
+    if ($trainingHours < 0) {
+        $validationErrors[] = 'Training hours cannot be negative.';
+    }
+    foreach ($_POST['training_aid_ids'] ?? [] as $index => $aidId) {
+        if ((int) $aidId > 0 && k9_decimal($_POST['aid_grams'][$index] ?? '0') < 0) {
+            $validationErrors[] = 'Training aid grams cannot be negative.';
+            break;
+        }
+    }
+
+    k9_flash_validation_errors($validationErrors, $redirectPath);
 
     $saveParams = [
         'team_id' => $teamId,
         'dog_id' => (int) $selectedTeam['dog_id'],
         'handler_id' => (int) $selectedTeam['handler_id'],
-        'activity_date' => $_POST['activity_date'] ?? date('Y-m-d'),
+        'activity_date' => $activityDate,
         'activity_type_id' => $trainingActivityTypeId,
         'location_id' => (int) ($_POST['location_id'] ?? 0) ?: null,
         'training_area_id' => (int) ($_POST['training_area_id'] ?? 0) ?: null,
         'indication_id' => (int) ($_POST['indication_id'] ?? 0) ?: null,
-        'training_hours' => k9_decimal($_POST['training_hours'] ?? '0'),
+        'training_hours' => $trainingHours,
         'is_post_training' => isset($_POST['is_post_training']) ? 1 : 0,
         'incident_number' => null,
         'incident_type_id' => null,
@@ -97,7 +122,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                  packaging = :packaging, location_of_hide = :location_of_hide, delay_description = :delay_description,
                  search_time = :search_time, dog_performance = :dog_performance, problems_corrections = :problems_corrections,
                  notes = :notes
-             WHERE id = :id'
+             WHERE id = :id AND voided_at IS NULL'
         );
         $statement->execute([
             'team_id' => $saveParams['team_id'],
@@ -176,6 +201,9 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
         <?php if (!$teams): ?>
             <div class="notice error"><?= $isManager ? 'Create an active K-9 team before entering activity.' : 'Your account is not connected to an active K-9 team yet.' ?></div>
         <?php endif; ?>
+        <?php if (!$trainingActivityTypeId): ?>
+            <div class="notice error">Add the Training activity type in K-9 setup before saving training records.</div>
+        <?php endif; ?>
 
         <form class="form compact-form" method="post">
             <label>
@@ -189,7 +217,7 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
             </label>
             <label>
                 Training date
-                <input type="date" name="activity_date" value="<?= e($record['activity_date'] ?? date('Y-m-d')) ?>" required>
+                <input type="date" name="activity_date" value="<?= e($record['activity_date'] ?? date('Y-m-d')) ?>" max="<?= e(date('Y-m-d')) ?>" required>
             </label>
             <label>
                 Training area
@@ -220,7 +248,7 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
             </label>
             <label>
                 Training hours
-                <input name="training_hours" inputmode="decimal" value="<?= e(isset($record['training_hours']) ? number_format((float) $record['training_hours'], 2, '.', '') : '') ?>" placeholder="1.50">
+                <input type="number" name="training_hours" inputmode="decimal" min="0" step="0.01" value="<?= e(isset($record['training_hours']) ? number_format((float) $record['training_hours'], 2, '.', '') : '') ?>" placeholder="1.50">
             </label>
             <label class="toggle-option">
                 <input type="checkbox" name="is_post_training" value="1" <?= (int) ($record['is_post_training'] ?? 0) === 1 ? 'checked' : '' ?>>
@@ -247,7 +275,7 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
                         </label>
                         <label data-k9-grams-field hidden>
                             Grams used
-                            <input name="aid_grams[]" inputmode="decimal" value="<?= e(isset($aidRow['amount_grams']) ? number_format((float) $aidRow['amount_grams'], 2, '.', '') : '') ?>" placeholder="0.00">
+                            <input type="number" name="aid_grams[]" inputmode="decimal" min="0" step="0.01" value="<?= e(isset($aidRow['amount_grams']) ? number_format((float) $aidRow['amount_grams'], 2, '.', '') : '') ?>" placeholder="0.00">
                         </label>
                         <button type="button" class="button secondary compact-button k9-remove-aid" data-k9-remove-aid>Remove</button>
                     </div>
@@ -291,7 +319,7 @@ page_header($id > 0 ? 'Edit K-9 Training' : 'Add K-9 Training');
                 <textarea name="notes"><?= e($record['notes'] ?? '') ?></textarea>
             </label>
             <div class="actions span-2">
-                <button type="submit" <?= !$teams ? 'disabled' : '' ?>><?= $id > 0 ? 'Save changes' : 'Save training' ?></button>
+                <button type="submit" <?= !$teams || !$trainingActivityTypeId ? 'disabled' : '' ?>><?= $id > 0 ? 'Save changes' : 'Save training' ?></button>
                 <a class="button secondary" href="<?= e(url('departments/k9/activity.php')) ?>">Cancel</a>
             </div>
         </form>

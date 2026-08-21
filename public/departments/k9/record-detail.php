@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../app/bootstrap.php';
 require_k9_access();
 
+$isManager = k9_user_can_manage();
 $type = $_GET['type'] ?? '';
 $id = (int) ($_GET['id'] ?? 0);
 if (!in_array($type, ['training', 'deployment', 'medical', 'expense'], true) || $id <= 0) {
@@ -30,7 +31,8 @@ if ($type === 'training' || $type === 'deployment') {
                 k9_indications.name AS indication,
                 k9_incident_types.name AS incident_type,
                 k9_assisting_agencies.name AS assisting_agency,
-                k9_deployment_outcomes.name AS deployment_outcome
+                k9_deployment_outcomes.name AS deployment_outcome,
+                COALESCE(NULLIF(CONCAT_WS(" ", voided_users.first_name, voided_users.last_name), ""), voided_users.email) AS voided_by_name
          FROM k9_activity_logs
          INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
          INNER JOIN k9_dogs ON k9_dogs.id = k9_activity_logs.dog_id
@@ -42,6 +44,7 @@ if ($type === 'training' || $type === 'deployment') {
          LEFT JOIN k9_incident_types ON k9_incident_types.id = k9_activity_logs.incident_type_id
          LEFT JOIN k9_assisting_agencies ON k9_assisting_agencies.id = k9_activity_logs.assisting_agency_id
          LEFT JOIN k9_deployment_outcomes ON k9_deployment_outcomes.id = k9_activity_logs.deployment_outcome_id
+         LEFT JOIN users AS voided_users ON voided_users.id = k9_activity_logs.voided_by_user_id
          WHERE k9_activity_logs.id = :id
            AND k9_activity_types.name = :activity_type' . $teamWhere
     );
@@ -56,11 +59,13 @@ if ($type === 'training' || $type === 'deployment') {
     $statement = db()->prepare(
         'SELECT k9_medical_visits.*,
                 k9_dogs.dog_name,
-                k9_handlers.handler_name
+                k9_handlers.handler_name,
+                COALESCE(NULLIF(CONCAT_WS(" ", voided_users.first_name, voided_users.last_name), ""), voided_users.email) AS voided_by_name
          FROM k9_medical_visits
          INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_visits.dog_id
          INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
          INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
+         LEFT JOIN users AS voided_users ON voided_users.id = k9_medical_visits.voided_by_user_id
          WHERE k9_medical_visits.id = :id' . $teamWhere
     );
     $statement->execute($params);
@@ -72,12 +77,14 @@ if ($type === 'training' || $type === 'deployment') {
         'SELECT k9_expenses.*,
                 k9_dogs.dog_name,
                 k9_handlers.handler_name,
-                k9_expense_categories.name AS expense_category
+                k9_expense_categories.name AS expense_category,
+                COALESCE(NULLIF(CONCAT_WS(" ", voided_users.first_name, voided_users.last_name), ""), voided_users.email) AS voided_by_name
          FROM k9_expenses
          INNER JOIN k9_dogs ON k9_dogs.id = k9_expenses.dog_id
          INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
          INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
          LEFT JOIN k9_expense_categories ON k9_expense_categories.id = k9_expenses.expense_category_id
+         LEFT JOIN users AS voided_users ON voided_users.id = k9_expenses.voided_by_user_id
          WHERE k9_expenses.id = :id' . $teamWhere
     );
     $statement->execute($params);
@@ -92,6 +99,56 @@ if (!$record) {
     echo '<main class="shell"><section class="panel"><h1>Record not found</h1><p>The selected K-9 record could not be found.</p></section></main>';
     page_footer();
     exit;
+}
+
+$isVoided = !empty($record['voided_at']);
+
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'void_record') {
+    if (!$isManager) {
+        http_response_code(403);
+        page_header('Access denied');
+        echo '<main class="shell"><section class="panel"><h1>Access denied</h1><p>You do not have permission to void K-9 records.</p></section></main>';
+        page_footer();
+        exit;
+    }
+
+    if ($isVoided) {
+        flash('error', 'This K-9 record has already been voided.');
+        redirect_to('departments/k9/record-detail.php?type=' . urlencode($type) . '&id=' . $id);
+    }
+
+    $voidReason = trim($_POST['void_reason'] ?? '');
+    if ($voidReason === '') {
+        flash('error', 'Enter a reason before voiding this record.');
+        redirect_to('departments/k9/record-detail.php?type=' . urlencode($type) . '&id=' . $id);
+    }
+
+    $voidTable = match ($type) {
+        'training', 'deployment' => 'k9_activity_logs',
+        'medical' => 'k9_medical_visits',
+        'expense' => 'k9_expenses',
+    };
+    $entityType = match ($type) {
+        'training' => 'k9_activity_log',
+        'deployment' => 'k9_deployment_log',
+        'medical' => 'k9_medical_visit',
+        'expense' => 'k9_expense',
+    };
+
+    $statement = db()->prepare(
+        "UPDATE $voidTable
+         SET voided_at = NOW(), voided_by_user_id = :voided_by_user_id, void_reason = :void_reason
+         WHERE id = :id AND voided_at IS NULL"
+    );
+    $statement->execute([
+        'voided_by_user_id' => current_user()['id'] ?? null,
+        'void_reason' => $voidReason,
+        'id' => $id,
+    ]);
+
+    audit_event('voided', $entityType, (string) $id, ['reason' => $voidReason]);
+    flash('success', 'K-9 record voided.');
+    redirect_to('departments/k9/record-detail.php?type=' . urlencode($type) . '&id=' . $id);
 }
 
 $shots = [];
@@ -150,13 +207,29 @@ page_header($title);
                 <p><?= e($record['dog_name']) ?> - <?= e($record['handler_name']) ?></p>
             </div>
             <div class="actions">
-                <a class="button" href="<?= e($editUrl) ?>">Edit</a>
+                <?php if (!$isVoided): ?>
+                    <a class="button" href="<?= e($editUrl) ?>">Edit</a>
+                <?php endif; ?>
                 <button type="button" class="secondary" onclick="window.print()">Print</button>
                 <a class="button secondary" href="<?= e(url('departments/k9/activity.php?record_type=' . urlencode($type))) ?>">Back to log</a>
             </div>
         </div>
         <?php k9_navigation($type === 'training' ? 'activity-edit' : ($type === 'deployment' ? 'deployment-edit' : ($type === 'medical' ? 'medical-edit' : 'expense-edit'))); ?>
+        <?php if ($message = flash('success')): ?>
+            <div class="notice success"><?= e($message) ?></div>
+        <?php endif; ?>
+        <?php if ($message = flash('error')): ?>
+            <div class="notice error"><?= e($message) ?></div>
+        <?php endif; ?>
     </section>
+
+    <?php if ($isVoided): ?>
+        <section class="panel k9-record-print-card" style="margin-top: 18px;">
+            <h1>Voided Record</h1>
+            <p>This record was voided<?= $record['voided_by_name'] ? ' by ' . e($record['voided_by_name']) : '' ?><?= $record['voided_at'] ? ' on ' . e(format_display_date($record['voided_at'])) : '' ?>.</p>
+            <p><strong>Reason:</strong> <?= nl2br(e($record['void_reason'] ?? '')) ?></p>
+        </section>
+    <?php endif; ?>
 
     <section class="panel k9-record-print-card" style="margin-top: 18px;">
         <div class="print-only k9-record-print-heading">
@@ -205,6 +278,23 @@ page_header($title);
                 <?php endif; ?>
         </dl>
     </section>
+
+    <?php if ($isManager && !$isVoided): ?>
+        <section class="panel print-hidden" style="margin-top: 18px;">
+            <h1>Void Record</h1>
+            <p>Voiding keeps the record for audit history but removes it from normal activity logs, dashboard totals, and reports.</p>
+            <form class="form" method="post">
+                <input type="hidden" name="action" value="void_record">
+                <label>
+                    Reason for voiding
+                    <textarea name="void_reason" required></textarea>
+                </label>
+                <div class="actions">
+                    <button type="submit" class="secondary">Void record</button>
+                </div>
+            </form>
+        </section>
+    <?php endif; ?>
 
     <?php if ($type === 'medical'): ?>
         <section class="panel k9-record-print-card" style="margin-top: 18px;">

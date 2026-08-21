@@ -48,6 +48,10 @@ if (!in_array($recordType, ['', 'training', 'deployment', 'medical', 'expense'],
 $teamId = (int) ($_GET['team_id'] ?? 0);
 $trainingAreaId = (int) ($_GET['training_area_id'] ?? 0);
 $expenseCategoryId = (int) ($_GET['expense_category_id'] ?? 0);
+$postFilter = $_GET['post_filter'] ?? '';
+if (!in_array($postFilter, ['', 'post', 'non_post'], true)) {
+    $postFilter = '';
+}
 
 $recordTypeOptions = [
     '' => 'All records',
@@ -55,6 +59,11 @@ $recordTypeOptions = [
     'deployment' => 'Deployment',
     'medical' => 'Medical',
     'expense' => 'Expense',
+];
+$postFilterOptions = [
+    '' => 'All POST statuses',
+    'post' => 'POST only',
+    'non_post' => 'Non-POST only',
 ];
 
 $teamSql = 'SELECT k9_teams.id, k9_dogs.dog_name, k9_handlers.handler_name
@@ -103,9 +112,9 @@ if (!$selectedExpenseCategory) {
 }
 
 $params = [];
-$activityWhere = 'WHERE 1 = 1' . $teamWhere;
-$medicalWhere = 'WHERE 1 = 1' . $teamWhere;
-$expenseWhere = 'WHERE 1 = 1' . $teamWhere;
+$activityWhere = 'WHERE 1 = 1' . k9_not_voided_sql('k9_activity_logs') . $teamWhere;
+$medicalWhere = 'WHERE 1 = 1' . k9_not_voided_sql('k9_medical_visits') . $teamWhere;
+$expenseWhere = 'WHERE 1 = 1' . k9_not_voided_sql('k9_expenses') . $teamWhere;
 foreach ($teamParams as $key => $value) {
     $params[$key] = $value;
 }
@@ -138,6 +147,15 @@ if ($expenseCategoryId > 0) {
     $medicalWhere .= ' AND 1 = 0';
     $expenseWhere .= ' AND k9_expenses.expense_category_id = :expense_category_id';
     $params['expense_category_id'] = $expenseCategoryId;
+}
+if ($postFilter === 'post') {
+    $activityWhere .= ' AND k9_activity_types.name = "Training" AND k9_activity_logs.is_post_training = 1';
+    $medicalWhere .= ' AND 1 = 0';
+    $expenseWhere .= ' AND 1 = 0';
+} elseif ($postFilter === 'non_post') {
+    $activityWhere .= ' AND (k9_activity_types.name <> "Training" OR k9_activity_logs.is_post_training = 0)';
+    $medicalWhere .= ' AND 1 = 0';
+    $expenseWhere .= ' AND 1 = 0';
 }
 if ($recordType === 'training') {
     $activityWhere .= ' AND k9_activity_types.name = "Training"';
@@ -250,6 +268,7 @@ $filterQuery = http_build_query([
     'start_date' => $startDate,
     'end_date' => $endDate,
     'record_type' => $recordType,
+    'post_filter' => $postFilter,
     'team_id' => $teamId,
     'training_area_id' => $trainingAreaId,
     'expense_category_id' => $expenseCategoryId,
@@ -257,11 +276,13 @@ $filterQuery = http_build_query([
 $filterSummary = [
     format_display_date($startDate) . ' to ' . format_display_date($endDate),
     $recordTypeOptions[$recordType] ?? 'All records',
+    $postFilterOptions[$postFilter] ?? 'All POST statuses',
     $selectedTeam ? $selectedTeam['dog_name'] . ' - ' . $selectedTeam['handler_name'] : 'All teams',
 ];
 $screenSummary = [
     $period === 'custom' ? format_display_date($startDate) . ' to ' . format_display_date($endDate) : ($periodOptions[$period] ?? 'This Month'),
     $recordTypeOptions[$recordType] ?? 'All records',
+    $postFilterOptions[$postFilter] ?? 'All POST statuses',
     $selectedTeam ? $selectedTeam['dog_name'] . ' - ' . $selectedTeam['handler_name'] : 'All teams',
     count($activities) . ' records shown',
 ];
@@ -336,6 +357,14 @@ page_header('K-9 Activity Log');
                 <select name="record_type">
                     <?php foreach ($recordTypeOptions as $typeKey => $typeLabel): ?>
                         <option value="<?= e($typeKey) ?>" <?= $recordType === $typeKey ? 'selected' : '' ?>><?= e($typeLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
+                POST
+                <select name="post_filter">
+                    <?php foreach ($postFilterOptions as $postKey => $postLabel): ?>
+                        <option value="<?= e($postKey) ?>" <?= $postFilter === $postKey ? 'selected' : '' ?>><?= e($postLabel) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>

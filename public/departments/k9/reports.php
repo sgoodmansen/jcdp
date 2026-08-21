@@ -3,8 +3,52 @@ require_once __DIR__ . '/../../../app/bootstrap.php';
 require_k9_access();
 
 [$teamWhere, $teamParams] = k9_visible_team_sql('k9_teams');
-$startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
-$endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
+$periodOptions = [
+    'this_week' => 'This Week',
+    'last_week' => 'Last Week',
+    'this_month' => 'This Month',
+    'last_month' => 'Last Month',
+    'this_year' => 'This Year',
+    'last_year' => 'Last Year',
+    'custom' => 'Custom Dates',
+];
+$periodRanges = [
+    'this_week' => [
+        'start' => date('Y-m-d', strtotime('monday this week')),
+        'end' => date('Y-m-d'),
+    ],
+    'last_week' => [
+        'start' => date('Y-m-d', strtotime('monday last week')),
+        'end' => date('Y-m-d', strtotime('sunday last week')),
+    ],
+    'this_month' => [
+        'start' => date('Y-m-01'),
+        'end' => date('Y-m-d'),
+    ],
+    'last_month' => [
+        'start' => date('Y-m-01', strtotime('first day of last month')),
+        'end' => date('Y-m-t', strtotime('last month')),
+    ],
+    'this_year' => [
+        'start' => date('Y-01-01'),
+        'end' => date('Y-m-d'),
+    ],
+    'last_year' => [
+        'start' => date('Y-01-01', strtotime('last year')),
+        'end' => date('Y-12-31', strtotime('last year')),
+    ],
+];
+$period = $_GET['period'] ?? ((isset($_GET['start_date']) || isset($_GET['end_date'])) ? 'custom' : 'this_year');
+if (!array_key_exists($period, $periodOptions)) {
+    $period = 'this_year';
+}
+if ($period === 'custom') {
+    $startDate = trim($_GET['start_date'] ?? date('Y-01-01'));
+    $endDate = trim($_GET['end_date'] ?? date('Y-m-d'));
+} else {
+    $startDate = $periodRanges[$period]['start'];
+    $endDate = $periodRanges[$period]['end'];
+}
 $teamId = (int) ($_GET['team_id'] ?? 0);
 $expenseCategoryId = (int) ($_GET['expense_category_id'] ?? 0);
 $reportTypes = [
@@ -55,9 +99,9 @@ if (!$selectedExpenseCategory) {
     $expenseCategoryId = 0;
 }
 
-$activityWhere = 'WHERE k9_activity_logs.activity_date BETWEEN :start_date AND :end_date' . $teamWhere;
-$medicalWhere = 'WHERE k9_medical_visits.visit_date BETWEEN :start_date AND :end_date' . $teamWhere;
-$expenseWhere = 'WHERE k9_expenses.expense_date BETWEEN :start_date AND :end_date' . $teamWhere;
+$activityWhere = 'WHERE k9_activity_logs.activity_date BETWEEN :start_date AND :end_date' . k9_not_voided_sql('k9_activity_logs') . $teamWhere;
+$medicalWhere = 'WHERE k9_medical_visits.visit_date BETWEEN :start_date AND :end_date' . k9_not_voided_sql('k9_medical_visits') . $teamWhere;
+$expenseWhere = 'WHERE k9_expenses.expense_date BETWEEN :start_date AND :end_date' . k9_not_voided_sql('k9_expenses') . $teamWhere;
 $params = array_merge($teamParams, [
     'start_date' => $startDate,
     'end_date' => $endDate,
@@ -77,8 +121,11 @@ $summarySql = "SELECT
                    COUNT(*) AS total_logs,
                    COALESCE(SUM(k9_activity_logs.training_hours), 0) AS total_hours,
                    COALESCE(SUM(CASE WHEN k9_activity_types.name = 'Training' THEN k9_activity_logs.training_hours ELSE 0 END), 0) AS training_hours,
+                   COALESCE(SUM(CASE WHEN k9_activity_types.name = 'Training' THEN 1 ELSE 0 END), 0) AS training_count,
+                   COALESCE(SUM(CASE WHEN k9_activity_types.name = 'Deployed' THEN k9_activity_logs.training_hours ELSE 0 END), 0) AS deployment_hours,
                    COALESCE(SUM(CASE WHEN k9_activity_types.name = 'Deployed' THEN 1 ELSE 0 END), 0) AS deployments,
-                   COALESCE(SUM(CASE WHEN k9_activity_logs.is_post_training = 1 THEN k9_activity_logs.training_hours ELSE 0 END), 0) AS post_hours
+                   COALESCE(SUM(CASE WHEN k9_activity_types.name = 'Training' AND k9_activity_logs.is_post_training = 1 THEN k9_activity_logs.training_hours ELSE 0 END), 0) AS post_hours,
+                   COALESCE(SUM(CASE WHEN k9_activity_types.name = 'Training' AND k9_activity_logs.is_post_training = 1 THEN 1 ELSE 0 END), 0) AS post_count
                FROM k9_activity_logs
                INNER JOIN k9_teams ON k9_teams.id = k9_activity_logs.team_id
                LEFT JOIN k9_activity_types ON k9_activity_types.id = k9_activity_logs.activity_type_id
@@ -268,7 +315,8 @@ foreach ($handlerMonthly as $row) {
 }
 
 $shotParams = $teamParams;
-$shotWhere = 'WHERE k9_medical_shots.shot_expiration IS NOT NULL' . $teamWhere;
+$shotWhere = 'WHERE k9_medical_shots.shot_expiration IS NOT NULL
+                AND (k9_medical_shots.medical_visit_id IS NULL OR k9_medical_visits.voided_at IS NULL)' . $teamWhere;
 if ($teamId > 0) {
     $shotWhere .= ' AND k9_teams.id = :team_id';
     $shotParams['team_id'] = $teamId;
@@ -278,6 +326,7 @@ $shotSql = "SELECT k9_dogs.dog_name,
                    k9_medical_shots.shot_description,
                    k9_medical_shots.shot_expiration
             FROM k9_medical_shots
+            LEFT JOIN k9_medical_visits ON k9_medical_visits.id = k9_medical_shots.medical_visit_id
             INNER JOIN k9_dogs ON k9_dogs.id = k9_medical_shots.dog_id
             INNER JOIN k9_teams ON k9_teams.dog_id = k9_dogs.id AND k9_teams.is_active = 1
             INNER JOIN k9_handlers ON k9_handlers.id = k9_teams.handler_id
@@ -290,6 +339,7 @@ $shotExpirations = $statement->fetchAll();
 
 $csvQuery = http_build_query([
     'report_type' => $reportType,
+    'period' => $period,
     'start_date' => $startDate,
     'end_date' => $endDate,
     'team_id' => $teamId,
@@ -304,13 +354,13 @@ if (($_GET['format'] ?? '') === 'csv') {
 
     $output = fopen('php://output', 'w');
     if ($reportType === 'summary') {
-        fputcsv($output, ['Metric', 'Value']);
-        fputcsv($output, ['Activity logs', (int) ($summary['total_logs'] ?? 0)]);
-        fputcsv($output, ['Training hours', number_format((float) ($summary['training_hours'] ?? 0), 2, '.', '')]);
-        fputcsv($output, ['Deployments', (int) ($summary['deployments'] ?? 0)]);
-        fputcsv($output, ['POST hours', number_format((float) ($summary['post_hours'] ?? 0), 2, '.', '')]);
-        fputcsv($output, ['Medical visits', $medicalCount]);
-        fputcsv($output, ['Expenses', k9_money($expenseTotal)]);
+        fputcsv($output, ['Metric', 'Hours / Amount', 'Entries']);
+        fputcsv($output, ['Training', number_format((float) ($summary['training_hours'] ?? 0), 2, '.', ''), (int) ($summary['training_count'] ?? 0)]);
+        fputcsv($output, ['POST', number_format((float) ($summary['post_hours'] ?? 0), 2, '.', ''), (int) ($summary['post_count'] ?? 0)]);
+        fputcsv($output, ['Deployments', number_format((float) ($summary['deployment_hours'] ?? 0), 2, '.', ''), (int) ($summary['deployments'] ?? 0)]);
+        fputcsv($output, ['Activity logs', '', (int) ($summary['total_logs'] ?? 0)]);
+        fputcsv($output, ['Medical visits', '', $medicalCount]);
+        fputcsv($output, ['Expenses', k9_money($expenseTotal), '']);
     } elseif ($reportType === 'training') {
         fputcsv($output, ['Dog', 'Handler', 'Training Logs', 'Training Hours', 'POST Hours', 'Latest Training']);
         foreach ($trainingByTeam as $row) {
@@ -404,7 +454,7 @@ page_header('K-9 Reports');
     <section class="panel print-hidden" style="margin-top: 18px;">
         <h1>Report Filters</h1>
         <form class="form compact-form k9-report-filter-form" method="get">
-            <label class="k9-report-type-field">
+            <label>
                 Report type
                 <select name="report_type">
                     <?php foreach ($reportTypes as $typeKey => $typeLabel): ?>
@@ -413,12 +463,25 @@ page_header('K-9 Reports');
                 </select>
             </label>
             <label>
+                Period
+                <select name="period" id="k9-report-period">
+                    <?php foreach ($periodOptions as $periodKey => $periodLabel): ?>
+                        <?php $range = $periodRanges[$periodKey] ?? null; ?>
+                        <option
+                            value="<?= e($periodKey) ?>"
+                            <?= $range ? 'data-start="' . e($range['start']) . '" data-end="' . e($range['end']) . '"' : '' ?>
+                            <?= $period === $periodKey ? 'selected' : '' ?>
+                        ><?= e($periodLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>
                 Start date
-                <input type="date" name="start_date" value="<?= e($startDate) ?>">
+                <input type="date" name="start_date" value="<?= e($startDate) ?>" data-k9-report-date>
             </label>
             <label>
                 End date
-                <input type="date" name="end_date" value="<?= e($endDate) ?>">
+                <input type="date" name="end_date" value="<?= e($endDate) ?>" data-k9-report-date>
             </label>
             <label>
                 K-9 team
@@ -456,20 +519,23 @@ page_header('K-9 Reports');
         </div>
         <div class="grid dashboard-stat-grid sheriff-budget-grid">
             <article class="card dashboard-stat-card">
-                <h3><?= e((string) (int) ($summary['total_logs'] ?? 0)) ?></h3>
-                <p>Activity logs</p>
-            </article>
-            <article class="card dashboard-stat-card">
                 <h3><?= e(number_format((float) ($summary['training_hours'] ?? 0), 2)) ?></h3>
                 <p>Training hours</p>
-            </article>
-            <article class="card dashboard-stat-card">
-                <h3><?= e((string) (int) ($summary['deployments'] ?? 0)) ?></h3>
-                <p>Deployments</p>
+                <p class="meta"><?= e((string) (int) ($summary['training_count'] ?? 0)) ?> entries</p>
             </article>
             <article class="card dashboard-stat-card">
                 <h3><?= e(number_format((float) ($summary['post_hours'] ?? 0), 2)) ?></h3>
                 <p>POST hours</p>
+                <p class="meta"><?= e((string) (int) ($summary['post_count'] ?? 0)) ?> entries</p>
+            </article>
+            <article class="card dashboard-stat-card">
+                <h3><?= e(number_format((float) ($summary['deployment_hours'] ?? 0), 2)) ?></h3>
+                <p>Deployment hours</p>
+                <p class="meta"><?= e((string) (int) ($summary['deployments'] ?? 0)) ?> entries</p>
+            </article>
+            <article class="card dashboard-stat-card">
+                <h3><?= e((string) (int) ($summary['total_logs'] ?? 0)) ?></h3>
+                <p>Activity logs</p>
             </article>
             <article class="card dashboard-stat-card">
                 <h3><?= e((string) $medicalCount) ?></h3>
@@ -754,4 +820,36 @@ page_header('K-9 Reports');
     </section>
     <?php endif; ?>
 </main>
+<script>
+    (function () {
+        const periodSelect = document.getElementById('k9-report-period');
+        if (!periodSelect) {
+            return;
+        }
+
+        const dateInputs = Array.from(document.querySelectorAll('[data-k9-report-date]'));
+        const startInput = document.querySelector('input[name="start_date"][data-k9-report-date]');
+        const endInput = document.querySelector('input[name="end_date"][data-k9-report-date]');
+
+        periodSelect.addEventListener('change', function () {
+            const selected = periodSelect.selectedOptions[0];
+            if (!selected || periodSelect.value === 'custom') {
+                return;
+            }
+
+            if (startInput && selected.dataset.start) {
+                startInput.value = selected.dataset.start;
+            }
+            if (endInput && selected.dataset.end) {
+                endInput.value = selected.dataset.end;
+            }
+        });
+
+        dateInputs.forEach(function (input) {
+            input.addEventListener('change', function () {
+                periodSelect.value = 'custom';
+            });
+        });
+    })();
+</script>
 <?php page_footer(); ?>

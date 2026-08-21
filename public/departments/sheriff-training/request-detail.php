@@ -158,25 +158,6 @@ $auditStatement = db()->prepare(
 $auditStatement->execute(['request_id' => $id]);
 $decisionHistory = $auditStatement->fetchAll();
 
-$topActions = match ($request['status']) {
-    'pending' => [
-        ['label' => 'Edit request', 'href' => url('departments/sheriff-training/request-edit.php?id=' . $request['id']), 'primary' => true],
-        ['label' => 'Officer history', 'href' => url('departments/sheriff-training/officer-detail.php?id=' . $request['officer_id'])],
-        ['label' => 'Requests', 'href' => url('departments/sheriff-training/requests.php')],
-    ],
-    'approved' => [
-        ['label' => 'Complete training', 'href' => url('departments/sheriff-training/request-detail.php?id=' . $request['id'] . '#complete-training'), 'primary' => true],
-        ['label' => 'Edit request', 'href' => url('departments/sheriff-training/request-edit.php?id=' . $request['id'])],
-        ['label' => 'Officer history', 'href' => url('departments/sheriff-training/officer-detail.php?id=' . $request['officer_id'])],
-        ['label' => 'Requests', 'href' => url('departments/sheriff-training/requests.php')],
-    ],
-    default => [
-        ['label' => 'Officer history', 'href' => url('departments/sheriff-training/officer-detail.php?id=' . $request['officer_id']), 'primary' => true],
-        ['label' => 'Edit request', 'href' => url('departments/sheriff-training/request-edit.php?id=' . $request['id'])],
-        ['label' => 'Requests', 'href' => url('departments/sheriff-training/requests.php')],
-    ],
-};
-
 page_header('Review Training Request');
 ?>
 <main class="shell">
@@ -191,8 +172,6 @@ page_header('Review Training Request');
         <?php if ($message = flash('error')): ?>
             <div class="notice error"><?= e($message) ?></div>
         <?php endif; ?>
-
-        <?php page_actions($topActions); ?>
     </section>
 
     <section class="dashboard-stat-row sheriff-stat-row" style="margin-top: 18px;">
@@ -228,7 +207,17 @@ page_header('Review Training Request');
     </section>
 
     <section class="panel" style="margin-top: 18px;">
-        <h1>Request Details</h1>
+        <div class="page-toolbar">
+            <div>
+                <h1>Request Details</h1>
+            </div>
+            <div class="actions">
+                <?php if ($request['status'] === 'approved'): ?>
+                    <a class="button compact-button" href="<?= e(url('departments/sheriff-training/request-detail.php?id=' . $request['id'] . '#complete-training')) ?>">Complete training</a>
+                <?php endif; ?>
+                <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/request-edit.php?id=' . $request['id'])) ?>">Edit request</a>
+            </div>
+        </div>
         <table class="table mobile-card-table">
             <tbody>
                 <tr><th>Officer</th><td><?= e($request['first_name'] . ' ' . $request['last_name']) ?><?= $request['rank_title'] ? ', ' . e($request['rank_title']) : '' ?></td></tr>

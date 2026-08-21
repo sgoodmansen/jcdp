@@ -155,7 +155,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         "CREATE TABLE IF NOT EXISTS k9_user_preferences (
             user_id INT UNSIGNED PRIMARY KEY,
-            default_summary_period ENUM('week', 'month', 'year') NOT NULL DEFAULT 'year',
+            default_summary_period ENUM('week', 'last_week', 'month', 'last_month', 'year', 'last_year') NOT NULL DEFAULT 'year',
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             CONSTRAINT fk_k9_preferences_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )",
@@ -186,10 +186,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             problems_corrections TEXT NULL,
             notes TEXT NULL,
             created_by_user_id INT UNSIGNED NULL,
+            voided_at TIMESTAMP NULL,
+            voided_by_user_id INT UNSIGNED NULL,
+            void_reason TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_k9_activity_date (activity_date),
             INDEX idx_k9_activity_team_date (team_id, activity_date),
+            INDEX idx_k9_activity_voided (voided_at),
             CONSTRAINT fk_k9_activity_team FOREIGN KEY (team_id) REFERENCES k9_teams(id) ON DELETE RESTRICT,
             CONSTRAINT fk_k9_activity_dog FOREIGN KEY (dog_id) REFERENCES k9_dogs(id) ON DELETE RESTRICT,
             CONSTRAINT fk_k9_activity_handler FOREIGN KEY (handler_id) REFERENCES k9_handlers(id) ON DELETE RESTRICT,
@@ -200,7 +204,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             CONSTRAINT fk_k9_activity_incident_type FOREIGN KEY (incident_type_id) REFERENCES k9_incident_types(id) ON DELETE SET NULL,
             CONSTRAINT fk_k9_activity_agency FOREIGN KEY (assisting_agency_id) REFERENCES k9_assisting_agencies(id) ON DELETE SET NULL,
             CONSTRAINT fk_k9_activity_outcome FOREIGN KEY (deployment_outcome_id) REFERENCES k9_deployment_outcomes(id) ON DELETE SET NULL,
-            CONSTRAINT fk_k9_activity_user FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+            CONSTRAINT fk_k9_activity_user FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+            CONSTRAINT fk_k9_activity_voided_user FOREIGN KEY (voided_by_user_id) REFERENCES users(id) ON DELETE SET NULL
         )",
 
         "CREATE TABLE IF NOT EXISTS k9_activity_log_aids (
@@ -227,11 +232,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             next_appointment_date DATE NULL,
             next_appointment_time TIME NULL,
             next_appointment_scheduled VARCHAR(80) NULL,
+            voided_at TIMESTAMP NULL,
+            voided_by_user_id INT UNSIGNED NULL,
+            void_reason TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_k9_medical_voided (voided_at),
             CONSTRAINT fk_k9_medical_dog FOREIGN KEY (dog_id) REFERENCES k9_dogs(id) ON DELETE RESTRICT,
             CONSTRAINT fk_k9_medical_vet_office FOREIGN KEY (vet_office_id) REFERENCES k9_vet_offices(id) ON DELETE SET NULL,
-            CONSTRAINT fk_k9_medical_vet_doctor FOREIGN KEY (vet_doctor_id) REFERENCES k9_vet_doctors(id) ON DELETE SET NULL
+            CONSTRAINT fk_k9_medical_vet_doctor FOREIGN KEY (vet_doctor_id) REFERENCES k9_vet_doctors(id) ON DELETE SET NULL,
+            CONSTRAINT fk_k9_medical_voided_user FOREIGN KEY (voided_by_user_id) REFERENCES users(id) ON DELETE SET NULL
         )",
 
         "CREATE TABLE IF NOT EXISTS k9_medical_shots (
@@ -256,10 +266,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
             vendor VARCHAR(190) NULL,
             notes TEXT NULL,
+            voided_at TIMESTAMP NULL,
+            voided_by_user_id INT UNSIGNED NULL,
+            void_reason TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_k9_expenses_voided (voided_at),
             CONSTRAINT fk_k9_expenses_dog FOREIGN KEY (dog_id) REFERENCES k9_dogs(id) ON DELETE SET NULL,
-            CONSTRAINT fk_k9_expenses_category FOREIGN KEY (expense_category_id) REFERENCES k9_expense_categories(id) ON DELETE SET NULL
+            CONSTRAINT fk_k9_expenses_category FOREIGN KEY (expense_category_id) REFERENCES k9_expense_categories(id) ON DELETE SET NULL,
+            CONSTRAINT fk_k9_expenses_voided_user FOREIGN KEY (voided_by_user_id) REFERENCES users(id) ON DELETE SET NULL
         )",
     ];
 
@@ -329,6 +344,42 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
     }
 
+    $voidColumnsByTable = [
+        'k9_activity_logs' => [
+            'voided_at' => 'TIMESTAMP NULL AFTER created_by_user_id',
+            'voided_by_user_id' => 'INT UNSIGNED NULL AFTER voided_at',
+            'void_reason' => 'TEXT NULL AFTER voided_by_user_id',
+        ],
+        'k9_medical_visits' => [
+            'voided_at' => 'TIMESTAMP NULL AFTER next_appointment_scheduled',
+            'voided_by_user_id' => 'INT UNSIGNED NULL AFTER voided_at',
+            'void_reason' => 'TEXT NULL AFTER voided_by_user_id',
+        ],
+        'k9_expenses' => [
+            'voided_at' => 'TIMESTAMP NULL AFTER notes',
+            'voided_by_user_id' => 'INT UNSIGNED NULL AFTER voided_at',
+            'void_reason' => 'TEXT NULL AFTER voided_by_user_id',
+        ],
+    ];
+    foreach ($voidColumnsByTable as $tableName => $columns) {
+        foreach ($columns as $columnName => $definition) {
+            $statement = db()->prepare(
+                'SELECT COUNT(*)
+                 FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = :table_name
+                   AND COLUMN_NAME = :column_name'
+            );
+            $statement->execute([
+                'table_name' => $tableName,
+                'column_name' => $columnName,
+            ]);
+            if ((int) $statement->fetchColumn() === 0) {
+                db()->exec("ALTER TABLE $tableName ADD COLUMN $columnName $definition");
+            }
+        }
+    }
+
     $medicalForeignKeys = [
         'fk_k9_medical_vet_office' => 'ALTER TABLE k9_medical_visits ADD CONSTRAINT fk_k9_medical_vet_office FOREIGN KEY (vet_office_id) REFERENCES k9_vet_offices(id) ON DELETE SET NULL',
         'fk_k9_medical_vet_doctor' => 'ALTER TABLE k9_medical_visits ADD CONSTRAINT fk_k9_medical_vet_doctor FOREIGN KEY (vet_doctor_id) REFERENCES k9_vet_doctors(id) ON DELETE SET NULL',
@@ -346,6 +397,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             db()->exec($sql);
         }
     }
+
+    db()->exec(
+        "ALTER TABLE k9_user_preferences
+         MODIFY default_summary_period ENUM('week', 'last_week', 'month', 'last_month', 'year', 'last_year') NOT NULL DEFAULT 'year'"
+    );
 
     $seedGroups = [
         'k9_activity_types' => ['Training', 'Deployed'],

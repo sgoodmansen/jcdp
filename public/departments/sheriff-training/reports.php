@@ -7,6 +7,15 @@ $years = db()->query('SELECT * FROM sheriff_training_fiscal_years ORDER BY fisca
 if ($yearId === 0 && $years) {
     $yearId = (int) $years[0]['id'];
 }
+$officerSummaryFilter = $_GET['officer_summary_filter'] ?? '';
+if (!in_array($officerSummaryFilter, ['', 'completed', 'not_completed'], true)) {
+    $officerSummaryFilter = '';
+}
+$officerSummaryFilterOptions = [
+    '' => 'All officers',
+    'completed' => 'With completed training',
+    'not_completed' => 'No completed training',
+];
 
 $budget = $yearId > 0 ? sheriff_training_budget_summary($yearId) : null;
 
@@ -37,6 +46,12 @@ $missingActuals = db()->query(
      ORDER BY sheriff_training_requests.end_date DESC'
 )->fetchAll();
 
+$officerSummaryWhere = '';
+if ($officerSummaryFilter === 'completed') {
+    $officerSummaryWhere = ' WHERE COALESCE(training_summary.completed_trainings, 0) > 0';
+} elseif ($officerSummaryFilter === 'not_completed') {
+    $officerSummaryWhere = ' WHERE COALESCE(training_summary.completed_trainings, 0) = 0';
+}
 $officerSummary = db()->query(
     'SELECT sheriff_training_officers.id,
             sheriff_training_officers.first_name,
@@ -55,6 +70,7 @@ $officerSummary = db()->query(
          FROM sheriff_training_requests
          GROUP BY officer_id
      ) training_summary ON training_summary.officer_id = sheriff_training_officers.id
+     ' . $officerSummaryWhere . '
      ORDER BY completed_trainings DESC, approved_cost DESC, sheriff_training_officers.last_name'
 )->fetchAll();
 
@@ -140,6 +156,22 @@ page_header('Sheriff Training Reports');
 
     <section class="panel" style="margin-top: 18px;">
         <h1>Officer Training Summary</h1>
+        <form class="form compact-form" method="get" style="margin-bottom: 18px;">
+            <input type="hidden" name="fiscal_year_id" value="<?= e((string) $yearId) ?>">
+            <label>
+                Summary filter
+                <select name="officer_summary_filter">
+                    <?php foreach ($officerSummaryFilterOptions as $filterKey => $filterLabel): ?>
+                        <option value="<?= e($filterKey) ?>" <?= $officerSummaryFilter === $filterKey ? 'selected' : '' ?>><?= e($filterLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <div class="actions">
+                <button type="submit">Apply</button>
+                <a class="button secondary" href="<?= e(url('departments/sheriff-training/reports.php?fiscal_year_id=' . $yearId)) ?>">Clear</a>
+            </div>
+        </form>
+        <p class="meta"><?= e($officerSummaryFilterOptions[$officerSummaryFilter]) ?> | <?= e((string) count($officerSummary)) ?> officers shown</p>
         <table class="table mobile-card-table">
             <thead>
                 <tr>
