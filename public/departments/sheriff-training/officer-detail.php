@@ -33,15 +33,17 @@ page_header('Officer Training History');
         <h1><?= e($officer['first_name'] . ' ' . $officer['last_name']) ?></h1>
         <p><?= e(trim(($officer['rank_title'] ?? '') . (($officer['division'] ?? '') ? ' - ' . $officer['division'] : '')) ?: 'Officer training history') ?></p>
         <?php sheriff_training_navigation('officers'); ?>
-        <?php page_actions([
-            ['label' => 'New request', 'href' => url('departments/sheriff-training/request-edit.php?officer_id=' . $officer['id']), 'primary' => true],
-            ['label' => 'Edit officer', 'href' => url('departments/sheriff-training/officer-edit.php?id=' . $officer['id'])],
-            ['label' => 'Officer list', 'href' => url('departments/sheriff-training/officers.php')],
-        ]); ?>
     </section>
 
     <section class="panel" style="margin-top: 18px;">
-        <h1>Training History</h1>
+        <div class="page-toolbar">
+            <div>
+                <h1>Training History</h1>
+            </div>
+            <div class="actions">
+                <a class="button compact-button" href="<?= e(url('departments/sheriff-training/request-edit.php?officer_id=' . $officer['id'])) ?>">New request</a>
+            </div>
+        </div>
         <table class="table mobile-card-table">
             <thead>
                 <tr>
