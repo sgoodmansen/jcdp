@@ -25,6 +25,7 @@ page_header('Supervisor How To');
             <button type="button" class="guide-topic-button" data-guide-target="staffing" role="tab" aria-selected="false">Staffing</button>
             <button type="button" class="guide-topic-button" data-guide-target="training" role="tab" aria-selected="false">Training</button>
             <button type="button" class="guide-topic-button" data-guide-target="election-day" role="tab" aria-selected="false">Election Day</button>
+            <button type="button" class="guide-topic-button" data-guide-target="payroll" role="tab" aria-selected="false">Payroll</button>
             <button type="button" class="guide-topic-button" data-guide-target="signup" role="tab" aria-selected="false">Sign Up Training</button>
             <button type="button" class="guide-topic-button" data-guide-target="remove-training" role="tab" aria-selected="false">Remove Training</button>
             <button type="button" class="guide-topic-button" data-guide-target="review" role="tab" aria-selected="false">Daily Review</button>
@@ -142,6 +143,40 @@ page_header('Supervisor How To');
                         <a class="button secondary compact-button" href="<?= e(url('departments/election/chief-feedback.php')) ?>">Chief Feedback</a>
                     </article>
                 </div>
+            </section>
+
+            <section class="guide-topic-pane" data-guide-pane="payroll" role="tabpanel" hidden>
+                <h1>Payroll Workflow</h1>
+                <div class="grid how-to-grid">
+                    <article class="card how-to-card">
+                        <h2>1. Confirm payroll setup</h2>
+                        <p>Open Payroll Setup for the election period and review position rates, training pay, training cap, mileage rate, and minimum mileage settings before final payroll review.</p>
+                        <a class="button secondary compact-button" href="<?= e(url('departments/election/payroll-setup.php')) ?>">Payroll Setup</a>
+                    </article>
+                    <article class="card how-to-card">
+                        <h2>2. Review election day pay</h2>
+                        <p>Use Election Day Pay to confirm who worked, who did not work, and whether anyone should be paid as Chief Judge. Add payroll notes when a record needs explanation.</p>
+                        <a class="button secondary compact-button" href="<?= e(url('departments/election/payroll-election-day.php')) ?>">Election Day Pay</a>
+                    </article>
+                    <article class="card how-to-card">
+                        <h2>3. Review training and mileage</h2>
+                        <p>Training Pay uses completed training records and the payroll setup rates. Enter round-trip mileage for training when mileage should be paid.</p>
+                        <a class="button secondary compact-button" href="<?= e(url('departments/election/payroll-training.php')) ?>">Training Pay</a>
+                    </article>
+                    <article class="card how-to-card">
+                        <h2>4. Finalize the summary</h2>
+                        <p>Use Payroll Summary to review total election day pay, training pay, mileage pay, and each worker total. Export CSV for payroll processing or print the summary for review.</p>
+                        <a class="button secondary compact-button" href="<?= e(url('departments/election/payroll.php')) ?>">Payroll Summary</a>
+                    </article>
+                </div>
+                <ol class="how-to-steps" style="margin-top: 18px;">
+                    <li><strong>Start with setup.</strong> Payroll calculations depend on the selected election period, position rates, training rate, training cap, and mileage settings.</li>
+                    <li><strong>Election day pay comes from assignments.</strong> Assigned workers appear in payroll, then supervisors confirm the work status and any Chief Judge pay override.</li>
+                    <li><strong>Training pay comes from completed classes.</strong> The system counts completed training and applies the training rate up to the configured cap.</li>
+                    <li><strong>Mileage is entered separately.</strong> Training mileage is reviewed on the Training Pay page and calculated using the mileage settings.</li>
+                    <li><strong>Use reports before locking.</strong> Export CSV or Print PDF from Payroll Summary after reviewing totals.</li>
+                    <li><strong>Lock payroll when finished.</strong> Locking the period prevents accidental changes to election day pay, training mileage, and payroll rates for that election.</li>
+                </ol>
             </section>
 
             <section class="guide-topic-pane" data-guide-pane="signup" role="tabpanel" hidden>
