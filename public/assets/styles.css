@@ -3997,6 +3997,86 @@ textarea {
         display: none !important;
     }
 
+    .sheriff-report-table,
+    .sheriff-report-table thead,
+    .sheriff-report-table tbody,
+    .sheriff-report-table tr,
+    .sheriff-report-table th,
+    .sheriff-report-table td {
+        width: auto;
+    }
+
+    .sheriff-report-panel {
+        border: 0 !important;
+        box-shadow: none !important;
+        color: #111827 !important;
+        padding: 0 !important;
+    }
+
+    .sheriff-report-panel h1,
+    .sheriff-report-panel p,
+    .sheriff-report-panel .meta {
+        color: #111827 !important;
+    }
+
+    .sheriff-report-panel h1 {
+        font-size: 13pt !important;
+        line-height: 1.1 !important;
+        margin: 0 0 0.05in !important;
+    }
+
+    .sheriff-report-panel .meta {
+        font-size: 8pt !important;
+        margin: 0 0 0.08in !important;
+    }
+
+    .sheriff-report-table {
+        border-collapse: collapse;
+        display: table !important;
+        table-layout: fixed;
+        width: 100% !important;
+    }
+
+    .sheriff-report-table thead {
+        display: table-header-group !important;
+    }
+
+    .sheriff-report-table tbody {
+        display: table-row-group !important;
+    }
+
+    .sheriff-report-table tr {
+        border: 0;
+        display: table-row !important;
+    }
+
+    .sheriff-report-table th,
+    .sheriff-report-table td {
+        border-bottom: 1px solid #9ca3af;
+        color: #111827 !important;
+        display: table-cell !important;
+        font-size: 7.5pt !important;
+        line-height: 1.12 !important;
+        padding: 3px 5px !important;
+        vertical-align: top;
+    }
+
+    .sheriff-report-table th {
+        border-bottom-color: #111827;
+        font-weight: 700;
+    }
+
+    .sheriff-report-table td::before {
+        content: none !important;
+        display: none !important;
+    }
+
+    .sheriff-report-table .print-hidden,
+    .sheriff-report-table th.print-hidden,
+    .sheriff-report-table td.print-hidden {
+        display: none !important;
+    }
+
     .election-attendance-table,
     .election-attendance-table thead,
     .election-attendance-table tbody,

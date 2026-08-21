@@ -219,7 +219,7 @@ page_header('Sheriff Training Reports');
     </section>
 
     <?php if ($reportType === 'budget'): ?>
-        <section class="panel" style="margin-top: 18px;">
+        <section class="panel sheriff-report-panel" style="margin-top: 18px;">
             <div class="page-toolbar">
                 <div>
                     <h1>Fiscal Year Budget Summary</h1>
@@ -245,7 +245,7 @@ page_header('Sheriff Training Reports');
         </section>
 
     <?php elseif ($reportType === 'approved'): ?>
-        <section class="panel" style="margin-top: 18px;">
+        <section class="panel sheriff-report-panel" style="margin-top: 18px;">
             <div class="page-toolbar">
                 <div>
                     <h1>Approved / Completed Training</h1>
@@ -256,7 +256,7 @@ page_header('Sheriff Training Reports');
                 </div>
             </div>
             <p class="meta"><?= e($selectedYearLabel) ?></p>
-            <table class="table" style="margin-top: 18px;">
+            <table class="table sheriff-report-table" style="margin-top: 18px;">
             <thead>
                 <tr>
                     <th>Officer</th>
@@ -286,7 +286,7 @@ page_header('Sheriff Training Reports');
     </section>
 
     <?php elseif ($reportType === 'officer_summary'): ?>
-    <section class="panel" style="margin-top: 18px;">
+    <section class="panel sheriff-report-panel" style="margin-top: 18px;">
         <div class="page-toolbar">
             <div>
                 <h1>Officer Training Summary</h1>
@@ -296,24 +296,8 @@ page_header('Sheriff Training Reports');
                 <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
             </div>
         </div>
-        <form class="form compact-form print-hidden" method="get" style="margin-bottom: 18px;">
-            <input type="hidden" name="report_type" value="officer_summary">
-            <input type="hidden" name="fiscal_year_id" value="<?= e((string) $yearId) ?>">
-            <label>
-                Summary filter
-                <select name="officer_summary_filter">
-                    <?php foreach ($officerSummaryFilterOptions as $filterKey => $filterLabel): ?>
-                        <option value="<?= e($filterKey) ?>" <?= $officerSummaryFilter === $filterKey ? 'selected' : '' ?>><?= e($filterLabel) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <div class="actions">
-                <button type="submit">Apply</button>
-                <a class="button secondary" href="<?= e(url('departments/sheriff-training/reports.php?report_type=officer_summary&fiscal_year_id=' . $yearId)) ?>">Clear</a>
-            </div>
-        </form>
         <p class="meta"><?= e($officerSummaryFilterOptions[$officerSummaryFilter]) ?> | <?= e((string) count($officerSummary)) ?> officers shown</p>
-        <table class="table">
+        <table class="table sheriff-report-table">
             <thead>
                 <tr>
                     <th>Officer</th>
@@ -343,17 +327,17 @@ page_header('Sheriff Training Reports');
     </section>
 
     <?php elseif ($reportType === 'missing_actuals'): ?>
-    <section class="panel" style="margin-top: 18px;">
+    <section class="panel sheriff-report-panel" style="margin-top: 18px;">
         <div class="page-toolbar">
             <div>
-                <h1>Completed or Past Trainings Missing Actual Costs</h1>
+                <h1>Missing Actual Costs</h1>
             </div>
             <div class="actions print-hidden">
                 <button type="button" class="secondary compact-button" onclick="window.print()">Print PDF</button>
                 <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
             </div>
         </div>
-        <table class="table">
+        <table class="table sheriff-report-table">
             <thead>
                 <tr>
                     <th>Officer</th>
@@ -381,7 +365,7 @@ page_header('Sheriff Training Reports');
     </section>
 
     <?php elseif ($reportType === 'denied'): ?>
-    <section class="panel" style="margin-top: 18px;">
+    <section class="panel sheriff-report-panel" style="margin-top: 18px;">
         <div class="page-toolbar">
             <div>
                 <h1>Recent Denied Requests</h1>
@@ -391,7 +375,7 @@ page_header('Sheriff Training Reports');
                 <a class="button secondary compact-button" href="<?= e(url('departments/sheriff-training/reports.php?' . $csvQuery)) ?>">Export CSV</a>
             </div>
         </div>
-        <table class="table">
+        <table class="table sheriff-report-table">
             <thead>
                 <tr>
                     <th>Officer</th>
